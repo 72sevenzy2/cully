@@ -5,6 +5,10 @@ Clients use the existing MCP OAuth issuer `https://auth.mcpruntime.org/mcp-auth`
 OAuth discovery depends on the resource identifier being allowed by that issuer.
 The resource requested by Buddy is the full endpoint URL above.
 
+Install the latest shared Buddy skill in the current user's Codex, Claude Code,
+and Cursor directories by running `python3 scripts/install_skill.py` from the
+Buddy checkout.
+
 ## Codex
 
 Add the remote MCP server in `~/.codex/config.toml`:
