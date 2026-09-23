@@ -1,0 +1,7 @@
+interface:
+  display_name: "Buddy"
+  short_description: "Log and analyze life memory"
+  default_prompt: "Use $buddy to log my latest life data and update my local memory."
+
+policy:
+  allow_implicit_invocation: true
