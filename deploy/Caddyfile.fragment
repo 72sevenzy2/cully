@@ -1,8 +1,7 @@
 # Add inside the existing workspace.mcpruntime.org site block before its
-# catch-all reverse_proxy. The MCP SDK serves protected-resource metadata at
-# its internal /mcp metadata path; map the public prefixed path to that route.
+# catch-all reverse_proxy. The MCP SDK exposes protected-resource metadata
+# using the path from the configured public resource URL.
 handle /.well-known/oauth-protected-resource/buddy/mcp {
-	rewrite * /.well-known/oauth-protected-resource/mcp
 	reverse_proxy buddy:8080
 }
 
