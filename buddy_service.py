@@ -237,7 +237,7 @@ def buddy_log(
         row = conn.execute(
             """INSERT INTO buddy_entries
                (id,project_url,entry_type,summary,approach,outcome,issue,learning,next_steps,assistant,tags,embedding,occurred_at)
-               VALUES (%(id)s,%(project_url)s,%(entry_type)s,%(summary)s,%(approach)s,%(outcome)s,%(issue)s,%(learning)s,%(next_steps)s,%(assistant)s,%(tags)s,%(embedding)s::vector,%(occurred_at)s
+               VALUES (%(id)s,%(project_url)s,%(entry_type)s,%(summary)s,%(approach)s,%(outcome)s,%(issue)s,%(learning)s,%(next_steps)s,%(assistant)s,%(tags)s,%(embedding)s::vector,%(occurred_at)s)
                RETURNING id,project_url,theme,entry_type,summary,approach,outcome,issue,learning,next_steps,assistant,tags,occurred_at,created_at,updated_at""",
             values,
         ).fetchone()
