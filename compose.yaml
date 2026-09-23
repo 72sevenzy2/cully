@@ -29,7 +29,7 @@ services:
     expose:
       - "8080"
     healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/.well-known/oauth-protected-resource/mcp', timeout=3)"]
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/.well-known/oauth-protected-resource/buddy/mcp', timeout=3)"]
       interval: 20s
       timeout: 5s
       retries: 5
