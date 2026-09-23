@@ -268,13 +268,13 @@ def buddy_search(
     with pool.connection() as conn:
         rows = conn.execute(
             """SELECT id,project_url,theme,entry_type,summary,approach,outcome,issue,learning,next_steps,assistant,tags,occurred_at,created_at,updated_at,
-                      (CASE WHEN %(embedding)s IS NOT NULL AND embedding IS NOT NULL
+                      (CASE WHEN %(embedding)s::vector IS NOT NULL AND embedding IS NOT NULL
                             THEN 1 - (embedding <=> %(embedding)s::vector) ELSE 0 END
                        + CASE WHEN %(query)s <> ''
                               THEN ts_rank_cd(search_vector, websearch_to_tsquery('english', %(query)s)) ELSE 0 END) AS search_rank
                FROM buddy_entries
                WHERE ((%(query)s <> '' AND search_vector @@ websearch_to_tsquery('english', %(query)s))
-                   OR (%(embedding)s IS NOT NULL AND embedding IS NOT NULL))
+                   OR (%(embedding)s::vector IS NOT NULL AND embedding IS NOT NULL))
                  AND (%(project)s IS NULL OR project_url=%(project)s)
                  AND (%(entry_type)s IS NULL OR entry_type=%(entry_type)s)
                  AND (%(since)s IS NULL OR occurred_at >= %(since)s)
