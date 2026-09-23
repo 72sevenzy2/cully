@@ -275,9 +275,9 @@ def buddy_search(
                FROM buddy_entries
                WHERE ((%(query)s <> '' AND search_vector @@ websearch_to_tsquery('english', %(query)s))
                    OR (%(embedding)s::vector IS NOT NULL AND embedding IS NOT NULL))
-                 AND (%(project)s IS NULL OR project_url=%(project)s)
-                 AND (%(entry_type)s IS NULL OR entry_type=%(entry_type)s)
-                 AND (%(since)s IS NULL OR occurred_at >= %(since)s)
+                 AND (%(project)s::text IS NULL OR project_url=%(project)s::text)
+                 AND (%(entry_type)s::text IS NULL OR entry_type=%(entry_type)s::text)
+                 AND (%(since)s::timestamptz IS NULL OR occurred_at >= %(since)s::timestamptz)
                ORDER BY search_rank DESC, occurred_at DESC LIMIT %(limit)s""",
             {"query": query, "embedding": embedding, "project": project, "entry_type": entry_type, "since": since_at, "limit": limit},
         ).fetchall()
@@ -298,8 +298,8 @@ def buddy_recent(
     with pool.connection() as conn:
         rows = conn.execute(
             """SELECT * FROM buddy_entries
-               WHERE (%(project)s IS NULL OR project_url=%(project)s)
-                 AND (%(entry_type)s IS NULL OR entry_type=%(entry_type)s)
+               WHERE (%(project)s::text IS NULL OR project_url=%(project)s::text)
+                 AND (%(entry_type)s::text IS NULL OR entry_type=%(entry_type)s::text)
                ORDER BY occurred_at DESC LIMIT %(limit)s""",
             {"project": project, "entry_type": entry_type, "limit": limit},
         ).fetchall()
