@@ -1,6 +1,6 @@
 ---
 name: buddy
-description: Use to record, find, update, and recall coding-agent work across GitHub projects through the shared Buddy MCP server, including approaches, outcomes, blockers, and lessons learned.
+description: Use during coding work to record substantive changes, blockers, and lessons in the shared Buddy MCP memory, and when asked to search or manage prior project notes.
 ---
 
 # Buddy

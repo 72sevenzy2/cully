@@ -1,7 +1,0 @@
-interface:
-  display_name: "Buddy"
-  short_description: "Remember and retrieve coding project work"
-  default_prompt: "Use Buddy to log this work to the shared project memory."
-
-policy:
-  allow_implicit_invocation: true

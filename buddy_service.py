@@ -183,6 +183,7 @@ mcp = FastMCP(
 
 def as_record(row: dict[str, Any]) -> dict[str, Any]:
     row.pop("search_rank", None)
+    row.pop("embedding", None)
     if row.get("id") is not None:
         row["id"] = str(row["id"])
     row["tags"] = list(row.get("tags") or [])

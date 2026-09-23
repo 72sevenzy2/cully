@@ -46,6 +46,7 @@ Restart Cursor and complete OAuth for Buddy when prompted.
 ## OAuth resource registration
 
 The authorization service must issue tokens for exactly
-`https://workspace.mcpruntime.org/buddy/mcp`. Its current allowlist needs that
-resource added before the client login flow can complete. Keep PostgreSQL
-private; only expose the HTTPS MCP endpoint through Caddy.
+`https://workspace.mcpruntime.org/buddy/mcp`. Buddy's resource is registered
+with the current authorization issuer. If the public Buddy URL changes, update
+the issuer allowlist and service audience together. Keep PostgreSQL private;
+only expose the HTTPS MCP endpoint through Caddy.

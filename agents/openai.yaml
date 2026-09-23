@@ -1,0 +1,15 @@
+interface:
+  display_name: "Buddy"
+  short_description: "Remember and retrieve coding project work"
+  default_prompt: "Use $buddy to log this work to the shared project memory."
+
+dependencies:
+  tools:
+    - type: "mcp"
+      value: "buddy"
+      description: "Shared Buddy work memory"
+      transport: "streamable_http"
+      url: "https://workspace.mcpruntime.org/buddy/mcp"
+
+policy:
+  allow_implicit_invocation: true
