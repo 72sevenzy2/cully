@@ -1,9 +1,41 @@
 # Buddy
 
-Buddy is a personal memory and work journal for coding agents. This repository
-starts with the local SQLite capture CLI and its Buddy skill. The next milestone
-is a shared, authenticated MCP service so Codex, Claude, Cursor, and phone-based
-agent clients can record and retrieve work notes.
+Buddy is shared work memory for coding agents. It provides a remote,
+OAuth-protected MCP service and a Buddy skill that tells agents how to capture
+and retrieve work across projects and devices. The service stores data and
+performs search; the connected agent's model interprets it and writes answers.
+The VM does not run a language model.
+
+## Remote MCP service
+
+Buddy uses PostgreSQL with full-text search and pgvector. The service exposes
+`buddy_log`, `buddy_search`, `buddy_recent`, `buddy_get`, `buddy_update`,
+`buddy_delete`, and `buddy_projects`. Entries use normalized GitHub repository
+URLs as project keys and `mcp` as the theme. Each entry can retain the assistant,
+summary, approach, outcome, issue, learning, next steps, and tags.
+
+The app runs on the Buddy VM and Caddy routes the existing
+`workspace.mcpruntime.org` HTTPS host to `/buddy/mcp`; the Buddy MCP's internal
+HTTP path remains `/mcp`. Deployment uses Docker Compose and requires
+`BUDDY_DB_PASSWORD`. Copy
+`.env.example` to `.env`, set a unique long password, then run:
+
+```sh
+docker compose up -d --build
+```
+
+Do not expose PostgreSQL publicly. Put the MCP endpoint behind HTTPS and the
+configured OAuth authorization server. The server URL defaults to
+`https://workspace.mcpruntime.org/buddy/mcp`; its OAuth resource identifier
+must be registered with the authorization server before agents can connect.
+
+## Agent skill
+
+Install `SKILL.md` as the `buddy` skill in each coding agent. Configure that
+agent's remote MCP client to use the HTTPS endpoint above with OAuth. The skill
+normalizes the current Git remote, records substantive work and useful
+blockers/lessons, and searches shared memory before answering history questions.
+See `clients/README.md` for per-agent configuration and setup.
 
 ## Current local CLI
 
@@ -20,31 +52,12 @@ to select another local database. Buddy never starts or hosts a language model.
 
 ## Shared Buddy direction
 
-The shared service will store work records with a normalized GitHub project URL
-as the project key, `mcp` as the theme, the coding assistant, a concise summary,
-approach, outcome, and next steps. Agents use their own model to turn retrieved
-records into plain-English answers. The VM hosts storage and the MCP/API service;
-it does not run inference.
-
-The MCP service will provide authenticated, scoped create, read, update, delete,
-and search operations. Until that service is deployed, the local CLI and skill
-are the working implementation; do not configure clients with a pretend remote
-endpoint. Destructive operations will require explicit caller intent. Never log
-credentials, tokens, private keys, or full conversation transcripts.
-
-## Client skill
-
-`SKILL.md` contains the Buddy workflow instructions. `openai.yaml` contains
-Codex skill metadata. The shared workflow will derive the project key from the
-Git remote, normalize SSH and HTTPS forms to `https://github.com/OWNER/REPO`,
-and append a brief work record at the end of substantive coding sessions.
-
-## Storage and integrations
-
-The planned remote store is PostgreSQL with full-text search and optional
-pgvector support. Search and CRUD run on the service; language-model reasoning
-stays with the connected agent. Agent Flightdeck integration is deferred until
-the Buddy API and data model have matured.
+The service uses PostgreSQL full-text search immediately. It also installs
+pgvector and creates an HNSW cosine index. A client can pass a 1536-dimensional
+vector to `buddy_log`/`buddy_update` and `query_embedding` to `buddy_search`.
+Buddy stores and searches vectors but does not generate them or run a model.
+Without client-supplied vectors, search uses PostgreSQL full-text search. Agent
+Flightdeck integration is deferred until the Buddy API and data model mature.
 
 ## Local data safety
 

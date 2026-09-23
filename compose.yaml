@@ -1,0 +1,48 @@
+services:
+  db:
+    image: pgvector/pgvector:pg17
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: buddy
+      POSTGRES_USER: buddy
+      POSTGRES_PASSWORD: ${BUDDY_DB_PASSWORD:?set BUDDY_DB_PASSWORD}
+    volumes:
+      - buddy-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U buddy -d buddy"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    networks:
+      - private
+  buddy:
+    build: .
+    restart: unless-stopped
+    environment:
+      BUDDY_DATABASE_URL: postgresql://buddy:${BUDDY_DB_PASSWORD}@db:5432/buddy
+      BUDDY_MCP_URL: ${BUDDY_MCP_URL:-https://workspace.mcpruntime.org/buddy/mcp}
+      MCP_AUTH_ISSUER: ${MCP_AUTH_ISSUER:-https://auth.mcpruntime.org/mcp-auth}
+      BUDDY_LOG_LEVEL: ${BUDDY_LOG_LEVEL:-INFO}
+    depends_on:
+      db:
+        condition: service_healthy
+    expose:
+      - "8080"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/.well-known/oauth-protected-resource/mcp', timeout=3)"]
+      interval: 20s
+      timeout: 5s
+      retries: 5
+    networks:
+      - private
+      - workspace
+
+volumes:
+  buddy-data:
+
+networks:
+  private:
+    internal: true
+  workspace:
+    external: true
+    name: workspace_workspace

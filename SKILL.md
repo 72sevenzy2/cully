@@ -1,71 +1,27 @@
 ---
 name: buddy
-description: Use when the user wants to log, search, recall, or analyze personal life data in Buddy, including career, fitness, relationships, finance, food, water, reading, mood, spending, habits, check-ins, reviews, and life optimization.
+description: Use to record, find, update, and recall coding-agent work across GitHub projects through the shared Buddy MCP server, including approaches, outcomes, blockers, and lessons learned.
 ---
 
 # Buddy
 
-Buddy is the user's local life memory and analytics system. Use `/Users/proshan/buddy/buddy.py` and store data only in `/Users/proshan/buddy/memory/buddy_memory.db`.
+Buddy is shared work memory for the user's coding agents. Use the configured remote Buddy MCP server for cross-device work logs. Use the local CLI only when the user specifically asks to work with local personal-life logs.
 
-## Core Behavior
+## Shared work memory
 
-- The user usually feeds raw data. Save it with minimal friction.
-- Ask for data only during check-ins or when one missing detail materially improves retrieval or analytics.
-- Ask at most one follow-up for concrete values such as amount, time, duration, cost, quantity, pages, reps, distance, or sleep.
-- Do not turn casual logging into an interview.
-- For analytics, summarize patterns and practical next actions from saved memory.
+- Derive `project_url` from the current Git remote (prefer `origin`) and normalize it to `https://github.com/OWNER/REPO`. Do not guess a project when the directory is not a GitHub checkout; ask once or omit the log if the user does not want to identify it.
+- Set theme to `mcp` (the service currently applies this default).
+- At the end of a substantive coding session, write one concise `buddy_log` entry with the assistant name, what changed, the approach, result, encountered issue and resolution, learned insight, and next step when available. Include only fields that add useful context.
+- Also log a meaningful blocker or reusable discovery when it happens; do not create a record for every command, trivial edit, or conversation turn.
+- Never store credentials, tokens, private keys, personal data unrelated to the project, or full conversation transcripts. Keep enough technical detail to make the reasoning and lesson reusable.
+- Before answering questions about prior project work, call `buddy_search`; filter by normalized project URL when relevant. Cite dates and record IDs or summaries from results, and say when no matching memory was found.
+- Use `buddy_get` to inspect a record before changing it. Use `buddy_update` for corrections. Use `buddy_delete` only when the user explicitly asks to remove that specific record.
+- Do not claim a write succeeded unless `buddy_log` or `buddy_update` returns success. If Buddy is unavailable, report that and continue the user's coding work without silently substituting a local-only log.
 
-## Commands
+## Record shape
 
-Save a raw event:
+Choose `entry_type` from `work`, `issue`, `learning`, or `decision`. Useful records answer: what happened, why this approach was chosen, what worked or failed, and what should happen next. Keep summaries independently understandable because the agent may retrieve one entry without surrounding conversation.
 
-```bash
-python3 /Users/proshan/buddy/buddy.py log <category> "<text>"
-```
+## Local personal-life CLI
 
-Save food with nutrition estimates:
-
-```bash
-python3 /Users/proshan/buddy/buddy.py food --at 2026-07-20T06:00:00+05:30 --calories 660 --confidence medium --assumptions "serving sizes estimated" "<food text>"
-```
-
-Run a check-in:
-
-```bash
-python3 /Users/proshan/buddy/buddy.py ask --mode quick
-python3 /Users/proshan/buddy/buddy.py ask --mode daily
-python3 /Users/proshan/buddy/buddy.py ask --mode weekly
-```
-
-Search and analyze memory:
-
-```bash
-python3 /Users/proshan/buddy/buddy.py search "<query>"
-python3 /Users/proshan/buddy/buddy.py summary
-python3 /Users/proshan/buddy/buddy.py analytics
-```
-
-Explore with open-source analytics wrappers:
-
-```bash
-/Users/proshan/buddy/scripts/buddy-datasette.sh
-/Users/proshan/buddy/scripts/buddy-dogsheep-index.sh
-```
-
-## Categories
-
-- `career`: work, learning, projects, reading, reputation, opportunities.
-- `fitness`: food, training, sleep, water, body metrics, recovery, energy.
-- `relationship`: partner, family, friends, network, conflict, support.
-- `finance`: spending, income, investing, subscriptions, debt, waste.
-- `food`, `water`, `reading`, `mood`, `other`: quick captures.
-
-## Analytics
-
-When asked for optimization, review the SQLite memory through `analytics`, `summary`, and targeted `search` calls. Look for:
-
-- Food analytics should use the structured `food` command when calories, macros, confidence, assumptions, or event timestamps are available.
-- Repeated drains on time, money, health, attention, or relationships.
-- Missing signals Buddy should ask for in the next check-in.
-- Career leverage, wasted spend, workout consistency, sleep/energy patterns, reading consistency, and neglected relationships.
-- Concrete next actions, not generic advice.
+Only use the existing `buddy.py` local SQLite commands when the user explicitly asks about personal-life tracking. They store data on that machine and do not sync to the remote MCP server. See `README.md` for the CLI usage.
