@@ -13,6 +13,8 @@ servers:
           value: https://workspace.mcpruntime.org/buddy-data
         - name: BUDDY_PORT
           value: "8080"
+        - name: BUDDY_MCP_URL
+          value: https://mcp.mcpruntime.org/buddy/mcp
       secretEnvVars:
         - name: BUDDY_DATA_API_TOKEN
           secretKeyRef:
@@ -56,7 +58,7 @@ servers:
         sessionIDHeader: X-MCP-Agent-Session
         tokenHeader: Authorization
         issuerURL: https://auth.mcpruntime.org/mcp-auth
-        audience: https://workspace.mcpruntime.org/buddy/mcp
+        audience: https://mcp.mcpruntime.org/buddy/mcp
       policy:
         mode: allow-list
         defaultDecision: deny

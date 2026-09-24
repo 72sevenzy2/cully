@@ -9,7 +9,7 @@ dependencies:
       value: "buddy"
       description: "Shared Buddy work memory"
       transport: "streamable_http"
-      url: "https://workspace.mcpruntime.org/buddy/mcp"
+      url: "https://mcp.mcpruntime.org/buddy/mcp"
 
 policy:
   allow_implicit_invocation: true

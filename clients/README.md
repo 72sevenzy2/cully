@@ -1,14 +1,13 @@
 # Connect an agent to Buddy
 
-Buddy's Streamable HTTP endpoint is `https://workspace.mcpruntime.org/buddy/mcp`.
-Clients use the existing MCP OAuth issuer `https://auth.mcpruntime.org/mcp-auth`.
-OAuth discovery depends on the resource identifier being allowed by that issuer.
-The resource requested by Buddy is the full endpoint URL above. The data API
-is on the Buddy VM at `https://workspace.mcpruntime.org/buddy-data` and is used
-only by the MCP workload. Caddy forwards `/buddy/mcp` and the OAuth
-protected-resource metadata URL to MCP Runtime. Buddy's MCPServer uses
-`auth.mode: oauth`, so the Runtime operator adds both paths to its ingress. The
-OAuth resource identifier stays `https://workspace.mcpruntime.org/buddy/mcp`.
+Buddy's Streamable HTTP endpoint is `https://mcp.mcpruntime.org/buddy/mcp`, served
+by MCP Runtime. Clients use the MCP OAuth issuer
+`https://auth.mcpruntime.org/mcp-auth`. The OAuth resource identifier is the full
+endpoint URL above, and the issuer must allow it before clients can sign in.
+Buddy's MCPServer uses `auth.mode: oauth`, so the Runtime operator routes both the
+MCP endpoint and its protected-resource metadata path. The data API is on the
+Buddy VM at `https://workspace.mcpruntime.org/buddy-data` and is used only by the
+MCP workload.
 
 Install the latest shared Buddy skill in the current user's Codex, Claude Code,
 and Cursor directories by running `python3 scripts/install_skill.py` from the
@@ -20,7 +19,7 @@ Add the remote MCP server in `~/.codex/config.toml`:
 
 ```toml
 [mcp_servers.buddy]
-url = "https://workspace.mcpruntime.org/buddy/mcp"
+url = "https://mcp.mcpruntime.org/buddy/mcp"
 ```
 
 Then run `codex mcp login buddy` and complete the browser OAuth flow.
@@ -28,7 +27,7 @@ Then run `codex mcp login buddy` and complete the browser OAuth flow.
 ## Claude Code
 
 ```sh
-claude mcp add --transport http buddy https://workspace.mcpruntime.org/buddy/mcp
+claude mcp add --transport http buddy https://mcp.mcpruntime.org/buddy/mcp
 claude mcp get buddy
 ```
 
@@ -44,7 +43,7 @@ Add this server to `~/.cursor/mcp.json` (or project `.cursor/mcp.json`):
 {
   "mcpServers": {
     "buddy": {
-      "url": "https://workspace.mcpruntime.org/buddy/mcp"
+      "url": "https://mcp.mcpruntime.org/buddy/mcp"
     }
   }
 }
@@ -55,7 +54,7 @@ Restart Cursor and complete OAuth for Buddy when prompted.
 ## OAuth resource registration
 
 The authorization service must issue tokens for exactly
-`https://workspace.mcpruntime.org/buddy/mcp`. Buddy's resource is registered
+`https://mcp.mcpruntime.org/buddy/mcp`. Buddy's resource is registered
 with the current authorization issuer. If the public Buddy URL changes, update
 the issuer allowlist and service audience together. Keep PostgreSQL private;
 only expose the HTTPS MCP endpoint through Caddy.

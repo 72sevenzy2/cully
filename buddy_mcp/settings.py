@@ -9,7 +9,7 @@ from datetime import timedelta, timezone
 
 IST = timezone(timedelta(hours=5, minutes=30), name="IST")
 DEFAULT_ISSUER = "https://auth.mcpruntime.org/mcp-auth"
-DEFAULT_RESOURCE = "https://workspace.mcpruntime.org/buddy/mcp"
+DEFAULT_RESOURCE = "https://mcp.mcpruntime.org/buddy/mcp"
 
 
 @dataclass(frozen=True)
