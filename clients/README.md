@@ -5,10 +5,10 @@ Clients use the existing MCP OAuth issuer `https://auth.mcpruntime.org/mcp-auth`
 OAuth discovery depends on the resource identifier being allowed by that issuer.
 The resource requested by Buddy is the full endpoint URL above. The data API
 is on the Buddy VM at `https://workspace.mcpruntime.org/buddy-data` and is used
-only by the MCP workload. Caddy forwards `/buddy/mcp` to MCP Runtime and
-rewrites the OAuth protected-resource metadata URL to a metadata alias under
-the Runtime-routed Buddy path. The OAuth resource identifier stays
-`https://workspace.mcpruntime.org/buddy/mcp`.
+only by the MCP workload. Caddy forwards `/buddy/mcp` and the OAuth
+protected-resource metadata URL to MCP Runtime. Buddy's MCPServer uses
+`auth.mode: oauth`, so the Runtime operator adds both paths to its ingress. The
+OAuth resource identifier stays `https://workspace.mcpruntime.org/buddy/mcp`.
 
 Install the latest shared Buddy skill in the current user's Codex, Claude Code,
 and Cursor directories by running `python3 scripts/install_skill.py` from the

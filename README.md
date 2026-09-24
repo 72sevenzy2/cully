@@ -38,9 +38,12 @@ Compose-only `private` network and is never published. Caddy routes
 `/buddy-data/*` to the API and allows only the MCP Runtime node's egress IP;
 the API also requires `BUDDY_DATA_API_TOKEN`. The allowlisted address must be
 updated if that node's public egress IP changes. The API intentionally disables
-interactive docs and emits no request access logs. Caddy also rewrites Buddy's
-OAuth protected-resource metadata URL to an alias under `/buddy/mcp`, which is
-the path Runtime routes to the Buddy server.
+interactive docs and emits no request access logs. The Buddy MCPServer declares
+OAuth mode with its canonical issuer and audience; MCP Runtime then routes both
+the MCP endpoint and its standard protected-resource metadata path to Buddy.
+Buddy's own FastMCP auth layer verifies the bearer token and passes the
+authenticated subject to the VM data API; the Runtime gateway stays disabled
+so it does not consume or strip that token.
 
 Deploy the VM-side database and API with Docker Compose. Copy
 `.env.example` to `.env`, set independent random values for the database

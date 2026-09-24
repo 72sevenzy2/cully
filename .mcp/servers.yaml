@@ -49,7 +49,9 @@ servers:
           requiredTrust: low
           sideEffect: read
       auth:
-        mode: none
+        mode: oauth
+        issuerURL: https://auth.mcpruntime.org/mcp-auth
+        audience: https://workspace.mcpruntime.org/buddy/mcp
         humanIDHeader: X-MCP-Human-ID
         agentIDHeader: X-MCP-Agent-ID
         teamIDHeader: X-MCP-Team-ID
