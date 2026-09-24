@@ -13,7 +13,7 @@ handle @buddy_data {
 }
 
 handle /.well-known/oauth-protected-resource/buddy/mcp {
-	rewrite * /buddy/mcp/.well-known/oauth-protected-resource
+	uri replace /.well-known/oauth-protected-resource/buddy/mcp /buddy/mcp/.well-known/oauth-protected-resource
 	reverse_proxy https://mcp.mcpruntime.org {
 		header_up Host mcp.mcpruntime.org
 	}
