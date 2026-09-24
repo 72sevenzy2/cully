@@ -2,13 +2,12 @@ version: v1
 servers:
     - name: buddy
       description: buddy MCP server
-      image: registry.mcpruntime.org/org/buddy-mcp
-      imageTag: latest
+      image: registry.mcpruntime.org/org/buddy-mcp/buddy
+      imageTag: ae58a7e
       route: /buddy/mcp
       publicPathPrefix: buddy
       port: 8080
-      scope: tenant
-      namespace: mcp-servers
+      replicas: 1
       envVars:
         - name: BUDDY_DATA_API_URL
           value: https://workspace.mcpruntime.org/buddy-data
@@ -17,6 +16,7 @@ servers:
           secretKeyRef:
             name: buddy-data-api-token
             key: BUDDY_DATA_API_TOKEN
+      namespace: mcp-servers
       tools:
         - name: buddy_log
           description: buddy_log tool
@@ -48,10 +48,20 @@ servers:
           sideEffect: read
       auth:
         mode: none
+        humanIDHeader: X-MCP-Human-ID
+        agentIDHeader: X-MCP-Agent-ID
+        teamIDHeader: X-MCP-Team-ID
+        sessionIDHeader: X-MCP-Agent-Session
+        tokenHeader: Authorization
       policy:
         mode: allow-list
         defaultDecision: deny
+        enforceOn: call_tool
+        policyVersion: v1
       session:
-        required: false
-      gateway:
-        enabled: false
+        store: kubernetes
+        headerName: X-MCP-Agent-Session
+        maxLifetime: 24h
+        idleTimeout: 1h
+        upstreamTokenHeader: Authorization
+      gateway: {}
