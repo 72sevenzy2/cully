@@ -15,21 +15,21 @@ services:
       retries: 5
     networks:
       - private
-  buddy:
-    build: .
+  data-api:
+    build:
+      context: .
+      dockerfile: Dockerfile.data-api
     restart: unless-stopped
     environment:
       BUDDY_DATABASE_URL: postgresql://buddy:${BUDDY_DB_PASSWORD}@db:5432/buddy
-      BUDDY_MCP_URL: ${BUDDY_MCP_URL:-https://workspace.mcpruntime.org/buddy/mcp}
-      MCP_AUTH_ISSUER: ${MCP_AUTH_ISSUER:-https://auth.mcpruntime.org/mcp-auth}
-      BUDDY_LOG_LEVEL: ${BUDDY_LOG_LEVEL:-INFO}
+      BUDDY_DATA_API_TOKEN: ${BUDDY_DATA_API_TOKEN:?set BUDDY_DATA_API_TOKEN}
     depends_on:
       db:
         condition: service_healthy
     expose:
-      - "8080"
+      - "8083"
     healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/.well-known/oauth-protected-resource/buddy/mcp', timeout=3)"]
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8083/healthz', timeout=3)"]
       interval: 20s
       timeout: 5s
       retries: 5

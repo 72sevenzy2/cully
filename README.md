@@ -19,25 +19,35 @@ retrieve its entries from each connected agent.
 
 The remote service is split into `buddy_mcp/settings.py` (configuration and
 time-zone policy), `auth.py` (token verification and subject lookup),
-`validation.py` (input checks), `repository.py` (owner-scoped PostgreSQL
-queries), and `server.py` (MCP tool handlers and application startup).
+`validation.py` (input checks), `repository.py` (authenticated HTTP client),
+`postgres_repository.py` (owner-scoped SQL), `data_api.py` (VM-side HTTP API),
+and `server.py` (MCP tool handlers and application startup).
 `buddy_service.py` remains a compatibility entry point. The unrelated local
 SQLite personal-life CLI remains in `buddy.py`.
 
-The app runs on the Buddy VM and Caddy routes the existing
-`workspace.mcpruntime.org` HTTPS host to `/buddy/mcp`; the Buddy MCP's internal
-HTTP path remains `/mcp`. Deployment uses Docker Compose and requires
-`BUDDY_DB_PASSWORD`. Copy
-`.env.example` to `.env`, set a unique long password, then run:
+The PostgreSQL database and the data API run on the Buddy VM. The MCP server
+runs separately in MCP Runtime and calls the VM API over HTTPS. Postgres is on
+the Compose-only `private` network and is never published. Caddy routes
+`/buddy-data/*` to the API and allows only the MCP Runtime node's egress IP;
+the API also requires `BUDDY_DATA_API_TOKEN`. The allowlisted address must be
+updated if that node's public egress IP changes. The API intentionally disables
+interactive docs and emits no request access logs.
+
+Deploy the VM-side database and API with Docker Compose. Copy
+`.env.example` to `.env`, set independent random values for the database
+password and API token, then run:
 
 ```sh
 docker compose up -d --build
 ```
 
-Do not expose PostgreSQL publicly. Put the MCP endpoint behind HTTPS and the
-configured OAuth authorization server. The server URL defaults to
-`https://workspace.mcpruntime.org/buddy/mcp`; its OAuth resource identifier
-must be registered with the authorization server before agents can connect.
+Deploy the MCP container in MCP Runtime with `BUDDY_DATA_API_URL` set to
+`https://workspace.mcpruntime.org/buddy-data` and the same
+`BUDDY_DATA_API_TOKEN` configured on the VM. Do not provide the MCP container
+with `BUDDY_DATABASE_URL` or `BUDDY_DB_PASSWORD`. The MCP endpoint remains
+behind HTTPS and the configured OAuth authorization server; its OAuth resource
+identifier must be registered with the authorization server before agents can
+connect.
 
 ## Timestamp behavior
 

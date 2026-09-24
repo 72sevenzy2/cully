@@ -30,7 +30,7 @@ def create_server(
 ) -> tuple[FastMCP, BuddyRepository]:
     """Build the MCP application and bind its persistence dependency."""
     settings = settings or BuddySettings.from_env()
-    repository = repository or BuddyRepository(settings.database_url)
+    repository = repository or BuddyRepository(settings.data_api_url, settings.data_api_token)
     app = FastMCP(
         "Buddy",
         instructions=(

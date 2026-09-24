@@ -1,12 +1,15 @@
 # Add inside the existing workspace.mcpruntime.org site block before its
-# catch-all reverse_proxy. The MCP SDK exposes protected-resource metadata
-# using the path from the configured public resource URL.
-handle /.well-known/oauth-protected-resource/buddy/mcp {
-	reverse_proxy buddy:8080
-}
-
-handle_path /buddy/* {
-	reverse_proxy buddy:8080
+# catch-all reverse_proxy. Buddy MCP runs in MCP Runtime; only its data API
+# remains on this VM next to PostgreSQL. Keep this allowlist aligned with the
+# MCP Runtime node's public egress IP and retain the service bearer token.
+@buddy_data path /buddy-data/*
+handle @buddy_data {
+	@runtime_node remote_ip 163.61.31.14
+	handle @runtime_node {
+		uri strip_prefix /buddy-data
+		reverse_proxy data-api:8083
+	}
+	respond "forbidden" 403
 }
 
 handle {
