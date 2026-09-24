@@ -3,7 +3,7 @@ servers:
     - name: buddy
       description: buddy MCP server
       image: registry.mcpruntime.org/org/buddy-mcp/buddy
-      imageTag: 5862c2b
+      imageTag: fb9c6c1
       route: /buddy/mcp
       publicPathPrefix: buddy
       port: 8080
@@ -50,13 +50,13 @@ servers:
           sideEffect: read
       auth:
         mode: oauth
-        issuerURL: https://auth.mcpruntime.org/mcp-auth
-        audience: https://workspace.mcpruntime.org/buddy/mcp
         humanIDHeader: X-MCP-Human-ID
         agentIDHeader: X-MCP-Agent-ID
         teamIDHeader: X-MCP-Team-ID
         sessionIDHeader: X-MCP-Agent-Session
         tokenHeader: Authorization
+        issuerURL: https://auth.mcpruntime.org/mcp-auth
+        audience: https://workspace.mcpruntime.org/buddy/mcp
       policy:
         mode: allow-list
         defaultDecision: deny
