@@ -11,6 +11,8 @@ servers:
       envVars:
         - name: BUDDY_DATA_API_URL
           value: https://workspace.mcpruntime.org/buddy-data
+        - name: BUDDY_PORT
+          value: "8080"
       secretEnvVars:
         - name: BUDDY_DATA_API_TOKEN
           secretKeyRef:
