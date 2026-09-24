@@ -6,7 +6,6 @@ import math
 import re
 from urllib.parse import urlparse
 
-
 MAX_TEXT = 8000
 MAX_TAGS = 20
 EMBEDDING_DIM = 1536
@@ -19,7 +18,7 @@ SECRET_PATTERNS = [
 
 def normalize_project_url(value: str) -> str:
     value = value.strip()
-    match = re.fullmatch(r"git@github\.com:([^/]+)/([^/]+?)(?:\.git)?", value, re.I)
+    match = re.fullmatch(r"git@github\.com:([^/]+)/([^/]+?)(?:\.git)?", value, re.IGNORECASE)
     if match:
         owner, repo = match.groups()
     else:

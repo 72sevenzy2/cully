@@ -11,7 +11,6 @@ from psycopg_pool import ConnectionPool
 
 from buddy_mcp.time_utils import format_timestamp
 
-
 SCHEMA = """
 CREATE EXTENSION IF NOT EXISTS vector;
 CREATE TABLE IF NOT EXISTS buddy_entries (

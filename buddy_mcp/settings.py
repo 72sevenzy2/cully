@@ -6,7 +6,6 @@ import os
 from dataclasses import dataclass
 from datetime import timedelta, timezone
 
-
 IST = timezone(timedelta(hours=5, minutes=30), name="IST")
 DEFAULT_ISSUER = "https://auth.mcpruntime.org/mcp-auth"
 DEFAULT_RESOURCE = "https://mcp.mcpruntime.org/buddy/mcp"
@@ -22,7 +21,7 @@ class BuddySettings:
     port: int = 8080
 
     @classmethod
-    def from_env(cls) -> "BuddySettings":
+    def from_env(cls) -> BuddySettings:
         data_api_url = os.environ.get("BUDDY_DATA_API_URL", "").strip()
         data_api_token = os.environ.get("BUDDY_DATA_API_TOKEN", "").strip()
         if not data_api_url or not data_api_token:

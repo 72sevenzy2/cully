@@ -5,9 +5,14 @@ The implementation lives in :mod:`buddy_mcp`; this module preserves the old
 """
 
 from buddy_mcp.server import main
-from buddy_mcp.validation import EMBEDDING_DIM, checked_embedding, checked_text, normalize_project_url
+from buddy_mcp.validation import (
+    EMBEDDING_DIM,
+    checked_embedding,
+    checked_text,
+    normalize_project_url,
+)
 
-__all__ = ["EMBEDDING_DIM", "checked_embedding", "checked_text", "normalize_project_url", "main"]
+__all__ = ["EMBEDDING_DIM", "checked_embedding", "checked_text", "main", "normalize_project_url"]
 
 
 if __name__ == "__main__":

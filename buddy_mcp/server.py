@@ -20,7 +20,6 @@ from buddy_mcp.validation import (
     normalize_project_url,
 )
 
-
 ENTRY_TYPES = {"work", "issue", "learning", "decision"}
 SECTIONS = {"personal", "company"}
 PERSONAL_CATEGORIES = {"career", "fitness", "relationship", "finance", "food", "water", "reading", "mood", "check-in", "other"}
