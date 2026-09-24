@@ -3,7 +3,7 @@ servers:
     - name: buddy
       description: buddy MCP server
       image: registry.mcpruntime.org/org/buddy-mcp/buddy
-      imageTag: ae58a7e
+      imageTag: 5862c2b
       route: /buddy/mcp
       publicPathPrefix: buddy
       port: 8080
