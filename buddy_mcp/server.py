@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 import re
 from uuid import UUID, uuid4
 
@@ -49,7 +50,7 @@ def create_server(
         ),
         host=settings.host,
         port=settings.port,
-        streamable_http_path="/mcp",
+        streamable_http_path=os.getenv("MCP_PATH", "/mcp").strip() or "/mcp",
     )
 
     @app.tool()
