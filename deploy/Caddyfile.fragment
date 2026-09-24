@@ -12,6 +12,13 @@ handle @buddy_data {
 	respond "forbidden" 403
 }
 
+handle /.well-known/oauth-protected-resource/buddy/mcp {
+	rewrite * /buddy/mcp/.well-known/oauth-protected-resource
+	reverse_proxy https://mcp.mcpruntime.org {
+		header_up Host mcp.mcpruntime.org
+	}
+}
+
 handle /buddy/* {
 	reverse_proxy https://mcp.mcpruntime.org {
 		header_up Host mcp.mcpruntime.org

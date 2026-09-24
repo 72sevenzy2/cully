@@ -31,13 +31,16 @@ and `server.py` (MCP tool handlers and application startup).
 short and practical: capture a win or concern the user brings up, and one useful
 next priority. Do not turn an ordinary log into a questionnaire.
 
-The PostgreSQL database and the data API run on the Buddy VM. The MCP server
-runs separately in MCP Runtime and calls the VM API over HTTPS. Postgres is on
-the Compose-only `private` network and is never published. Caddy routes
+The PostgreSQL database and the data API run on the Buddy VM. MCP Runtime hosts
+the Buddy MCP server, which calls the VM API over HTTPS; it has no database
+credentials or dependency on Runtime's internal services. Postgres is on the
+Compose-only `private` network and is never published. Caddy routes
 `/buddy-data/*` to the API and allows only the MCP Runtime node's egress IP;
 the API also requires `BUDDY_DATA_API_TOKEN`. The allowlisted address must be
 updated if that node's public egress IP changes. The API intentionally disables
-interactive docs and emits no request access logs.
+interactive docs and emits no request access logs. Caddy also rewrites Buddy's
+OAuth protected-resource metadata URL to an alias under `/buddy/mcp`, which is
+the path Runtime routes to the Buddy server.
 
 Deploy the VM-side database and API with Docker Compose. Copy
 `.env.example` to `.env`, set independent random values for the database

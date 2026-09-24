@@ -8,6 +8,7 @@ from uuid import UUID, uuid4
 
 from mcp.server.auth.settings import AuthSettings
 from mcp.server.fastmcp import FastMCP
+from starlette.responses import JSONResponse
 
 from buddy_mcp.auth import BuddyTokenVerifier, current_owner
 from buddy_mcp.repository import BuddyRepository
@@ -52,6 +53,22 @@ def create_server(
         port=settings.port,
         streamable_http_path=os.getenv("MCP_PATH", "/mcp").strip() or "/mcp",
     )
+
+    @app.custom_route(
+        "/buddy/mcp/.well-known/oauth-protected-resource",
+        methods=["GET"],
+        include_in_schema=False,
+    )
+    async def protected_resource_metadata_alias(_request):
+        """Expose OAuth metadata through Runtime's routed Buddy path prefix."""
+        return JSONResponse(
+            {
+                "resource": settings.resource,
+                "authorization_servers": [settings.issuer],
+                "scopes_supported": ["tools:read"],
+                "bearer_methods_supported": ["header"],
+            }
+        )
 
     @app.tool()
     def buddy_log(
