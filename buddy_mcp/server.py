@@ -21,6 +21,8 @@ from buddy_mcp.validation import (
 
 
 ENTRY_TYPES = {"work", "issue", "learning", "decision"}
+SECTIONS = {"personal", "company"}
+PERSONAL_CATEGORIES = {"career", "fitness", "relationship", "finance", "food", "water", "reading", "mood", "check-in", "other"}
 ASSISTANT_PATTERN = re.compile(r"(?i)(codex|claude|cursor|chatgpt|other)(?:[- ][a-z0-9_.-]{1,40})?")
 
 
@@ -34,8 +36,9 @@ def create_server(
     app = FastMCP(
         "Buddy",
         instructions=(
-            "Shared work memory for GitHub projects. Record concise work, approach, "
-            "outcomes, issues, lessons, and next steps. Search before answering memory questions."
+            "Shared Personal and Company memory. Every record is sectioned as personal or company. "
+            "Use categories for personal notes and a GitHub project URL when company work belongs "
+            "to a repository. Search within the requested section before answering memory questions."
         ),
         token_verifier=BuddyTokenVerifier(settings.issuer, settings.resource),
         auth=AuthSettings(
@@ -51,10 +54,12 @@ def create_server(
 
     @app.tool()
     def buddy_log(
-        project_url: str,
         summary: str,
-        approach: str,
         assistant: str,
+        section: str,
+        project_url: str | None = None,
+        category: str | None = None,
+        approach: str | None = None,
         entry_type: str = "work",
         outcome: str | None = None,
         issue: str | None = None,
@@ -64,9 +69,13 @@ def create_server(
         embedding: list[float] | None = None,
         occurred_at: str | None = None,
     ) -> dict:
-        """Save a work update, issue, learning, or decision to shared Buddy memory."""
+        """Save a Personal or Company memory entry. Choose a section; project_url is optional for personal notes."""
         if entry_type not in ENTRY_TYPES:
             raise ValueError("entry_type must be work, issue, learning, or decision")
+        if section not in SECTIONS:
+            raise ValueError("section must be personal or company")
+        if category and category not in PERSONAL_CATEGORIES:
+            raise ValueError("category must be one of: " + ", ".join(sorted(PERSONAL_CATEGORIES)))
         if not ASSISTANT_PATTERN.fullmatch(assistant.strip()):
             raise ValueError("assistant must identify Codex, Claude, Cursor, ChatGPT, or other")
         tag_list = [str(tag).strip().lower()[:64] for tag in (tags or []) if str(tag).strip()]
@@ -75,10 +84,12 @@ def create_server(
         when = parse_timestamp(occurred_at, field="occurred_at") if occurred_at else now_ist()
         values = {
             "id": uuid4(),
-            "project_url": normalize_project_url(project_url),
+            "project_url": normalize_project_url(project_url) if project_url else None,
+            "section": section,
+            "category": category,
             "entry_type": entry_type,
             "summary": checked_text("summary", summary, required=True),
-            "approach": checked_text("approach", approach, required=True),
+            "approach": checked_text("approach", approach),
             "outcome": checked_text("outcome", outcome),
             "issue": checked_text("issue", issue),
             "learning": checked_text("learning", learning),
@@ -95,17 +106,23 @@ def create_server(
         query: str = "",
         project_url: str | None = None,
         entry_type: str | None = None,
+        section: str | None = None,
+        category: str | None = None,
         since: str | None = None,
         limit: int = 20,
         query_embedding: list[float] | None = None,
     ) -> list[dict]:
-        """Search by words and optionally by client-generated vector embeddings."""
+        """Search by words, section, or category and optionally by client-generated vector embeddings."""
         query = checked_text("query", query) or ""
         embedding = checked_embedding(query_embedding)
         if not query and not embedding:
             raise ValueError("provide query text or a query_embedding")
         if entry_type and entry_type not in ENTRY_TYPES:
             raise ValueError("invalid entry_type")
+        if section and section not in SECTIONS:
+            raise ValueError("section must be personal or company")
+        if category and category not in PERSONAL_CATEGORIES:
+            raise ValueError("invalid category")
         since_at = parse_timestamp(since, field="since") if since else None
         return repository.search_entries(
             current_owner(),
@@ -113,6 +130,8 @@ def create_server(
             embedding=embedding,
             project=normalize_project_url(project_url) if project_url else None,
             entry_type=entry_type,
+            section=section,
+            category=category,
             since=since_at,
             limit=max(1, min(int(limit), 50)),
         )
@@ -121,15 +140,23 @@ def create_server(
     def buddy_recent(
         project_url: str | None = None,
         entry_type: str | None = None,
+        section: str | None = None,
+        category: str | None = None,
         limit: int = 20,
     ) -> list[dict]:
-        """Show the authenticated user's latest entries, optionally scoped to a project."""
+        """Show recent entries, optionally scoped to a Personal or Company section and category."""
         if entry_type and entry_type not in ENTRY_TYPES:
             raise ValueError("invalid entry_type")
+        if section and section not in SECTIONS:
+            raise ValueError("section must be personal or company")
+        if category and category not in PERSONAL_CATEGORIES:
+            raise ValueError("invalid category")
         return repository.recent_entries(
             current_owner(),
             project=normalize_project_url(project_url) if project_url else None,
             entry_type=entry_type,
+            section=section,
+            category=category,
             limit=max(1, min(int(limit), 50)),
         )
 
@@ -147,6 +174,8 @@ def create_server(
         issue: str | None = None,
         learning: str | None = None,
         next_steps: str | None = None,
+        section: str | None = None,
+        category: str | None = None,
         tags: list[str] | None = None,
         embedding: list[float] | None = None,
     ) -> dict | None:
@@ -159,8 +188,14 @@ def create_server(
             "issue": issue,
             "learning": learning,
             "next_steps": next_steps,
+            "section": section,
+            "category": category,
         }.items():
             if value is not None:
+                if name == "section" and value not in SECTIONS:
+                    raise ValueError("section must be personal or company")
+                if name == "category" and value not in PERSONAL_CATEGORIES:
+                    raise ValueError("invalid category")
                 fields[name] = checked_text(name, value, required=name in {"summary", "approach"})
         if tags is not None:
             if len(tags) > MAX_TAGS:
@@ -181,9 +216,11 @@ def create_server(
         return {"deleted": deleted, "id": str(identifier)}
 
     @app.tool()
-    def buddy_projects(limit: int = 50) -> list[dict]:
+    def buddy_projects(limit: int = 50, section: str | None = None) -> list[dict]:
         """List the authenticated user's projects with recent Buddy activity."""
-        return repository.project_summaries(current_owner(), max(1, min(int(limit), 100)))
+        if section and section not in SECTIONS:
+            raise ValueError("section must be personal or company")
+        return repository.project_summaries(current_owner(), max(1, min(int(limit), 100)), section)
 
     return app, repository
 

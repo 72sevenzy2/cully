@@ -30,6 +30,8 @@ class SearchRequest(StrictModel):
     embedding: str | None = None
     project: str | None = None
     entry_type: str | None = None
+    section: str | None = Field(default=None, pattern="^(personal|company)$")
+    category: str | None = Field(default=None, max_length=64)
     since: datetime | None = None
     limit: int = Field(ge=1, le=50)
 
@@ -38,6 +40,8 @@ class RecentRequest(StrictModel):
     owner_subject: str = Field(min_length=1, max_length=512)
     project: str | None = None
     entry_type: str | None = None
+    section: str | None = Field(default=None, pattern="^(personal|company)$")
+    category: str | None = Field(default=None, max_length=64)
     limit: int = Field(ge=1, le=50)
 
 
@@ -58,6 +62,7 @@ class OwnerRequest(StrictModel):
 class ProjectsRequest(StrictModel):
     owner_subject: str = Field(min_length=1, max_length=512)
     limit: int = Field(ge=1, le=100)
+    section: str | None = Field(default=None, pattern="^(personal|company)$")
 
 
 def create_app(repository: BuddyRepository | None = None, service_token: str | None = None) -> FastAPI:
@@ -101,14 +106,15 @@ def create_app(repository: BuddyRepository | None = None, service_token: str | N
         return store.search_entries(
             request.owner_subject, query=request.query, embedding=request.embedding,
             project=request.project, entry_type=request.entry_type, since=request.since,
-            limit=request.limit,
+            section=request.section, category=request.category, limit=request.limit,
         )
 
     @app.post("/v1/entries/recent", dependencies=[Depends(require_service)])
     async def recent_entries(request: RecentRequest) -> list[dict[str, Any]]:
         return store.recent_entries(
             request.owner_subject, project=request.project,
-            entry_type=request.entry_type, limit=request.limit,
+            entry_type=request.entry_type, section=request.section,
+            category=request.category, limit=request.limit,
         )
 
     @app.post("/v1/entries/get", dependencies=[Depends(require_service)])
@@ -128,7 +134,7 @@ def create_app(repository: BuddyRepository | None = None, service_token: str | N
 
     @app.post("/v1/projects", dependencies=[Depends(require_service)])
     async def projects(request: ProjectsRequest) -> list[dict[str, Any]]:
-        return store.project_summaries(request.owner_subject, request.limit)
+        return store.project_summaries(request.owner_subject, request.limit, request.section)
 
     return app
 

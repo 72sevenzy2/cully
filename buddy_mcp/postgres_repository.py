@@ -17,7 +17,9 @@ CREATE EXTENSION IF NOT EXISTS vector;
 CREATE TABLE IF NOT EXISTS buddy_entries (
   id uuid PRIMARY KEY,
   owner_subject text NOT NULL,
-  project_url text NOT NULL,
+  section text NOT NULL DEFAULT 'company' CHECK (section IN ('personal','company')),
+  project_url text,
+  category text,
   theme text NOT NULL DEFAULT 'mcp',
   entry_type text NOT NULL CHECK (entry_type IN ('work','issue','learning','decision')),
   summary text NOT NULL,
@@ -43,9 +45,17 @@ CREATE TABLE IF NOT EXISTS buddy_entries (
 );
 ALTER TABLE buddy_entries ADD COLUMN IF NOT EXISTS embedding vector(1536);
 ALTER TABLE buddy_entries ADD COLUMN IF NOT EXISTS owner_subject text;
+ALTER TABLE buddy_entries ADD COLUMN IF NOT EXISTS section text NOT NULL DEFAULT 'company';
+ALTER TABLE buddy_entries ADD COLUMN IF NOT EXISTS category text;
+ALTER TABLE buddy_entries ALTER COLUMN project_url DROP NOT NULL;
+DO $$ BEGIN
+  ALTER TABLE buddy_entries ADD CONSTRAINT buddy_entries_section_check CHECK (section IN ('personal','company'));
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
 CREATE INDEX IF NOT EXISTS buddy_entries_search_idx ON buddy_entries USING gin(search_vector);
 CREATE INDEX IF NOT EXISTS buddy_entries_project_time_idx ON buddy_entries(project_url, occurred_at DESC);
 CREATE INDEX IF NOT EXISTS buddy_entries_type_idx ON buddy_entries(entry_type, occurred_at DESC);
+CREATE INDEX IF NOT EXISTS buddy_entries_section_time_idx ON buddy_entries(section, occurred_at DESC);
 CREATE INDEX IF NOT EXISTS buddy_entries_owner_project_time_idx ON buddy_entries(owner_subject, project_url, occurred_at DESC);
 CREATE INDEX IF NOT EXISTS buddy_entries_embedding_idx ON buddy_entries USING hnsw (embedding vector_cosine_ops) WHERE embedding IS NOT NULL;
 """
@@ -57,6 +67,8 @@ UPDATABLE_FIELDS = {
     "issue",
     "learning",
     "next_steps",
+    "section",
+    "category",
     "tags",
     "embedding",
     "updated_at",
@@ -101,9 +113,9 @@ class BuddyRepository:
     def create_entry(self, owner_subject: str, values: dict[str, Any]) -> dict[str, Any]:
         row = self._fetch_one(
             """INSERT INTO buddy_entries
-               (id,owner_subject,project_url,entry_type,summary,approach,outcome,issue,learning,next_steps,assistant,tags,embedding,occurred_at)
-               VALUES (%(id)s,%(owner_subject)s,%(project_url)s,%(entry_type)s,%(summary)s,%(approach)s,%(outcome)s,%(issue)s,%(learning)s,%(next_steps)s,%(assistant)s,%(tags)s,%(embedding)s::vector,%(occurred_at)s)
-               RETURNING id,project_url,theme,entry_type,summary,approach,outcome,issue,learning,next_steps,assistant,tags,occurred_at,created_at,updated_at""",
+               (id,owner_subject,section,project_url,category,entry_type,summary,approach,outcome,issue,learning,next_steps,assistant,tags,embedding,occurred_at)
+               VALUES (%(id)s,%(owner_subject)s,%(section)s,%(project_url)s,%(category)s,%(entry_type)s,%(summary)s,%(approach)s,%(outcome)s,%(issue)s,%(learning)s,%(next_steps)s,%(assistant)s,%(tags)s,%(embedding)s::vector,%(occurred_at)s)
+               RETURNING id,owner_subject,section,project_url,category,theme,entry_type,summary,approach,outcome,issue,learning,next_steps,assistant,tags,occurred_at,created_at,updated_at""",
             {**values, "owner_subject": owner_subject},
         )
         return as_record(row)
@@ -116,17 +128,21 @@ class BuddyRepository:
         embedding: str | None,
         project: str | None,
         entry_type: str | None,
+        section: str | None,
+        category: str | None,
         since: datetime | None,
         limit: int,
     ) -> list[dict[str, Any]]:
         rows = self._fetch_all(
-            """SELECT id,project_url,theme,entry_type,summary,approach,outcome,issue,learning,next_steps,assistant,tags,occurred_at,created_at,updated_at,
+            """SELECT id,section,project_url,category,theme,entry_type,summary,approach,outcome,issue,learning,next_steps,assistant,tags,occurred_at,created_at,updated_at,
                       (CASE WHEN %(embedding)s::vector IS NOT NULL AND embedding IS NOT NULL
                             THEN 1 - (embedding <=> %(embedding)s::vector) ELSE 0 END
                        + CASE WHEN %(query)s <> ''
                               THEN ts_rank_cd(search_vector, websearch_to_tsquery('english', %(query)s)) ELSE 0 END) AS search_rank
                FROM buddy_entries
                WHERE owner_subject=%(owner_subject)s
+                 AND (%(section)s::text IS NULL OR section=%(section)s::text)
+                 AND (%(category)s::text IS NULL OR category=%(category)s::text)
                  AND ((%(query)s <> '' AND search_vector @@ websearch_to_tsquery('english', %(query)s))
                    OR (%(embedding)s::vector IS NOT NULL AND embedding IS NOT NULL))
                  AND (%(project)s::text IS NULL OR project_url=%(project)s::text)
@@ -139,6 +155,8 @@ class BuddyRepository:
                 "embedding": embedding,
                 "project": project,
                 "entry_type": entry_type,
+                "section": section,
+                "category": category,
                 "since": since,
                 "limit": limit,
             },
@@ -146,15 +164,18 @@ class BuddyRepository:
         return [as_record(row) for row in rows]
 
     def recent_entries(
-        self, owner_subject: str, *, project: str | None, entry_type: str | None, limit: int
+        self, owner_subject: str, *, project: str | None, entry_type: str | None,
+        section: str | None, category: str | None, limit: int
     ) -> list[dict[str, Any]]:
         rows = self._fetch_all(
             """SELECT * FROM buddy_entries
                WHERE owner_subject=%(owner_subject)s
                  AND (%(project)s::text IS NULL OR project_url=%(project)s::text)
                  AND (%(entry_type)s::text IS NULL OR entry_type=%(entry_type)s::text)
+                 AND (%(section)s::text IS NULL OR section=%(section)s::text)
+                 AND (%(category)s::text IS NULL OR category=%(category)s::text)
                ORDER BY occurred_at DESC LIMIT %(limit)s""",
-            {"owner_subject": owner_subject, "project": project, "entry_type": entry_type, "limit": limit},
+            {"owner_subject": owner_subject, "project": project, "entry_type": entry_type, "section": section, "category": category, "limit": limit},
         )
         return [as_record(row) for row in rows]
 
@@ -187,12 +208,12 @@ class BuddyRepository:
         )
         return row is not None
 
-    def project_summaries(self, owner_subject: str, limit: int) -> list[dict[str, Any]]:
+    def project_summaries(self, owner_subject: str, limit: int, section: str | None = None) -> list[dict[str, Any]]:
         rows = self._fetch_all(
-            """SELECT project_url,count(*) AS entry_count,max(occurred_at) AS last_activity
-               FROM buddy_entries WHERE owner_subject=%s
-               GROUP BY project_url ORDER BY last_activity DESC LIMIT %s""",
-            (owner_subject, limit),
+            """SELECT project_url,section,count(*) AS entry_count,max(occurred_at) AS last_activity
+               FROM buddy_entries WHERE owner_subject=%s AND project_url IS NOT NULL AND (%s::text IS NULL OR section=%s::text)
+               GROUP BY project_url,section ORDER BY last_activity DESC LIMIT %s""",
+            (owner_subject, section, section, limit),
         )
         return [as_record(row) for row in rows]
 

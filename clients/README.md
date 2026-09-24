@@ -3,7 +3,10 @@
 Buddy's Streamable HTTP endpoint is `https://workspace.mcpruntime.org/buddy/mcp`.
 Clients use the existing MCP OAuth issuer `https://auth.mcpruntime.org/mcp-auth`.
 OAuth discovery depends on the resource identifier being allowed by that issuer.
-The resource requested by Buddy is the full endpoint URL above.
+The resource requested by Buddy is the full endpoint URL above. The data API
+is on the same host at `https://workspace.mcpruntime.org/buddy-data` and is
+used only by the MCP workload. Caddy forwards `/buddy/mcp` to the Runtime MCP
+ingress while keeping the existing OAuth resource identifier stable.
 
 Install the latest shared Buddy skill in the current user's Codex, Claude Code,
 and Cursor directories by running `python3 scripts/install_skill.py` from the

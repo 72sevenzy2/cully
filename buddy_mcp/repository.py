@@ -43,8 +43,8 @@ class BuddyRepository:
     def search_entries(self, owner_subject: str, **params: Any) -> list[dict[str, Any]]:
         return self._request("POST", "v1/entries/search", json={"owner_subject": owner_subject, **params})
 
-    def recent_entries(self, owner_subject: str, *, project: str | None, entry_type: str | None, limit: int) -> list[dict[str, Any]]:
-        return self._request("POST", "v1/entries/recent", json={"owner_subject": owner_subject, "project": project, "entry_type": entry_type, "limit": limit})
+    def recent_entries(self, owner_subject: str, *, project: str | None, entry_type: str | None, section: str | None, category: str | None, limit: int) -> list[dict[str, Any]]:
+        return self._request("POST", "v1/entries/recent", json={"owner_subject": owner_subject, "project": project, "entry_type": entry_type, "section": section, "category": category, "limit": limit})
 
     def get_entry(self, owner_subject: str, identifier: UUID) -> dict[str, Any] | None:
         return self._request("POST", "v1/entries/get", json={"owner_subject": owner_subject, "identifier": str(identifier)})
@@ -56,8 +56,8 @@ class BuddyRepository:
         result = self._request("DELETE", f"v1/entries/{identifier}", json={"owner_subject": owner_subject})
         return bool(result["deleted"])
 
-    def project_summaries(self, owner_subject: str, limit: int) -> list[dict[str, Any]]:
-        return self._request("POST", "v1/projects", json={"owner_subject": owner_subject, "limit": limit})
+    def project_summaries(self, owner_subject: str, limit: int, section: str | None = None) -> list[dict[str, Any]]:
+        return self._request("POST", "v1/projects", json={"owner_subject": owner_subject, "limit": limit, "section": section})
 
 
 def _json_safe(value: Any) -> Any:

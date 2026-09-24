@@ -1,6 +1,6 @@
 # Buddy
 
-Buddy is shared work memory for coding agents. It provides a remote,
+Buddy is shared Personal and Company memory for coding agents. It provides a remote,
 OAuth-protected MCP service and a Buddy skill that tells agents how to capture
 and retrieve work across projects and devices. The service stores data and
 performs search; the connected agent's model interprets it and writes answers.
@@ -11,8 +11,13 @@ The VM does not run a language model.
 Buddy uses PostgreSQL with full-text search and pgvector. The service exposes
 `buddy_log`, `buddy_search`, `buddy_recent`, `buddy_get`, `buddy_update`,
 `buddy_delete`, and `buddy_projects`. Entries use normalized GitHub repository
-URLs as project keys and `mcp` as the theme. Each entry can retain the assistant,
-summary, approach, outcome, issue, learning, next steps, and tags.
+URLs as project keys and `mcp` as the theme. Every entry belongs to the `personal`
+or `company` section, which can be selected when logging, searching, or reviewing
+recent activity. Personal entries can use categories such as career, fitness,
+relationships, finance, food, water, reading, mood, or check-in; they do not need
+a project URL. Company entries can be tied to a GitHub repository. Each entry
+can retain the assistant, summary, approach, outcome, issue, learning, next
+steps, and tags.
 
 Entries are isolated by the authenticated OAuth subject; the same identity can
 retrieve its entries from each connected agent.
@@ -22,8 +27,9 @@ time-zone policy), `auth.py` (token verification and subject lookup),
 `validation.py` (input checks), `repository.py` (authenticated HTTP client),
 `postgres_repository.py` (owner-scoped SQL), `data_api.py` (VM-side HTTP API),
 and `server.py` (MCP tool handlers and application startup).
-`buddy_service.py` remains a compatibility entry point. The unrelated local
-SQLite personal-life CLI remains in `buddy.py`.
+`buddy_service.py` remains a compatibility entry point. Personal check-ins are
+short and practical: capture a win or concern the user brings up, and one useful
+next priority. Do not turn an ordinary log into a questionnaire.
 
 The PostgreSQL database and the data API run on the Buddy VM. The MCP server
 runs separately in MCP Runtime and calls the VM API over HTTPS. Postgres is on
@@ -58,9 +64,8 @@ timestamps without one are rejected. PostgreSQL stores these values as
 `timestamptz`, which preserves the instant rather than the submitted timezone
 label. The service converts database values to IST when it returns them.
 
-The local CLI also uses IST for new entries and output. For `--at`, pass an ISO
-timestamp with an offset, for example `2026-09-23T15:00:00+05:30`. A timestamp
-without an offset is interpreted as IST by the local CLI.
+For `occurred_at`, pass an ISO timestamp with an offset, for example
+`2026-09-23T15:00:00+05:30`.
 
 ## Agent skill
 
@@ -69,19 +74,6 @@ agent's remote MCP client to use the HTTPS endpoint above with OAuth. The skill
 normalizes the current Git remote, records substantive work and useful
 blockers/lessons, and searches shared memory before answering history questions.
 See `clients/README.md` for per-agent configuration and setup.
-
-## Current local CLI
-
-```sh
-python3 buddy.py ask --mode quick
-python3 buddy.py log career "Finished the API migration; next: document rollout"
-python3 buddy.py search "API migration"
-python3 buddy.py summary
-```
-
-SQLite data is created locally at `memory/buddy_memory.db` by default. That
-directory is intentionally excluded from Git. Use `--memory /path/to/file.db`
-to select another local database. Buddy never starts or hosts a language model.
 
 ## Shared Buddy direction
 

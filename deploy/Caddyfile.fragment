@@ -12,6 +12,12 @@ handle @buddy_data {
 	respond "forbidden" 403
 }
 
+handle /buddy/* {
+	reverse_proxy https://mcp.mcpruntime.org {
+		header_up Host mcp.mcpruntime.org
+	}
+}
+
 handle {
 	reverse_proxy vikunja:3456
 }
