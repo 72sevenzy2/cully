@@ -25,3 +25,34 @@ jobs:
         run: ruff check .
       - name: Test
         run: python -m pytest -q
+
+  e2e:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: pgvector/pgvector:pg17
+        env:
+          POSTGRES_DB: buddy
+          POSTGRES_USER: buddy
+          POSTGRES_PASSWORD: buddy
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U buddy -d buddy"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+    env:
+      BUDDY_E2E_DATABASE_URL: postgresql://buddy:buddy@127.0.0.1:5432/buddy
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+      - name: Install project and test tools
+        run: python -m pip install --upgrade pip && python -m pip install -e . pytest
+      - name: End-to-end test
+        run: python -m pytest -q -rs tests/test_e2e.py

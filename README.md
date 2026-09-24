@@ -90,6 +90,21 @@ Buddy stores and searches vectors but does not generate them or run a model.
 Without client-supplied vectors, search uses PostgreSQL full-text search. Agent
 Flightdeck integration is deferred until the Buddy API and data model mature.
 
+## Tests
+
+`python -m pytest -q` runs the unit tests. `tests/test_e2e.py` drives the real
+MCP server, data API, and PostgreSQL through an MCP client, with a local OAuth
+issuer standing in for the authorization server. It runs when
+`BUDDY_E2E_DATABASE_URL` points at a pgvector database, and CI runs it against a
+`pgvector/pgvector:pg17` service:
+
+```sh
+docker run -d --rm -p 5432:5432 -e POSTGRES_DB=buddy -e POSTGRES_USER=buddy \
+  -e POSTGRES_PASSWORD=buddy pgvector/pgvector:pg17
+BUDDY_E2E_DATABASE_URL=postgresql://buddy:buddy@127.0.0.1:5432/buddy \
+  python -m pytest -q tests/test_e2e.py
+```
+
 ## Local data safety
 
 Do not commit personal databases, environment files, API tokens, OAuth secrets,
