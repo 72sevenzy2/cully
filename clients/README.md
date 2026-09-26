@@ -58,3 +58,21 @@ The authorization service must issue tokens for exactly
 with the current authorization issuer. If the public Buddy URL changes, update
 the issuer allowlist and service audience together. Keep PostgreSQL private;
 only expose the HTTPS MCP endpoint through Caddy.
+
+## Protected resource host mismatch
+
+If a client reports that Buddy's protected resource uses
+`workspace.mcpruntime.org` while the configured endpoint uses
+`mcp.mcpruntime.org`, inspect the public metadata response:
+
+```sh
+curl -fsS https://mcp.mcpruntime.org/.well-known/oauth-protected-resource/buddy/mcp | jq -r .resource
+```
+
+It should return `https://mcp.mcpruntime.org/buddy/mcp`. Keep the server's
+`auth.audience` and the authorization server's resource registration set to that
+full endpoint. If the running MCPServer still advertises the workspace host,
+redeploy Buddy from `.mcp/servers.yaml` so the stored `spec.auth.audience` is
+updated, then remove and add the Buddy MCP connection again to refresh cached
+OAuth discovery. Keep `https://workspace.mcpruntime.org/buddy-data` as the
+workload's data API URL; it is separate from the client-facing OAuth resource.

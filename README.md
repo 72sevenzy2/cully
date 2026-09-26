@@ -59,7 +59,9 @@ Deploy the MCP container in MCP Runtime with `BUDDY_DATA_API_URL` set to
 with `BUDDY_DATABASE_URL` or `BUDDY_DB_PASSWORD`. The MCP endpoint remains
 behind HTTPS and the configured OAuth authorization server; its OAuth resource
 identifier must be registered with the authorization server before agents can
-connect.
+connect. Use `https://mcp.mcpruntime.org/buddy/mcp` as the OAuth resource. The
+`workspace.mcpruntime.org` host serves Buddy's data API and is not advertised to
+MCP clients as the OAuth resource.
 
 ## Timestamp behavior
 

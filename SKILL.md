@@ -19,6 +19,12 @@ Buddy is shared memory for the user's Personal and Company work across coding ag
 - Use `buddy_get` to inspect a record before changing it. Use `buddy_update` for corrections. Use `buddy_delete` only when the user explicitly asks to remove that specific record.
 - Do not claim a write succeeded unless `buddy_log` or `buddy_update` returns success. If Buddy is unavailable, report that and continue the user's coding work without silently substituting a local-only log.
 
+## Buddy OAuth connection failures
+
+- Use `https://mcp.mcpruntime.org/buddy/mcp` for the MCP client endpoint and as Buddy's full OAuth resource identifier. The `workspace.mcpruntime.org` host serves the workload's data API.
+- For a protected-resource mismatch, inspect `https://mcp.mcpruntime.org/.well-known/oauth-protected-resource/buddy/mcp`. Its `resource` value must match the full MCP endpoint. If a running server reports the workspace host, redeploy Buddy with the canonical `auth.audience` from `.mcp/servers.yaml`, then reconnect the client to refresh OAuth discovery.
+- Keep the authorization issuer separate from the resource identifier. Correct a resource-host mismatch in the MCPServer audience and by refreshing the client's OAuth discovery cache; the issuer identifies the authorization service.
+
 ## Record shape
 
 Choose `entry_type` from `work`, `issue`, `learning`, or `decision`. Useful records answer: what happened, why this approach was chosen, what worked or failed, and what should happen next. Keep summaries independently understandable because the agent may retrieve one entry without surrounding conversation.
