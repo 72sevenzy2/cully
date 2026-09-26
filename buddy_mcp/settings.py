@@ -11,6 +11,14 @@ DEFAULT_ISSUER = "https://auth.mcpruntime.org/mcp-auth"
 DEFAULT_RESOURCE = "https://mcp.mcpruntime.org/buddy/mcp"
 
 
+def _first_env(*names: str, default: str) -> str:
+    for name in names:
+        value = os.getenv(name, "").strip()
+        if value:
+            return value.rstrip("/")
+    return default
+
+
 @dataclass(frozen=True)
 class BuddySettings:
     data_api_url: str
@@ -29,8 +37,11 @@ class BuddySettings:
         return cls(
             data_api_url=data_api_url,
             data_api_token=data_api_token,
-            issuer=os.getenv("MCP_AUTH_ISSUER", DEFAULT_ISSUER).rstrip("/"),
-            resource=os.getenv("BUDDY_MCP_URL", DEFAULT_RESOURCE).rstrip("/"),
+            issuer=_first_env("MCP_AUTH_ISSUER", default=DEFAULT_ISSUER),
+            # MCP Runtime derives the OAuth resource from the server's public
+            # route and injects it as MCP_AUTH_RESOURCE; BUDDY_MCP_URL is only
+            # for running outside the platform.
+            resource=_first_env("MCP_AUTH_RESOURCE", "BUDDY_MCP_URL", default=DEFAULT_RESOURCE),
             host=os.getenv("BUDDY_HOST", "0.0.0.0"),
             port=int(os.getenv("BUDDY_PORT", "8080")),
         )
