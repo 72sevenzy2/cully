@@ -13,8 +13,6 @@ servers:
           value: https://workspace.mcpruntime.org/buddy-data
         - name: BUDDY_PORT
           value: "8080"
-        - name: BUDDY_MCP_URL
-          value: https://mcp.mcpruntime.org/buddy/mcp
       secretEnvVars:
         - name: BUDDY_DATA_API_TOKEN
           secretKeyRef:
