@@ -3,7 +3,7 @@ servers:
     - name: buddy
       description: buddy MCP server
       image: registry.mcpruntime.org/org/buddy-mcp/buddy
-      imageTag: fb9c6c1
+      imageTag: bb82270
       route: /buddy/mcp
       publicPathPrefix: buddy
       port: 8080
@@ -57,15 +57,22 @@ servers:
         tokenHeader: Authorization
         issuerURL: https://auth.mcpruntime.org/mcp-auth
         audience: https://mcp.mcpruntime.org/buddy/mcp
+      # Observe mode: record decisions for analytics without deny-by-default.
+      # Switch to allow-list + deny when adapter grants should enforce access.
       policy:
-        mode: allow-list
-        defaultDecision: deny
+        mode: observe
+        defaultDecision: allow
         enforceOn: call_tool
         policyVersion: v1
       session:
-        store: kubernetes
+        store: memory
         headerName: X-MCP-Agent-Session
         maxLifetime: 24h
         idleTimeout: 1h
         upstreamTokenHeader: Authorization
-      gateway: {}
+      gateway:
+        enabled: true
+      # Explicit analytics so current (pre-#511) operator/runtime-api emit events.
+      # After #511 lands, omitting analytics is enough when the gateway is on.
+      analytics:
+        ingestURL: http://mcp-sentinel-ingest.mcp-sentinel.svc.cluster.local:8081/events
