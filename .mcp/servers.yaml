@@ -2,8 +2,8 @@ version: v1
 servers:
     - name: buddy
       description: buddy MCP server
-      image: registry.mcpruntime.org/org/buddy-mcp/buddy
-      imageTag: bb82270
+      image: registry.mcpruntime.org/buddy
+      imageTag: 1cdad78
       route: /buddy/mcp
       publicPathPrefix: buddy
       port: 8080
@@ -49,16 +49,9 @@ servers:
           requiredTrust: low
           sideEffect: read
       auth:
-        mode: oauth
-        humanIDHeader: X-MCP-Human-ID
-        agentIDHeader: X-MCP-Agent-ID
-        teamIDHeader: X-MCP-Team-ID
-        sessionIDHeader: X-MCP-Agent-Session
         tokenHeader: Authorization
         issuerURL: https://auth.mcpruntime.org/mcp-auth
         audience: https://mcp.mcpruntime.org/buddy/mcp
-      # Observe mode records decisions for analytics without deny-by-default.
-      # Use allow-list + deny when adapter grants should enforce access.
       policy:
         mode: observe
         defaultDecision: allow
@@ -66,7 +59,6 @@ servers:
         policyVersion: v1
       session:
         store: memory
-        headerName: X-MCP-Agent-Session
         maxLifetime: 24h
         idleTimeout: 1h
         upstreamTokenHeader: Authorization
@@ -77,5 +69,5 @@ servers:
         source: buddy-gateway
         eventType: mcp.request
         apiKeySecretRef:
-          name: buddy-analytics-creds
-          key: api-key
+            name: buddy-analytics-creds
+            key: api-key
