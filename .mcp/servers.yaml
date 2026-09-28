@@ -57,8 +57,8 @@ servers:
         tokenHeader: Authorization
         issuerURL: https://auth.mcpruntime.org/mcp-auth
         audience: https://mcp.mcpruntime.org/buddy/mcp
-      # Observe mode: record decisions for analytics without deny-by-default.
-      # Switch to allow-list + deny when adapter grants should enforce access.
+      # Observe mode records decisions for analytics without deny-by-default.
+      # Use allow-list + deny when adapter grants should enforce access.
       policy:
         mode: observe
         defaultDecision: allow
@@ -72,7 +72,10 @@ servers:
         upstreamTokenHeader: Authorization
       gateway:
         enabled: true
-      # Explicit analytics so current (pre-#511) operator/runtime-api emit events.
-      # After #511 lands, omitting analytics is enough when the gateway is on.
       analytics:
         ingestURL: http://mcp-sentinel-ingest.mcp-sentinel.svc.cluster.local:8081/events
+        source: buddy-gateway
+        eventType: mcp.request
+        apiKeySecretRef:
+          name: buddy-analytics-creds
+          key: api-key
