@@ -1,0 +1,68 @@
+name: Deploy
+
+# Publishes Buddy to the MCP Runtime public preview (platform.mcpruntime.org)
+# using the documented server-author flow: build image -> push -> deploy.
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-buddy
+  cancel-in-progress: false
+
+env:
+  MCP_RUNTIME_VERSION: v0.5.2
+  MCP_RUNTIME_SHA256: 3b26aadb20690acf778a036f657d41c6ea86305c4e621527fd7f06628c137ca9
+  MCP_PLATFORM_API_URL: https://platform.mcpruntime.org
+  SERVER_NAME: buddy
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: production
+    env:
+      MCP_PLATFORM_API_TOKEN: ${{ secrets.MCP_PLATFORM_API_TOKEN }}
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Install mcp-runtime CLI
+        run: |
+          curl -fsSL -o mcp-runtime \
+            "https://github.com/mcp-runtime/mcp-runtime/releases/download/${MCP_RUNTIME_VERSION}/mcp-runtime-linux-amd64"
+          echo "${MCP_RUNTIME_SHA256}  mcp-runtime" | sha256sum -c -
+          sudo install -m 0755 mcp-runtime /usr/local/bin/mcp-runtime
+          rm mcp-runtime
+          mcp-runtime --version
+
+      - name: Check platform credentials
+        run: |
+          if [ -z "${MCP_PLATFORM_API_TOKEN}" ]; then
+            echo "::error::MCP_PLATFORM_API_TOKEN secret is not set"
+            exit 1
+          fi
+          mcp-runtime auth status
+
+      - name: Validate metadata
+        run: mcp-runtime server validate --metadata-dir .mcp
+
+      - name: Build image
+        run: |
+          tag="$(git rev-parse --short=7 HEAD)"
+          mcp-runtime server build image "${SERVER_NAME}" --tag "${tag}" --platform linux/amd64 --metadata-dir .mcp
+          image="$(yq ".servers[] | select(.name == \"${SERVER_NAME}\") | .image + \":\" + .imageTag" .mcp/servers.yaml)"
+          echo "Built ${image}"
+          echo "IMAGE=${image}" >> "$GITHUB_ENV"
+
+      - name: Push image
+        run: mcp-runtime server push --scope org --image "${IMAGE}"
+
+      - name: Deploy server
+        run: mcp-runtime server deploy "${SERVER_NAME}" --scope org --metadata-dir .mcp --update
+
+      - name: Summary
+        run: echo "Deployed \`${SERVER_NAME}\` with image \`${IMAGE}\` to ${MCP_PLATFORM_API_URL}" >> "$GITHUB_STEP_SUMMARY"

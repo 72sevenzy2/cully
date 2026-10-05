@@ -2,7 +2,8 @@ version: v1
 servers:
     - name: buddy
       description: buddy MCP server
-      image: registry.mcpruntime.org/org/buddy-mcp/buddy
+      scope: org
+      image: registry.mcpruntime.org/org/buddy
       imageTag: 1cdad78
       route: /buddy/mcp
       publicPathPrefix: buddy
@@ -49,7 +50,6 @@ servers:
           requiredTrust: low
           sideEffect: read
       auth:
-        mode: oauth
         humanIDHeader: X-MCP-Human-ID
         agentIDHeader: X-MCP-Agent-ID
         teamIDHeader: X-MCP-Team-ID
