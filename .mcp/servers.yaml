@@ -2,11 +2,11 @@ version: v1
 servers:
     - name: buddy
       description: buddy MCP server
-      scope: org
-      image: registry.mcpruntime.org/org/buddy
-      imageTag: 1cdad78
+      image: registry.mcpruntime.org/org/buddy-mcp/buddy
+      imageTag: 04ed70b
       route: /buddy/mcp
       publicPathPrefix: buddy
+      ingressHost: mcp.mcpruntime.org
       port: 8080
       replicas: 1
       envVars:
@@ -50,10 +50,6 @@ servers:
           requiredTrust: low
           sideEffect: read
       auth:
-        humanIDHeader: X-MCP-Human-ID
-        agentIDHeader: X-MCP-Agent-ID
-        teamIDHeader: X-MCP-Team-ID
-        sessionIDHeader: X-MCP-Agent-Session
         tokenHeader: Authorization
         issuerURL: https://auth.mcpruntime.org/mcp-auth
         audience: https://mcp.mcpruntime.org/buddy/mcp
@@ -64,14 +60,13 @@ servers:
         policyVersion: v1
       session:
         store: memory
-        headerName: X-MCP-Agent-Session
         maxLifetime: 24h
         idleTimeout: 1h
         upstreamTokenHeader: Authorization
       gateway:
         enabled: true
       analytics:
-        ingestURL: http://mcp-sentinel-ingest.mcp-sentinel.svc.cluster.local:8081/events
+        ingestURL: http://mcp-ingest.mcp-observability.svc.cluster.local:8081/events
         source: buddy-gateway
         eventType: mcp.request
         apiKeySecretRef:
