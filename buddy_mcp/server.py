@@ -45,7 +45,10 @@ def create_server(
             issuer_url=settings.issuer,
             resource_server_url=settings.resource,
             required_scopes=["tools:read"],
-            validate_token_resource=True,
+            # BuddyTokenVerifier already checks aud against settings.resource.
+            # Request-URL resource checks break behind mcp-gateway, which rewrites
+            # Host to 127.0.0.1:8080 on the upstream hop.
+            validate_token_resource=False,
         ),
         host=settings.host,
         port=settings.port,

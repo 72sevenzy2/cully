@@ -3,7 +3,7 @@ servers:
     - name: buddy
       description: buddy MCP server
       image: registry.mcpruntime.org/org/buddy-mcp/buddy
-      imageTag: fb9c6c1
+      imageTag: 1cdad78
       route: /buddy/mcp
       publicPathPrefix: buddy
       port: 8080
@@ -58,14 +58,22 @@ servers:
         issuerURL: https://auth.mcpruntime.org/mcp-auth
         audience: https://mcp.mcpruntime.org/buddy/mcp
       policy:
-        mode: allow-list
-        defaultDecision: deny
+        mode: observe
+        defaultDecision: allow
         enforceOn: call_tool
         policyVersion: v1
       session:
-        store: kubernetes
+        store: memory
         headerName: X-MCP-Agent-Session
         maxLifetime: 24h
         idleTimeout: 1h
         upstreamTokenHeader: Authorization
-      gateway: {}
+      gateway:
+        enabled: true
+      analytics:
+        ingestURL: http://mcp-sentinel-ingest.mcp-sentinel.svc.cluster.local:8081/events
+        source: buddy-gateway
+        eventType: mcp.request
+        apiKeySecretRef:
+          name: buddy-analytics-creds
+          key: api-key
