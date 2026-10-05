@@ -26,8 +26,17 @@ class BuddyTokenVerifier(TokenVerifier):
             )
             scopes = claims.get("scope", "")
             if isinstance(scopes, str):
-                scopes = scopes.split()
-            if "tools:read" not in scopes:
+                scopes = [part for part in scopes.split() if part]
+            elif not isinstance(scopes, list):
+                scopes = []
+            else:
+                scopes = [str(part) for part in scopes if str(part).strip()]
+            # Cursor CLI OAuth often omits scope= on authorize; mcp-auth then
+            # mints an empty scope claim. This resource only advertises
+            # tools:read, so treat a missing scope as that default.
+            if not scopes:
+                scopes = ["tools:read"]
+            elif "tools:read" not in scopes:
                 return None
             return AccessToken(
                 token=token,
