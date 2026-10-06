@@ -20,7 +20,7 @@ CULLY_WEB_SITE_DIR=dist/site CULLY_WEB_DATA_DIR=/tmp/cully-web-preview go run ./
 
 Open `http://localhost:8080`. Do not serve the repository root: it includes source files and deployment notes.
 
-The docs source is Markdown in `docs/`. `docs/.vitepress/config.mts` defines the public navigation. Every Markdown guide under `docs/` is built, including architecture and website hosting. Product and documentation links assume the two production domains. Local previews can follow the corresponding links in the sidebar.
+The docs source is Markdown in `docs/`. `docs/.vitepress/config.mts` defines the public navigation. Every Markdown guide under `docs/` is built; these deployment notes stay outside the public docs site. Product and documentation links assume the two production domains. Local previews can follow the corresponding links in the sidebar.
 
 ## Publish on the existing VM
 
@@ -49,7 +49,7 @@ The current VM has separate `cully-web` and `cully-docs` Compose projects. Its C
 
 To rebuild the controller on a replacement VM, copy `deploy/` and the dedicated deployment public key there, then run `sh deploy/bootstrap-website.sh /path/to/deployment-key.pub` as root. Install the two Caddy routes from `deploy/Caddyfile.website.fragment`, validate the Caddyfile and reload Caddy. Set the three deployment variables to `true` after the routes and controller are ready. Changes to either site then deploy that site from `main`.
 
-The website domains do not change an operator's MCP resource URL. See the [team deployment guide](team-deployment.md) for the MCP and authorization server relationship.
+The website domains do not change an operator's MCP resource URL. See the [team deployment guide](../docs/team-deployment.md) for the MCP and authorization server relationship.
 
 ## Community testimonials
 
@@ -73,4 +73,4 @@ Submission routes require same-origin requests, validate fields and image conten
 
 ## Installer download
 
-The website serves the repository's installer at `https://cully.net/install.sh`. The website build copies `install.sh` into its static image, and an installer change triggers only the website deployment. Keep the displayed `curl -fsSL https://cully.net/install.sh | sh` command aligned with [installation](installation.md).
+The website serves the repository's installer at `https://cully.net/install.sh`. The website build copies `install.sh` into its static image, and an installer change triggers only the website deployment. Keep the displayed `curl -fsSL https://cully.net/install.sh | sh` command aligned with [installation](../docs/installation.md).

@@ -30,4 +30,4 @@ For yourself, the default stack runs on your laptop with one stable owner and no
 
 Manual service settings and system details are in the [configuration reference](/configuration) and [architecture](/architecture).
 
-For project work, see [development](/development), [website and docs hosting](/website), the [roadmap](/roadmap) and the [changelog](https://github.com/mcp-runtime/cully/blob/main/CHANGELOG.md).
+For project work, see [development](/development), the [roadmap](/roadmap) and the [changelog](https://github.com/mcp-runtime/cully/blob/main/CHANGELOG.md).

@@ -67,7 +67,6 @@ export default withMermaid(defineConfig({
           { text: 'Configuration', link: '/configuration' },
           { text: 'Mem0 recall', link: '/mem0' },
           { text: 'Architecture', link: '/architecture' },
-          { text: 'Website and docs hosting', link: '/website' },
           { text: 'Development', link: '/development' },
           { text: 'Roadmap', link: '/roadmap' },
           { text: 'Changelog ↗', link: 'https://github.com/mcp-runtime/cully/blob/main/CHANGELOG.md' }
