@@ -6,6 +6,19 @@ DO $$ BEGIN
   END IF;
 END $$;
 
+-- Reuse the original indexes after the table rename, especially the HNSW
+-- index, instead of rebuilding duplicate indexes over the existing data.
+DO $$ DECLARE suffix text; BEGIN
+  FOREACH suffix IN ARRAY ARRAY['search_idx','project_time_idx','type_idx','section_time_idx','owner_project_time_idx','embedding_idx'] LOOP
+    IF to_regclass('buddy_entries_' || suffix) IS NOT NULL AND to_regclass('cully_entries_' || suffix) IS NULL THEN
+      EXECUTE format('ALTER INDEX %I RENAME TO %I', 'buddy_entries_' || suffix, 'cully_entries_' || suffix);
+    END IF;
+  END LOOP;
+  IF to_regclass('cully_entries') IS NOT NULL AND EXISTS(SELECT 1 FROM pg_constraint WHERE conrelid=to_regclass('cully_entries') AND conname='buddy_entries_section_check') THEN
+    ALTER TABLE cully_entries RENAME CONSTRAINT buddy_entries_section_check TO cully_entries_section_check;
+  END IF;
+END $$;
+
 CREATE EXTENSION IF NOT EXISTS vector;
 CREATE TABLE IF NOT EXISTS cully_entries (
   id uuid PRIMARY KEY,

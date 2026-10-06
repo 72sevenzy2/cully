@@ -36,6 +36,34 @@ func TestFmtTokens(t *testing.T) {
 	}
 }
 
+func TestInstallCombinedMemorySkill(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv("CODEX_HOME", dir)
+	if err := installMemorySkill("codex"); err != nil {
+		t.Fatal(err)
+	}
+	path := filepath.Join(dir, "skills", "cully", "SKILL.md")
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, required := range []string{"cully systems", "cully_log", "cully_recall"} {
+		if !strings.Contains(string(data), required) {
+			t.Fatalf("combined skill missing %s", required)
+		}
+	}
+	if err := os.WriteFile(path, []byte("user-owned skill"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	if err := installMemorySkill("codex"); err != nil {
+		t.Fatal(err)
+	}
+	data, err = os.ReadFile(path)
+	if err != nil || string(data) != "user-owned skill" {
+		t.Fatal("user-owned skill overwritten")
+	}
+}
+
 func TestGauge(t *testing.T) {
 	if got := gauge(0); got != strings.Repeat("░", 10) {
 		t.Errorf("gauge(0)=%q", got)

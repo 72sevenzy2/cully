@@ -3,6 +3,7 @@ name: cully
 description: Inspect coding-agent session controls and record, retrieve or manage substantive personal and project memory through the Cully MCP service.
 ---
 
+<!-- cully:skill:managed -->
 # Cully
 
 Use the local `cully` command for session instruments and controls. Use the configured Cully MCP server for shared memory across agents and devices. PostgreSQL holds source records; self-hosted Mem0 supplies optional semantic recall.

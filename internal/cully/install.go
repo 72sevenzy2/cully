@@ -3,12 +3,13 @@ package cully
 import (
 	"encoding/json"
 	"fmt"
-	cullyskill "github.com/mcp-runtime/cully/skills/cully"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
 	"time"
+
+	cullyskill "github.com/mcp-runtime/cully/skills/cully"
 )
 
 // Install registers cully for one or more coding agents. With no target it
@@ -36,6 +37,32 @@ func Install(targets ...string) error {
 		default:
 			return fmt.Errorf("unknown install target %q (use claude, codex, cursor, or all)", target)
 		}
+		if err := installMemorySkill(target); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func installMemorySkill(target string) error {
+	var dir string
+	switch target {
+	case "claude":
+		dir = ConfigDir()
+	case "codex":
+		dir = CodexConfigDir()
+	case "cursor":
+		dir = CursorConfigDir()
+	default:
+		return fmt.Errorf("unknown skill target %q", target)
+	}
+	path := filepath.Join(dir, "skills", "cully", "SKILL.md")
+	wrote, err := writeOwnedFile(path, "<!-- cully:skill:managed -->", cullyskill.Content)
+	if err != nil {
+		return err
+	}
+	if !wrote {
+		fmt.Printf("Preserved user-owned Cully skill -> %s\n", path)
 	}
 	return nil
 }

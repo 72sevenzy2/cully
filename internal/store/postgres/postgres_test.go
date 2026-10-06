@@ -217,8 +217,20 @@ func TestDatabaseMemoryLifecycle(t *testing.T) {
 	if _, err := s.Pool.Exec(context.Background(), "ALTER TABLE cully_entries RENAME TO buddy_entries; DELETE FROM cully_schema_versions"); err != nil {
 		t.Fatal(err)
 	}
+	for _, suffix := range []string{"search_idx", "project_time_idx", "type_idx", "section_time_idx", "owner_project_time_idx", "embedding_idx"} {
+		if _, err := s.Pool.Exec(context.Background(), "ALTER INDEX cully_entries_"+suffix+" RENAME TO buddy_entries_"+suffix); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if _, err := s.Pool.Exec(context.Background(), "ALTER TABLE buddy_entries RENAME CONSTRAINT cully_entries_section_check TO buddy_entries_section_check"); err != nil {
+		t.Fatal(err)
+	}
 	if err := migrations.Apply(context.Background(), s.Pool); err != nil {
 		t.Fatal(err)
+	}
+	var vectorIndexes int
+	if err := s.Pool.QueryRow(context.Background(), "SELECT count(*) FROM pg_indexes WHERE schemaname=current_schema() AND tablename='cully_entries' AND indexdef LIKE '%USING hnsw%'").Scan(&vectorIndexes); err != nil || vectorIndexes != 1 {
+		t.Fatalf("duplicate vector indexes: %d %v", vectorIndexes, err)
 	}
 	if execute(t, s, "owner-a", memory.Request{Operation: "get", ID: &id}).Entry.ID != logged.ID {
 		t.Fatal("migration lost memory")
