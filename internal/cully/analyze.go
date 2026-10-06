@@ -703,7 +703,7 @@ func writeDebriefNote(session string) {
 		return
 	}
 	var b strings.Builder
-	RunDebrief(&b, session)
+	writeSessionSummary(&b, session)
 	logf(session, "debrief:\n%s", strings.TrimSpace(b.String()))
 }
 

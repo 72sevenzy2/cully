@@ -41,6 +41,12 @@ func Install(targets ...string) error {
 			return err
 		}
 	}
+	if err := StartDaemonDetached(); err != nil {
+		fmt.Println("Advisor unavailable; rerun cully install to retry:", err)
+	} else {
+		fmt.Println("Advisor started; inspect with cully status")
+	}
+	fmt.Println("Connect shared memory with: cully mcp add")
 	return nil
 }
 
@@ -134,11 +140,11 @@ func installClaude() error {
 
 	m["statusLine"] = map[string]any{
 		"type":    "command",
-		"command": quote(exe) + " statusline",
+		"command": quote(exe) + " _internal statusline",
 		"padding": 0,
 	}
-	setEventHook(m, "Stop", quote(exe)+" analyze", "analyze")
-	setEventHook(m, "SessionEnd", quote(exe)+" cleanup", "cleanup")
+	setEventHook(m, "Stop", quote(exe)+" _internal analyze", "analyze")
+	setEventHook(m, "SessionEnd", quote(exe)+" _internal cleanup", "cleanup")
 
 	if err := writeSettings(settingsPath, m); err != nil {
 		return err
@@ -146,16 +152,11 @@ func installClaude() error {
 	if err := writeSlashCommand(exe); err != nil {
 		fmt.Println("Slash command: could not write /cully —", err)
 	} else {
-		fmt.Println("Registered /cully slash command (systems · status · list · apply · checklist · daemon).")
+		fmt.Println("Registered /cully (status · suggestions · apply).")
 	}
 	fmt.Printf("\033[32mInstalled.\033[0m Registered cully in %s\n", settingsPath)
 	fmt.Println("Restart Claude Code (or run /hooks) so the Stop hook loads. The status bar is live immediately.")
 	fmt.Println("Accept a suggestion: cully apply <n>  (updates agent instructions, MCP, skills after you confirm)")
-	if err := StartDaemonDetached(); err != nil {
-		fmt.Println("Advisor daemon: start manually with  cully daemon start")
-	} else {
-		fmt.Println("Advisor daemon started (cully daemon status)")
-	}
 	return nil
 }
 
@@ -234,7 +235,7 @@ func uninstallClaude() error {
 	_ = StopDaemon()
 	exe, _ := os.Executable()
 	exe, _ = filepath.Abs(exe)
-	slCmd := quote(exe) + " statusline"
+	slCmd := quote(exe) + " _internal statusline"
 	settingsPath := filepath.Join(ConfigDir(), "settings.json")
 
 	if _, err := os.Stat(settingsPath); err == nil {
@@ -249,8 +250,8 @@ func uninstallClaude() error {
 				delete(m, "statusLine")
 			}
 		}
-		removeEventHook(m, "Stop", quote(exe)+" analyze", "analyze")
-		removeEventHook(m, "SessionEnd", quote(exe)+" cleanup", "cleanup")
+		removeEventHook(m, "Stop", quote(exe)+" _internal analyze", "analyze")
+		removeEventHook(m, "SessionEnd", quote(exe)+" _internal cleanup", "cleanup")
 		if err := writeSettings(settingsPath, m); err != nil {
 			return err
 		}
@@ -454,8 +455,7 @@ func slashCommandPath() string {
 // cullyCommandMD is the /cully slash-command definition. {{EXE}} is replaced
 // with the absolute, shell-quoted binary path at install time so it works under a
 // custom CLAUDE_CONFIG_DIR. The embedded shell defaults a bare /cully to the
-// `systems` synoptic, and passes any argument (status, list, apply <n>,
-// checklist <topic>, daemon status, debrief) straight through to the binary.
+// status view, and passes status, suggestions and apply arguments through.
 //
 // $ARGUMENTS is text-substituted by Claude Code, so multi-word input like
 // `apply 1` must be re-split into separate argv entries. We route through an
@@ -474,14 +474,14 @@ func slashCommandPath() string {
 // CULLY_ASSUME_YES=1 tells `apply` there is no interactive stdin here, so it
 // must not wait on a y/N prompt that would read EOF and cancel.
 const cullyCommandMD = "---\n" +
-	"description: Manage Cully — synoptic, status, suggestions, apply, daemon\n" +
-	"argument-hint: \"[systems | status | list | apply <n> | checklist <topic> | plan | debrief | daemon status]\"\n" +
+	"description: Manage Cully — status, suggestions and apply\n" +
+	"argument-hint: \"[status | suggestions | apply <n>]\"\n" +
 	"allowed-tools: Bash\n" +
 	"---\n\n" +
 	"Run the cully control below, then explain the output plainly to the user:\n" +
 	"summarize what each section means, call out anything in the warning/caution\n" +
 	"colors first, and if they asked to `apply <n>` state exactly what changed.\n\n" +
-	"!`CULLY_BIN={{EXE}} sh -c 'if [ \"$#\" -eq 0 ]; then exec \"$CULLY_BIN\" systems; else CULLY_ASSUME_YES=1 exec \"$CULLY_BIN\" \"$@\"; fi' cully $ARGUMENTS 2>&1`\n"
+	"!`CULLY_BIN={{EXE}} sh -c 'if [ \"$#\" -eq 0 ]; then exec \"$CULLY_BIN\" status; else CULLY_ASSUME_YES=1 exec \"$CULLY_BIN\" \"$@\"; fi' cully $ARGUMENTS 2>&1`\n"
 
 func writeSlashCommand(exe string) error {
 	path := slashCommandPath()
@@ -595,7 +595,7 @@ func codexAgentInstructions() string {
 
 - Use the shared project skill at ` + "`.cully/skills/cully/SKILL.md`" + ` for Cully session controls.
 - In Codex, use /prompts:cully (or type /cully and select the saved cully prompt) for the in-session cully command.
-- Use ` + "`cully memory --json`" + ` when another tool needs compact background memory of what happened in recent sessions.`
+- Use the configured Cully MCP tools for shared personal and project memory.`
 }
 
 func flightdeckSkill() string {

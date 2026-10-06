@@ -39,4 +39,4 @@ See [self-hosted Mem0](mem0.md) for configuration, indexing and deletion behavio
 
 ## Local versus shared capture
 
-`cully memory` reads compact local session summaries from the CLI daemon. Shared memory is written through `cully_log`; the combined skill tells agents when useful work warrants a record. Automatic daemon-to-remote upload is planned separately. Neither path stores raw remote conversation transcripts by default.
+Shared memory is written through `cully_log`; the combined skill tells agents when useful work warrants a record. The CLI has no separate transcript scanner or local memory command. Local session diagnostics do not become memory records automatically. PostgreSQL stores durable personal/project records, with self-hosted Mem0 providing semantic recall.

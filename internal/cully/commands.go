@@ -71,36 +71,22 @@ func isStopword(w string) bool {
 	return false
 }
 
-// RunPlan shows the FMS-style session route.
-func RunPlan(w io.Writer) {
-	cwd, _ := os.Getwd()
-	snap := readSnapshot(resolveSession(cwd))
-	fmt.Fprintln(w, "Cully flight plan (FMS)")
-	fmt.Fprintf(w, "  phase:      %s\n", snap.Phase)
-	fmt.Fprintf(w, "  cost index: %s  (CULLY_COST_INDEX=eco|normal|perf)\n", snap.CostIndex)
-	if snap.PlanAnchor != "" {
-		fmt.Fprintf(w, "  route:      %s\n", snap.PlanAnchor)
-	} else {
-		fmt.Fprintln(w, "  route:      (no anchor yet — start with a clear task)")
-	}
-	if snap.PlanDeviation != "" {
-		fmt.Fprintf(w, "  deviation:  %s\n", snap.PlanDeviation)
-	}
-}
-
-// RunSystems prints an ECAM synoptic of connected systems.
-func RunSystems(w io.Writer, cwd string) {
+// writeIntegrations reports installed agent integrations.
+func writeIntegrations(w io.Writer, cwd string) {
 	if cwd == "" {
 		cwd, _ = os.Getwd()
 	}
-	fmt.Fprintln(w, "Cully systems (synoptic)")
+	fmt.Fprintln(w, "Agent setup")
 	fmt.Fprintln(w)
 	fmt.Fprintf(w, "  coding agents: %s\n", listCodingAgents(cwd))
 	fmt.Fprintln(w)
 	fmt.Fprintln(w, "  Claude hooks:")
-	printHookLine(w, "statusline")
-	printHookLine(w, "Stop/analyze")
-	printHookLine(w, "SessionEnd/cleanup")
+	settings, _ := loadSettings(filepath.Join(ConfigDir(), "settings.json"))
+	statusLine, _ := settings["statusLine"].(map[string]any)
+	statusCommand, _ := statusLine["command"].(string)
+	printIntegrationLine(w, "statusline", isCullySubcommand(statusCommand, "statusline"))
+	printIntegrationLine(w, "Stop/analyze", hookConfigured(settings, "Stop", "analyze"))
+	printIntegrationLine(w, "SessionEnd/cleanup", hookConfigured(settings, "SessionEnd", "cleanup"))
 	fmt.Fprintln(w)
 	fmt.Fprintln(w, "  agent surfaces:")
 	printIntegrationLine(w, "Codex statusline", codexStatusLineInstalled())
@@ -133,8 +119,19 @@ func RunSystems(w io.Writer, cwd string) {
 	}
 }
 
-func printHookLine(w io.Writer, name string) {
-	fmt.Fprintf(w, "    %-16s ✓\n", name)
+func hookConfigured(settings map[string]any, event, subcommand string) bool {
+	hooks, _ := settings["hooks"].(map[string]any)
+	for _, group := range toList(hooks[event]) {
+		entry, _ := group.(map[string]any)
+		for _, hook := range toList(entry["hooks"]) {
+			item, _ := hook.(map[string]any)
+			command, _ := item["command"].(string)
+			if isCullySubcommand(command, subcommand) {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 func printIntegrationLine(w io.Writer, name string, installed bool) {
@@ -152,22 +149,25 @@ func RunStatus(w io.Writer, cwd string) {
 	}
 	snap := readSnapshot(resolveSession(cwd))
 	st, hasState := readState()
-	fmt.Fprintln(w, "Cully STATUS — deferred items")
+	writeIntegrations(w, cwd)
+	RunDaemonStatus(w)
+	fmt.Fprintln(w)
+	fmt.Fprintln(w, "Cully session status")
 	fmt.Fprintln(w)
 	if !snap.GraphifyGraph && snap.Searches >= 5 {
 		fmt.Fprintln(w, "  ○ graphify graph not built — consider /graphify .")
 	}
 	if snap.PendingSuggestions > 0 {
-		fmt.Fprintf(w, "  ○ %d cully suggestion(s) pending — cully list\n", snap.PendingSuggestions)
+		fmt.Fprintf(w, "  ○ %d cully suggestion(s) pending — cully suggestions\n", snap.PendingSuggestions)
 	}
 	if snap.PlanDeviation != "" {
 		fmt.Fprintf(w, "  ○ plan deviation — %s\n", snap.PlanDeviation)
 	}
 	if snap.ToolErrors >= 8 {
-		fmt.Fprintf(w, "  ○ %d tool faults (%d not-found) — cully checklist faults\n", snap.ToolErrors, snap.NotFoundErrors)
+		fmt.Fprintf(w, "  ○ %d tool faults (%d not-found) — verify paths before retrying tools\n", snap.ToolErrors, snap.NotFoundErrors)
 	}
 	if hasState && st.CtxPct >= 75 {
-		fmt.Fprintf(w, "  ○ context at %d%% — cully checklist context\n", st.CtxPct)
+		fmt.Fprintf(w, "  ○ context at %d%% — consider /compact\n", st.CtxPct)
 	}
 	if mcp := listMCPServers(cwd); mcp == "" {
 		fmt.Fprintln(w, "  ○ no MCP servers in project")
@@ -263,8 +263,8 @@ func baseline7d() (n int, cost float64, avgCtx, faults int) {
 	return
 }
 
-// RunDebrief prints a post-session black-box summary.
-func RunDebrief(w io.Writer, session string) {
+// writeSessionSummary prints a post-session black-box summary.
+func writeSessionSummary(w io.Writer, session string) {
 	if session == "" {
 		cwd, _ := os.Getwd()
 		session = resolveSession(cwd)
