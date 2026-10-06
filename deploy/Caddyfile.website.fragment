@@ -1,16 +1,19 @@
-# Add these routes to the existing Caddy configuration after copying
-# dist/site -> /srv/cully/site and dist/docs -> /srv/cully/docs.
-# Keep the existing service routes in their current Caddyfile.
+# Add these routes to the existing Docker Caddy configuration.
+# Caddy and cully-web must share the workspace_workspace Docker network.
+# Preserve the existing workspace, Keycloak and memory service routes.
 
 cully.net {
-    root * /srv/cully/site
+    tls {
+        issuer acme https://acme-v02.api.letsencrypt.org/directory
+    }
     encode zstd gzip
-    file_server
+    reverse_proxy cully-web:8080
 }
 
 docs.cully.net {
-    root * /srv/cully/docs
+    tls {
+        issuer acme https://acme-v02.api.letsencrypt.org/directory
+    }
     encode zstd gzip
-    try_files {path} {path}.html {path}/index.html
-    file_server
+    reverse_proxy cully-web:8080
 }

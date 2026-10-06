@@ -1,0 +1,15 @@
+services:
+  cully-web:
+    image: ghcr.io/mcp-runtime/cully-web:${CULLY_WEB_REVISION:?set deployment commit}
+    restart: unless-stopped
+    read_only: true
+    tmpfs: [/tmp]
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    mem_limit: 256m
+    expose: ["8080"]
+    networks: [workspace]
+networks:
+  workspace:
+    external: true
+    name: workspace_workspace

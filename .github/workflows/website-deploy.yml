@@ -1,0 +1,99 @@
+name: Deploy website and docs
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'site/**'
+      - 'docs/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'Dockerfile.website'
+      - '.dockerignore'
+      - 'deploy/**'
+      - '.github/workflows/website-deploy.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: cully-website-production
+  cancel-in-progress: false
+env:
+  IMAGE: ghcr.io/mcp-runtime/cully-web:${{ github.sha }}
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Test deployment controller
+        run: python3 -m unittest discover -s deploy -p 'test_website*.py' -v
+      - name: Validate Caddy and Compose configuration
+        run: |
+          docker run --rm -v "$PWD/deploy/Caddyfile.website.fragment:/etc/caddy/Caddyfile:ro" caddy:2-alpine caddy validate --config /etc/caddy/Caddyfile
+          CULLY_WEB_REVISION="$GITHUB_SHA" docker compose -f deploy/compose.website.yaml config --quiet
+      - name: Build website image
+        run: docker build --build-arg REVISION="$GITHUB_SHA" -f Dockerfile.website -t "$IMAGE" .
+      - name: Smoke test both hosts
+        run: |
+          docker run -d --name cully-web-test --read-only --tmpfs /tmp -p 127.0.0.1:18080:8080 "$IMAGE"
+          trap 'docker rm -f cully-web-test' EXIT
+          curl --fail --retry 10 --retry-delay 2 --retry-all-errors -H 'Host: cully.net' http://127.0.0.1:18080/ -o /dev/null
+          curl --fail -H 'Host: docs.cully.net' http://127.0.0.1:18080/quickstart -o /dev/null
+          curl --fail -H 'Host: cully.net' http://127.0.0.1:18080/_deployment.json | python3 -c 'import json,os,sys; assert json.load(sys.stdin)["revision"] == os.environ["GITHUB_SHA"]'
+          test "$(curl -s -o /dev/null -w '%{http_code}' -H 'Host: docs.cully.net' http://127.0.0.1:18080/page-that-does-not-exist)" = 404
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Publish immutable image
+        run: docker push "$IMAGE"
+  deploy:
+    needs: build
+    if: vars.CULLY_WEB_DEPLOY_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    environment: website-production
+    permissions:
+      contents: read
+      packages: read
+    env:
+      DEPLOY_HOST: ${{ vars.CULLY_WEB_HOST }}
+      DEPLOY_USER: ${{ vars.CULLY_WEB_SSH_USER }}
+      DEPLOY_PORT: ${{ vars.CULLY_WEB_SSH_PORT }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure deployment identity
+        env:
+          DEPLOY_KEY: ${{ secrets.CULLY_WEB_SSH_KEY }}
+          DEPLOY_KNOWN_HOSTS: ${{ secrets.CULLY_WEB_KNOWN_HOSTS }}
+        run: |
+          test -n "$DEPLOY_HOST" && test -n "$DEPLOY_USER" && test -n "$DEPLOY_PORT"
+          test -n "$DEPLOY_KEY" && test -n "$DEPLOY_KNOWN_HOSTS"
+          install -d -m 700 "$HOME/.ssh"
+          umask 077
+          printf '%s\n' "$DEPLOY_KEY" > "$HOME/.ssh/cully-web"
+          printf '%s\n' "$DEPLOY_KNOWN_HOSTS" > "$HOME/.ssh/known_hosts"
+      - name: Deploy both sites
+        id: publish
+        env:
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          python3 -c 'import json,os; print(json.dumps({"action":"deploy","revision":os.environ["GITHUB_SHA"],"token":os.environ["GHCR_TOKEN"],"registry_user":os.environ["GITHUB_ACTOR"]}))' |
+            ssh -i "$HOME/.ssh/cully-web" -p "$DEPLOY_PORT" -o BatchMode=yes -o StrictHostKeyChecking=yes -o ConnectTimeout=15 "$DEPLOY_USER@$DEPLOY_HOST" deploy
+      - name: Verify public HTTPS deployment
+        run: |
+          for domain in cully.net docs.cully.net; do
+            curl --fail --silent --show-error --retry 12 --retry-delay 5 --retry-all-errors --max-time 20 "https://$domain/_deployment.json" |
+              python3 -c 'import json,os,sys; assert json.load(sys.stdin)["revision"] == os.environ["GITHUB_SHA"]'
+          done
+          curl --fail --silent --show-error https://docs.cully.net/quickstart -o /dev/null
+      - name: Roll back failed public verification
+        if: failure() && steps.publish.outcome == 'success'
+        run: |
+          python3 -c 'import json,os; print(json.dumps({"action":"rollback","revision":os.environ["GITHUB_SHA"]}))' |
+            ssh -i "$HOME/.ssh/cully-web" -p "$DEPLOY_PORT" -o BatchMode=yes -o StrictHostKeyChecking=yes -o ConnectTimeout=15 "$DEPLOY_USER@$DEPLOY_HOST" deploy
+      - name: Remove temporary credentials
+        if: always()
+        run: rm -f "$HOME/.ssh/cully-web"
