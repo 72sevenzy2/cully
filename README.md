@@ -1,113 +1,43 @@
-# Buddy
+# Cully
 
-Buddy is shared Personal and Company memory for coding agents. It provides a remote,
-OAuth-protected MCP service and a Buddy skill that tells agents how to capture
-and retrieve work across projects and devices. The service stores data and
-performs search; the connected agent's model interprets it and writes answers.
-The VM does not run a language model.
+**Your companion for better work and everyday life.**
 
-## Remote MCP service
+[Website](https://cully.net) · [Docs](https://docs.cully.net) (planned hosting)
 
-Buddy uses PostgreSQL with full-text search and pgvector. The service exposes
-`buddy_log`, `buddy_search`, `buddy_recent`, `buddy_get`, `buddy_update`,
-`buddy_delete`, and `buddy_projects`. Entries use normalized GitHub repository
-URLs as project keys and `mcp` as the theme. Every entry belongs to the `personal`
-or `company` section, which can be selected when logging, searching, or reviewing
-recent activity. Personal entries can use categories such as career, fitness,
-relationships, finance, food, water, reading, mood, or check-in; they do not need
-a project URL. Company entries can be tied to a GitHub repository. Each entry
-can retain the assistant, summary, approach, outcome, issue, learning, next
-steps, and tags.
+Cully remembers what you do and how you work. It helps you guide coding agents, manage projects, and spot ways to improve your workflow. When you ask it to remember personal things, it can help with your goals, routines and everyday life too.
 
-Entries are isolated by the authenticated OAuth subject; the same identity can
-retrieve its entries from each connected agent.
+| Component | What it does |
+| --- | --- |
+| `cully` | Local status line, session controls, suggestions and compact session memory |
+| `cully-mcp` | OAuth-protected shared memory tools |
+| `cully-data` | Private PostgreSQL/pgvector API and self-hosted Mem0 indexing |
 
-The remote service is split into `buddy_mcp/settings.py` (configuration and
-time-zone policy), `auth.py` (token verification and subject lookup),
-`validation.py` (input checks), `repository.py` (authenticated HTTP client),
-`postgres_repository.py` (owner-scoped SQL), `data_api.py` (VM-side HTTP API),
-and `server.py` (MCP tool handlers and application startup).
-`buddy_service.py` remains a compatibility entry point. Personal check-ins are
-short and practical: capture a win or concern the user brings up, and one useful
-next priority. Do not turn an ordinary log into a questionnaire.
+Works with Claude Code, Codex and Cursor. It combines Agent Flightdeck and Buddy in one Go repository, preserving both histories. PostgreSQL stores the original records; self-hosted Mem0 adds semantic recall.
 
-The PostgreSQL database and the data API run on the Buddy VM. MCP Runtime hosts
-the Buddy MCP server, which calls the VM API over HTTPS; it has no database
-credentials or dependency on Runtime's internal services. Postgres is on the
-Compose-only `private` network and is never published. Caddy routes
-`/buddy-data/*` to the API and allows only the MCP Runtime node's egress IP;
-the API also requires `BUDDY_DATA_API_TOKEN`. The allowlisted address must be
-updated if that node's public egress IP changes. The API intentionally disables
-interactive docs and emits no request access logs. The Buddy MCPServer declares
-OAuth mode with its canonical issuer and audience; MCP Runtime then routes both
-the MCP endpoint and its standard protected-resource metadata path to Buddy.
-Buddy's own FastMCP auth layer verifies the bearer token and passes the
-authenticated subject to the VM data API; the Runtime gateway stays disabled
-so it does not consume or strip that token.
+## Get started
 
-Deploy the VM-side database and API with Docker Compose. Copy
-`.env.example` to `.env`, set independent random values for the database
-password and API token, then run:
+From this checkout, with Go 1.25 or newer:
 
 ```sh
-docker compose up -d --build
+go build -o ./build/cully ./cmd/cully
+./build/cully install
+./build/cully systems
 ```
 
-Deploy the MCP container in MCP Runtime with `BUDDY_DATA_API_URL` set to
-`https://workspace.mcpruntime.org/buddy-data` and the same
-`BUDDY_DATA_API_TOKEN` configured on the VM. Do not provide the MCP container
-with `BUDDY_DATABASE_URL` or `BUDDY_DB_PASSWORD`. The MCP endpoint remains
-behind HTTPS and the configured OAuth authorization server; its OAuth resource
-identifier must be registered with the authorization server before agents can
-connect. Use `https://mcp.mcpruntime.org/buddy/mcp` as the OAuth resource. The
-`workspace.mcpruntime.org` host serves Buddy's data API and is not advertised to
-MCP clients as the OAuth resource.
+Configure shared memory separately using the [installation guide](docs/installation.md). The future deployment target is the existing Buddy VM; repository changes do not activate the new service endpoint.
 
-## Timestamp behavior
+## Documentation
 
-Buddy returns `occurred_at`, `created_at`, `updated_at`, and project activity
-times as ISO 8601 timestamps with the `+05:30` offset (India Standard Time,
-Asia/Kolkata). Inputs to the remote MCP tools must include a timezone offset;
-timestamps without one are rejected. PostgreSQL stores these values as
-`timestamptz`, which preserves the instant rather than the submitted timezone
-label. The service converts database values to IST when it returns them.
+- [Install and connect agents](docs/installation.md)
+- [Session controls](docs/flightdeck/README.md)
+- [Shared memory and tools](docs/memory.md)
+- [Architecture](docs/architecture.md)
+- [Configuration](docs/configuration.md)
+- [Self-hosted Mem0](docs/mem0.md)
+- [VM migration](docs/migration.md)
+- [Website, docs and DNS](docs/website.md)
+- [Development and tests](docs/development.md)
+- [Roadmap](docs/roadmap.md)
+- [Source history and release archive](docs/archive/flightdeck/README.md)
 
-For `occurred_at`, pass an ISO timestamp with an offset, for example
-`2026-09-23T15:00:00+05:30`.
-
-## Agent skill
-
-Install `SKILL.md` as the `buddy` skill in each coding agent. Configure that
-agent's remote MCP client to use the HTTPS endpoint above with OAuth. The skill
-normalizes the current Git remote, records substantive work and useful
-blockers/lessons, and searches shared memory before answering history questions.
-See `clients/README.md` for per-agent configuration and setup.
-
-## Shared Buddy direction
-
-The service uses PostgreSQL full-text search immediately. It also installs
-pgvector and creates an HNSW cosine index. A client can pass a 1536-dimensional
-vector to `buddy_log`/`buddy_update` and `query_embedding` to `buddy_search`.
-Buddy stores and searches vectors but does not generate them or run a model.
-Without client-supplied vectors, search uses PostgreSQL full-text search. Agent
-Flightdeck integration is deferred until the Buddy API and data model mature.
-
-## Tests
-
-`python -m pytest -q` runs the unit tests. `tests/test_e2e.py` drives the real
-MCP server, data API, and PostgreSQL through an MCP client, with a local OAuth
-issuer standing in for the authorization server. It runs when
-`BUDDY_E2E_DATABASE_URL` points at a pgvector database, and CI runs it against a
-`pgvector/pgvector:pg17` service:
-
-```sh
-docker run -d --rm -p 5432:5432 -e POSTGRES_DB=buddy -e POSTGRES_USER=buddy \
-  -e POSTGRES_PASSWORD=buddy pgvector/pgvector:pg17
-BUDDY_E2E_DATABASE_URL=postgresql://buddy:buddy@127.0.0.1:5432/buddy \
-  python -m pytest -q tests/test_e2e.py
-```
-
-## Local data safety
-
-Do not commit personal databases, environment files, API tokens, OAuth secrets,
-or exported memory. `.gitignore` excludes these by default.
+Licensed under [Apache 2.0](LICENSE).

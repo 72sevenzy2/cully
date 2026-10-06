@@ -1,58 +1,63 @@
 version: v1
 servers:
-    - name: buddy
-      description: buddy MCP server
-      image: registry.mcpruntime.org/org/buddy-mcp/buddy
-      imageTag: 04ed70b
-      route: /buddy/mcp
-      publicPathPrefix: buddy
+    - name: cully
+      description: Your companion for better work and everyday life
+      image: registry.mcpruntime.org/org/cully-mcp/cully
+      imageTag: dev
+      route: /cully/mcp
+      publicPathPrefix: cully
       ingressHost: mcp.mcpruntime.org
       port: 8080
       replicas: 1
       envVars:
-        - name: BUDDY_DATA_API_URL
-          value: https://workspace.mcpruntime.org/buddy-data
-        - name: BUDDY_PORT
+        - name: CULLY_DATA_API_URL
+          value: https://workspace.mcpruntime.org/cully-data
+        - name: CULLY_PORT
           value: "8080"
       secretEnvVars:
-        - name: BUDDY_DATA_API_TOKEN
+        - name: CULLY_DATA_API_TOKEN
           secretKeyRef:
-            name: buddy-data-api-token
-            key: BUDDY_DATA_API_TOKEN
+            name: cully-data-api-token
+            key: CULLY_DATA_API_TOKEN
       namespace: mcp-servers
       tools:
-        - name: buddy_log
-          description: buddy_log tool
+        - name: cully_log
+          description: cully_log tool
           requiredTrust: low
           sideEffect: write
-        - name: buddy_search
-          description: buddy_search tool
+        - name: cully_search
+          description: cully_search tool
           requiredTrust: low
           sideEffect: read
-        - name: buddy_recent
-          description: buddy_recent tool
+        - name: cully_recall
+          description: Semantic recall through self-hosted Mem0
           requiredTrust: low
           sideEffect: read
-        - name: buddy_get
-          description: buddy_get tool
+        - name: cully_recent
+          description: cully_recent tool
           requiredTrust: low
           sideEffect: read
-        - name: buddy_update
-          description: buddy_update tool
+        - name: cully_get
+          description: cully_get tool
+          requiredTrust: low
+          sideEffect: read
+        - name: cully_update
+          description: cully_update tool
           requiredTrust: medium
           sideEffect: write
-        - name: buddy_delete
-          description: buddy_delete tool
+        - name: cully_delete
+          description: cully_delete tool
           requiredTrust: high
           sideEffect: destructive
-        - name: buddy_projects
-          description: buddy_projects tool
+        - name: cully_projects
+          description: cully_projects tool
           requiredTrust: low
           sideEffect: read
       auth:
+        mode: oauth
         tokenHeader: Authorization
         issuerURL: https://auth.mcpruntime.org/mcp-auth
-        audience: https://mcp.mcpruntime.org/buddy/mcp
+        audience: https://mcp.mcpruntime.org/cully/mcp
       policy:
         mode: observe
         defaultDecision: allow
@@ -64,11 +69,4 @@ servers:
         idleTimeout: 1h
         upstreamTokenHeader: Authorization
       gateway:
-        enabled: true
-      analytics:
-        ingestURL: http://mcp-ingest.mcp-observability.svc.cluster.local:8081/events
-        source: buddy-gateway
-        eventType: mcp.request
-        apiKeySecretRef:
-          name: buddy-analytics-creds
-          key: api-key
+        enabled: false

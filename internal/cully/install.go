@@ -1,0 +1,615 @@
+package cully
+
+import (
+	"encoding/json"
+	"fmt"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"strings"
+	"time"
+
+	cullyskill "github.com/mcp-runtime/cully/skills/cully"
+)
+
+// Install registers cully for one or more coding agents. With no target it
+// auto-detects coding agents present on this machine/project and installs those
+// integrations.
+func Install(targets ...string) error {
+	cwd, _ := os.Getwd()
+	if len(targets) == 0 {
+		targets = detectedInstallTargets(cwd)
+	}
+	for _, target := range expandInstallTargets(targets) {
+		switch target {
+		case "claude":
+			if err := installClaude(); err != nil {
+				return err
+			}
+		case "codex":
+			if err := installCodex(cwd); err != nil {
+				return err
+			}
+		case "cursor":
+			if err := installCursor(cwd); err != nil {
+				return err
+			}
+		default:
+			return fmt.Errorf("unknown install target %q (use claude, codex, cursor, or all)", target)
+		}
+		if err := installMemorySkill(target); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func installMemorySkill(target string) error {
+	var dir string
+	switch target {
+	case "claude":
+		dir = ConfigDir()
+	case "codex":
+		dir = CodexConfigDir()
+	case "cursor":
+		dir = CursorConfigDir()
+	default:
+		return fmt.Errorf("unknown skill target %q", target)
+	}
+	path := filepath.Join(dir, "skills", "cully", "SKILL.md")
+	wrote, err := writeOwnedFile(path, "<!-- cully:skill:managed -->", cullyskill.Content)
+	if err != nil {
+		return err
+	}
+	if !wrote {
+		fmt.Printf("Preserved user-owned Cully skill -> %s\n", path)
+	}
+	return nil
+}
+
+func detectedInstallTargets(cwd string) []string {
+	ordered := []string{"claude", "codex", "cursor"}
+	var out []string
+	for _, id := range ordered {
+		if codingAgentPresent(id, cwd) {
+			out = append(out, id)
+		}
+	}
+	if len(out) == 0 {
+		// Keep first-run installs useful even before config directories exist.
+		out = []string{"claude"}
+	}
+	return out
+}
+
+func codingAgentPresent(id, cwd string) bool {
+	switch id {
+	case "claude":
+		return commandExists("claude") ||
+			dirExists(ConfigDir()) ||
+			fileExists(filepath.Join(cwd, "CLAUDE.md")) ||
+			dirExists(filepath.Join(cwd, ".claude"))
+	case "codex":
+		return commandExists("codex") ||
+			dirExists(CodexConfigDir()) ||
+			fileExists(filepath.Join(cwd, "AGENTS.md")) ||
+			dirExists(filepath.Join(cwd, ".codex"))
+	case "cursor":
+		return commandExists("cursor") ||
+			dirExists(CursorConfigDir()) ||
+			dirExists(filepath.Join(cwd, ".cursor"))
+	default:
+		return false
+	}
+}
+
+func commandExists(name string) bool {
+	_, err := exec.LookPath(name)
+	return err == nil
+}
+
+func dirExists(path string) bool {
+	st, err := os.Stat(path)
+	return err == nil && st.IsDir()
+}
+
+// installClaude registers cully into settings.json (statusLine + Stop hook),
+// merging rather than overwriting so other settings/hooks are preserved.
+// Idempotent. The merge is done in Go so the installer needs no jq.
+func installClaude() error {
+	exe, err := os.Executable()
+	if err != nil {
+		return fmt.Errorf("cannot resolve own path: %w", err)
+	}
+	exe, _ = filepath.Abs(exe)
+	settingsPath := filepath.Join(ConfigDir(), "settings.json")
+
+	m, err := loadSettings(settingsPath)
+	if err != nil {
+		return err
+	}
+	if err := backup(settingsPath); err != nil {
+		return err
+	}
+
+	m["statusLine"] = map[string]any{
+		"type":    "command",
+		"command": quote(exe) + " statusline",
+		"padding": 0,
+	}
+	setEventHook(m, "Stop", quote(exe)+" analyze", "analyze")
+	setEventHook(m, "SessionEnd", quote(exe)+" cleanup", "cleanup")
+
+	if err := writeSettings(settingsPath, m); err != nil {
+		return err
+	}
+	if err := writeSlashCommand(exe); err != nil {
+		fmt.Println("Slash command: could not write /cully —", err)
+	} else {
+		fmt.Println("Registered /cully slash command (systems · status · list · apply · checklist · daemon).")
+	}
+	fmt.Printf("\033[32mInstalled.\033[0m Registered cully in %s\n", settingsPath)
+	fmt.Println("Restart Claude Code (or run /hooks) so the Stop hook loads. The status bar is live immediately.")
+	fmt.Println("Accept a suggestion: cully apply <n>  (updates agent instructions, MCP, skills after you confirm)")
+	if err := StartDaemonDetached(); err != nil {
+		fmt.Println("Advisor daemon: start manually with  cully daemon start")
+	} else {
+		fmt.Println("Advisor daemon started (cully daemon status)")
+	}
+	return nil
+}
+
+func installCodex(cwd string) error {
+	if cwd == "" {
+		cwd, _ = os.Getwd()
+	}
+	if err := upsertManagedSection(filepath.Join(cwd, "AGENTS.md"), "codex", codexAgentInstructions()); err != nil {
+		return err
+	}
+	if err := writeSharedSkill(cwd, "cully", flightdeckSkill()); err != nil {
+		return err
+	}
+	if err := upsertCodexStatusLine(codexConfigPath()); err != nil {
+		return fmt.Errorf("configure Codex status line: %w", err)
+	}
+	if wrote, err := writeCodexPrompt(); err != nil {
+		return fmt.Errorf("install Codex cully prompt: %w", err)
+	} else if !wrote {
+		fmt.Printf("Preserved existing Codex prompt -> %s\n", codexPromptPath())
+	}
+	fmt.Printf("\033[32mInstalled.\033[0m Registered Cully for Codex in %s\n", cwd)
+	fmt.Printf("Codex status line configured in %s\n", codexConfigPath())
+	fmt.Printf("Codex cully prompt available as /prompts:cully -> %s\n", codexPromptPath())
+	return nil
+}
+
+func installCursor(cwd string) error {
+	if cwd == "" {
+		cwd, _ = os.Getwd()
+	}
+	if err := writeSharedSkill(cwd, "cully", flightdeckSkill()); err != nil {
+		return err
+	}
+	if wrote, err := writeCursorCommand(cwd); err != nil {
+		return fmt.Errorf("install Cursor cully command: %w", err)
+	} else if !wrote {
+		fmt.Printf("Preserved existing Cursor command -> %s\n", cursorCommandPath(cwd))
+	}
+	fmt.Printf("\033[32mInstalled.\033[0m Registered shared Cully skill for Cursor in %s\n", sharedSkillPath(cwd, "cully"))
+	fmt.Printf("Cursor cully command available as /cully -> %s\n", cursorCommandPath(cwd))
+	return nil
+}
+
+// Uninstall removes cully's entries for one or more coding agents. With no
+// target it preserves the historical behavior: uninstall Claude Code hooks only.
+func Uninstall(targets ...string) error {
+	if len(targets) == 0 {
+		targets = []string{"claude"}
+	}
+	cwd, _ := os.Getwd()
+	for _, target := range expandInstallTargets(targets) {
+		switch target {
+		case "claude":
+			if err := uninstallClaude(); err != nil {
+				return err
+			}
+		case "codex":
+			if err := uninstallCodex(cwd); err != nil {
+				return err
+			}
+		case "cursor":
+			if err := uninstallCursor(cwd); err != nil {
+				return err
+			}
+		default:
+			return fmt.Errorf("unknown uninstall target %q (use claude, codex, cursor, or all)", target)
+		}
+	}
+	return nil
+}
+
+// uninstallClaude removes cully's entries from settings.json and deletes
+// transient state. It leaves the binary in place (the installer/user manages that).
+func uninstallClaude() error {
+	_ = StopDaemon()
+	exe, _ := os.Executable()
+	exe, _ = filepath.Abs(exe)
+	slCmd := quote(exe) + " statusline"
+	settingsPath := filepath.Join(ConfigDir(), "settings.json")
+
+	if _, err := os.Stat(settingsPath); err == nil {
+		m, err := loadSettings(settingsPath)
+		if err != nil {
+			return err
+		}
+		_ = backup(settingsPath)
+
+		if sl, ok := m["statusLine"].(map[string]any); ok {
+			if cmd, _ := sl["command"].(string); cmd == slCmd || isCullySubcommand(cmd, "statusline") {
+				delete(m, "statusLine")
+			}
+		}
+		removeEventHook(m, "Stop", quote(exe)+" analyze", "analyze")
+		removeEventHook(m, "SessionEnd", quote(exe)+" cleanup", "cleanup")
+		if err := writeSettings(settingsPath, m); err != nil {
+			return err
+		}
+	}
+
+	_ = os.Remove(slashCommandPath())
+
+	// transient state, consolidated under cullyDir()
+	dir := cullyDir()
+	_ = os.Remove(filepath.Join(dir, ".model-hint"))
+	_ = os.Remove(filepath.Join(dir, ".session-report"))
+	_ = os.Remove(filepath.Join(dir, ".cully-learning.json"))
+	_ = os.Remove(filepath.Join(dir, ".cully-pending.json"))
+	_ = os.Remove(filepath.Join(dir, ".cully-state"))
+	_ = os.Remove(filepath.Join(dir, ".cully-snapshot"))
+	_ = os.Remove(filepath.Join(dir, ".cully-chime-state"))
+	_ = os.Remove(filepath.Join(dir, ".cully-debug.log"))
+	_ = os.Remove(filepath.Join(dir, ".cully-daemon.pid"))
+	_ = os.Remove(filepath.Join(dir, ".cully-daemon.log"))
+	_ = os.Remove(filepath.Join(dir, "history.jsonl"))
+	_ = os.RemoveAll(filepath.Join(dir, "cully-jobs"))
+	if entries, err := os.ReadDir(dir); err == nil {
+		for _, e := range entries {
+			name := e.Name()
+			transient := strings.HasPrefix(name, ".sa-count-") ||
+				strings.HasSuffix(name, ".report") || strings.HasSuffix(name, ".snapshot") ||
+				strings.HasSuffix(name, ".chime") || strings.HasSuffix(name, ".signals") ||
+				strings.HasSuffix(name, ".seen")
+			if transient {
+				_ = os.Remove(filepath.Join(dir, name))
+			}
+		}
+	}
+	fmt.Println("\033[32mUninstalled.\033[0m Removed cully entries and state. Restart Claude Code to drop the status line.")
+	return nil
+}
+
+func uninstallCodex(cwd string) error {
+	if cwd == "" {
+		cwd, _ = os.Getwd()
+	}
+	if err := removeManagedSection(filepath.Join(cwd, "AGENTS.md"), "codex"); err != nil {
+		return err
+	}
+	if err := removeOwnedFile(codexPromptPath(), codexCommandMarkerStart); err != nil {
+		return err
+	}
+	if err := removeCodexStatusLine(codexConfigPath()); err != nil {
+		return err
+	}
+	fmt.Printf("\033[32mUninstalled.\033[0m Removed Cully Codex integration from %s\n", cwd)
+	return nil
+}
+
+func uninstallCursor(cwd string) error {
+	if cwd == "" {
+		cwd, _ = os.Getwd()
+	}
+	if err := removeOwnedFile(cursorCommandPath(cwd), cursorCommandMarkerStart); err != nil {
+		return err
+	}
+	fmt.Printf("\033[32mUninstalled.\033[0m Removed Cursor cully command; shared skill remains at %s\n", sharedSkillPath(cwd, "cully"))
+	return nil
+}
+
+func loadSettings(path string) (map[string]any, error) {
+	b, err := os.ReadFile(path)
+	if os.IsNotExist(err) {
+		return map[string]any{}, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	if len(b) == 0 {
+		return map[string]any{}, nil
+	}
+	var m map[string]any
+	if err := json.Unmarshal(b, &m); err != nil {
+		return nil, fmt.Errorf("%s is not valid JSON — fix or move it, then retry: %w", path, err)
+	}
+	return m, nil
+}
+
+func writeSettings(path string, m map[string]any) error {
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		return err
+	}
+	b, err := json.MarshalIndent(m, "", "  ")
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(path, append(b, '\n'), 0o644)
+}
+
+func backup(path string) error {
+	b, err := os.ReadFile(path)
+	if os.IsNotExist(err) {
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+	dst := fmt.Sprintf("%s.bak.%s", path, time.Now().Format("20060102150405"))
+	if err := os.WriteFile(dst, b, 0o644); err != nil {
+		return err
+	}
+	fmt.Printf("Backed up settings.json -> %s\n", dst)
+	return nil
+}
+
+// setEventHook appends our hook for the given event, removing any prior cully
+// entry (matched by exact command or by subcommand) first so re-running install
+// never duplicates it. Foreign hooks are preserved.
+func setEventHook(m map[string]any, event, cmd, sub string) {
+	hooks, _ := m["hooks"].(map[string]any)
+	if hooks == nil {
+		hooks = map[string]any{}
+	}
+	list := filterOutCullyCommand(toList(hooks[event]), cmd, sub)
+	list = append(list, map[string]any{
+		"hooks": []any{map[string]any{"type": "command", "command": cmd}},
+	})
+	hooks[event] = list
+	m["hooks"] = hooks
+}
+
+func removeEventHook(m map[string]any, event, cmd, sub string) {
+	hooks, _ := m["hooks"].(map[string]any)
+	if hooks == nil {
+		return
+	}
+	list := filterOutCullyCommand(toList(hooks[event]), cmd, sub)
+	if len(list) == 0 {
+		delete(hooks, event)
+	} else {
+		hooks[event] = list
+	}
+	if len(hooks) == 0 {
+		delete(m, "hooks")
+	} else {
+		m["hooks"] = hooks
+	}
+}
+
+// filterOutCommand drops hook groups that contain the given command, and any
+// group left with no inner hooks.
+func filterOutCommand(groups []any, cmd string) []any {
+	return filterOutCullyCommand(groups, cmd, "")
+}
+
+func filterOutCullyCommand(groups []any, cmd, subcommand string) []any {
+	out := make([]any, 0, len(groups))
+	for _, g := range groups {
+		gm, ok := g.(map[string]any)
+		if !ok {
+			out = append(out, g)
+			continue
+		}
+		inner := toList(gm["hooks"])
+		kept := make([]any, 0, len(inner))
+		for _, h := range inner {
+			if hm, ok := h.(map[string]any); ok {
+				if c, _ := hm["command"].(string); c == cmd || isCullySubcommand(c, subcommand) {
+					continue
+				}
+			}
+			kept = append(kept, h)
+		}
+		if len(kept) == 0 {
+			continue
+		}
+		gm["hooks"] = kept
+		out = append(out, gm)
+	}
+	return out
+}
+
+func isCullySubcommand(cmd, subcommand string) bool {
+	if subcommand == "" {
+		return false
+	}
+	return strings.HasSuffix(cmd, " "+subcommand) && strings.Contains(cmd, "cully")
+}
+
+func toList(v any) []any {
+	if l, ok := v.([]any); ok {
+		return l
+	}
+	return nil
+}
+
+// quote single-quotes a path for safe use in a shell command string.
+func quote(s string) string {
+	return "'" + strings.ReplaceAll(s, "'", "'\\''") + "'"
+}
+
+func slashCommandPath() string {
+	return filepath.Join(ConfigDir(), "commands", "cully.md")
+}
+
+// cullyCommandMD is the /cully slash-command definition. {{EXE}} is replaced
+// with the absolute, shell-quoted binary path at install time so it works under a
+// custom CLAUDE_CONFIG_DIR. The embedded shell defaults a bare /cully to the
+// `systems` synoptic, and passes any argument (status, list, apply <n>,
+// checklist <topic>, daemon status, debrief) straight through to the binary.
+//
+// $ARGUMENTS is text-substituted by Claude Code, so multi-word input like
+// `apply 1` must be re-split into separate argv entries. We route through an
+// inner `sh -c` where the substituted tokens arrive as positional parameters
+// ($@) rather than being re-expanded from a variable: an unquoted ${VAR}
+// word-splits in bash but NOT in zsh (macOS default), which previously collapsed
+// `apply 1` into a single argument and produced `unknown subcommand "apply 1"`.
+// Passing the tokens as positionals splits identically in every POSIX shell.
+//
+// CRITICAL: the template must not contain ANY $<digit> ($0-$9) — Claude Code
+// substitutes those placeholders with the slash command's own arguments even
+// inside single quotes, ZERO-indexed: a previous `b=$1` became `b=1` (second
+// arg) and `exec "$0"` became `exec "apply"` (first arg). The binary path is
+// therefore carried in the $CULLY_BIN env var — named variables, $#, and $@
+// all survive substitution (only $ARGUMENTS and $<digit> are rewritten).
+// CULLY_ASSUME_YES=1 tells `apply` there is no interactive stdin here, so it
+// must not wait on a y/N prompt that would read EOF and cancel.
+const cullyCommandMD = "---\n" +
+	"description: Manage Cully — synoptic, status, suggestions, apply, daemon\n" +
+	"argument-hint: \"[systems | status | list | apply <n> | checklist <topic> | plan | debrief | daemon status]\"\n" +
+	"allowed-tools: Bash\n" +
+	"---\n\n" +
+	"Run the cully control below, then explain the output plainly to the user:\n" +
+	"summarize what each section means, call out anything in the warning/caution\n" +
+	"colors first, and if they asked to `apply <n>` state exactly what changed.\n\n" +
+	"!`CULLY_BIN={{EXE}} sh -c 'if [ \"$#\" -eq 0 ]; then exec \"$CULLY_BIN\" systems; else CULLY_ASSUME_YES=1 exec \"$CULLY_BIN\" \"$@\"; fi' cully $ARGUMENTS 2>&1`\n"
+
+func writeSlashCommand(exe string) error {
+	path := slashCommandPath()
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		return err
+	}
+	body := strings.ReplaceAll(cullyCommandMD, "{{EXE}}", quote(exe))
+	return os.WriteFile(path, []byte(body), 0o644)
+}
+
+func expandInstallTargets(targets []string) []string {
+	seen := map[string]bool{}
+	var out []string
+	for _, t := range targets {
+		t = strings.ToLower(strings.TrimSpace(t))
+		if t == "" {
+			continue
+		}
+		if t == "all" {
+			for _, expanded := range []string{"claude", "codex", "cursor"} {
+				if !seen[expanded] {
+					seen[expanded] = true
+					out = append(out, expanded)
+				}
+			}
+			continue
+		}
+		if !seen[t] {
+			seen[t] = true
+			out = append(out, t)
+		}
+	}
+	return out
+}
+
+func managedStart(id string) string { return "<!-- cully:" + id + ":start -->" }
+func managedEnd(id string) string   { return "<!-- cully:" + id + ":end -->" }
+
+func upsertManagedSection(path, id, section string) error {
+	start, end := managedStart(id), managedEnd(id)
+	existing, _ := os.ReadFile(path)
+	body := strings.TrimSpace(section)
+	prefix := ""
+	if strings.HasSuffix(path, ".mdc") && strings.HasPrefix(body, "---\n") {
+		rest := body[4:]
+		if i := strings.Index(rest, "\n---"); i >= 0 {
+			prefix = "---\n" + rest[:i] + "\n---\n\n"
+			body = strings.TrimSpace(rest[i+4:])
+		}
+	}
+	block := start + "\n" + body + "\n" + end
+	text := string(existing)
+	if text == "" {
+		text = prefix + block + "\n"
+	} else if s := strings.Index(text, start); s >= 0 {
+		if e := strings.Index(text[s:], end); e >= 0 {
+			e += s + len(end)
+			text = text[:s] + block + text[e:]
+		} else {
+			text = strings.TrimRight(text, "\n") + "\n\n" + block + "\n"
+		}
+	} else {
+		text = strings.TrimRight(text, "\n") + "\n\n" + block + "\n"
+	}
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		return err
+	}
+	return os.WriteFile(path, []byte(text), 0o644)
+}
+
+func removeManagedSection(path, id string) error {
+	b, err := os.ReadFile(path)
+	if os.IsNotExist(err) {
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+	text := string(b)
+	start, end := managedStart(id), managedEnd(id)
+	s := strings.Index(text, start)
+	if s < 0 {
+		return nil
+	}
+	e := strings.Index(text[s:], end)
+	if e < 0 {
+		return nil
+	}
+	e += s + len(end)
+	text = strings.TrimSpace(text[:s] + text[e:])
+	if text == "" || mdcFrontmatterOnly(text) {
+		return os.Remove(path)
+	}
+	return os.WriteFile(path, []byte(text+"\n"), 0o644)
+}
+
+func mdcFrontmatterOnly(text string) bool {
+	text = strings.TrimSpace(text)
+	if !strings.HasPrefix(text, "---\n") {
+		return false
+	}
+	rest := strings.TrimSpace(strings.TrimPrefix(text, "---"))
+	if i := strings.Index(rest, "---"); i >= 0 {
+		return strings.TrimSpace(rest[i+3:]) == ""
+	}
+	return false
+}
+
+func codexAgentInstructions() string {
+	return `## Cully
+
+- Use the shared project skill at ` + "`.cully/skills/cully/SKILL.md`" + ` for Cully session controls.
+- In Codex, use /prompts:cully (or type /cully and select the saved cully prompt) for the in-session cully command.
+- Use ` + "`cully memory --json`" + ` when another tool needs compact background memory of what happened in recent sessions.`
+}
+
+func flightdeckSkill() string {
+	return cullyskill.Content
+}
+
+func writeSharedSkill(cwd, name, content string) error {
+	name = strings.Trim(name, "/")
+	if name == "" {
+		return fmt.Errorf("empty skill name")
+	}
+	dir := filepath.Dir(sharedSkillPath(cwd, name))
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		return err
+	}
+	return os.WriteFile(filepath.Join(dir, "SKILL.md"), []byte(strings.TrimSpace(content)+"\n"), 0o644)
+}

@@ -1,58 +1,51 @@
 name: CI
-
 on:
   push:
     branches: [main]
   pull_request:
-
 permissions:
   contents: read
-
 jobs:
-  lint-and-test:
+  go:
     runs-on: ubuntu-latest
     steps:
-      - name: Check out repository
-        uses: actions/checkout@v4
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
         with:
-          python-version: "3.13"
-          cache: pip
-      - name: Install project and CI tools
-        run: python -m pip install --upgrade pip && python -m pip install -e . pytest ruff
-      - name: Lint
-        run: ruff check .
-      - name: Test
-        run: python -m pytest -q
-
-  e2e:
+          go-version-file: go.mod
+          cache: true
+      - name: Formatting
+        run: test -z "$(gofmt -l cmd internal migrations skills)"
+      - run: go vet ./...
+      - run: go build ./...
+      - run: go test ./... -race -count=1
+      - name: Installer syntax
+        run: bash -n install.sh
+  database:
     runs-on: ubuntu-latest
     services:
       postgres:
         image: pgvector/pgvector:pg17
         env:
-          POSTGRES_DB: buddy
-          POSTGRES_USER: buddy
-          POSTGRES_PASSWORD: buddy
-        ports:
-          - 5432:5432
+          POSTGRES_DB: cully_test
+          POSTGRES_USER: cully_test
+          POSTGRES_PASSWORD: cully_test
+        ports: ["5432:5432"]
         options: >-
-          --health-cmd "pg_isready -U buddy -d buddy"
-          --health-interval 5s
-          --health-timeout 3s
-          --health-retries 10
+          --health-cmd "pg_isready -U cully_test -d cully_test"
+          --health-interval 5s --health-timeout 3s --health-retries 10
     env:
-      BUDDY_E2E_DATABASE_URL: postgresql://buddy:buddy@127.0.0.1:5432/buddy
+      CULLY_TEST_DATABASE_URL: postgresql://cully_test:cully_test@127.0.0.1:5432/cully_test
     steps:
-      - name: Check out repository
-        uses: actions/checkout@v4
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
         with:
-          python-version: "3.13"
-          cache: pip
-      - name: Install project and test tools
-        run: python -m pip install --upgrade pip && python -m pip install -e . pytest
-      - name: End-to-end test
-        run: python -m pytest -q -rs tests/test_e2e.py
+          go-version-file: go.mod
+          cache: true
+      - run: go test ./internal/store/postgres -race -count=1 -v
+  containers:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker build -t cully-mcp:test .
+      - run: docker build -f Dockerfile.data-api -t cully-data:test .

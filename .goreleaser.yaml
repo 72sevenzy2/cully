@@ -1,0 +1,45 @@
+version: 2
+project_name: cully
+builds:
+  - id: cully
+    main: ./cmd/cully
+    binary: cully
+    env: [CGO_ENABLED=0]
+    goos: [linux, darwin]
+    goarch: [amd64, arm64]
+    ldflags: ['-s -w -X main.version={{ .Version }}']
+  - id: cully-mcp
+    main: ./cmd/cully-mcp
+    binary: cully-mcp
+    env: [CGO_ENABLED=0]
+    goos: [linux]
+    goarch: [amd64, arm64]
+    ldflags: ['-s -w -X main.version={{ .Version }}']
+  - id: cully-data
+    main: ./cmd/cully-data
+    binary: cully-data
+    env: [CGO_ENABLED=0]
+    goos: [linux]
+    goarch: [amd64, arm64]
+archives:
+  - id: cli
+    ids: [cully]
+    name_template: 'cully_{{ .Os }}_{{ .Arch }}'
+    formats: [tar.gz]
+    files: [README.md, LICENSE, NOTICE]
+  - id: mcp
+    ids: [cully-mcp]
+    name_template: 'cully-mcp_{{ .Os }}_{{ .Arch }}'
+    formats: [tar.gz]
+    files: [README.md, LICENSE, NOTICE]
+  - id: data
+    ids: [cully-data]
+    name_template: 'cully-data_{{ .Os }}_{{ .Arch }}'
+    formats: [tar.gz]
+    files: [README.md, LICENSE, NOTICE]
+checksum:
+  name_template: checksums.txt
+release:
+  github:
+    owner: mcp-runtime
+    name: cully

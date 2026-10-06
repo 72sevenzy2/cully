@@ -1,6 +1,6 @@
 __pycache__/
 *.py[cod]
-memory/
+/memory/
 *.db
 *.db-shm
 *.db-wal
@@ -11,3 +11,8 @@ memory/
 venv/
 dist/
 build/
+
+/cully
+/cully-mcp
+/cully-data
+*.test

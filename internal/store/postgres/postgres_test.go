@@ -1,0 +1,307 @@
+package postgres
+
+import (
+	"context"
+	"crypto/rand"
+	"crypto/rsa"
+	"encoding/json"
+	"net/http"
+	"net/http/httptest"
+	"os"
+	"testing"
+	"time"
+
+	"github.com/golang-jwt/jwt/v5"
+	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/mcp-runtime/cully/internal/identity"
+	"github.com/mcp-runtime/cully/internal/mem0"
+	"github.com/mcp-runtime/cully/internal/memory"
+	"github.com/mcp-runtime/cully/internal/store/remote"
+	"github.com/mcp-runtime/cully/internal/transport/datahttp"
+	mcpt "github.com/mcp-runtime/cully/internal/transport/mcp"
+	"github.com/mcp-runtime/cully/migrations"
+	sdk "github.com/modelcontextprotocol/go-sdk/mcp"
+)
+
+type signedTransport struct{ token string }
+
+func (s signedTransport) RoundTrip(r *http.Request) (*http.Response, error) {
+	r = r.Clone(r.Context())
+	r.Header.Set("Authorization", "Bearer "+s.token)
+	return http.DefaultTransport.RoundTrip(r)
+}
+func TestEndToEndMCPDatabase(t *testing.T) {
+	store := testStore(t)
+	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+	defer cancel()
+	key, err := rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		t.Fatal(err)
+	}
+	issuer, resource := "https://issuer.test/mcp-auth", "https://public.test/cully/mcp"
+	verify := identity.Verifier(func(*jwt.Token) (any, error) { return &key.PublicKey, nil }, issuer, resource)
+	data := httptest.NewServer(datahttp.Handler(memory.Service{Store: store}, "private-secret", nil))
+	defer data.Close()
+	httpStore, err := remote.New(data.URL, "private-secret")
+	if err != nil {
+		t.Fatal(err)
+	}
+	server := httptest.NewServer(mcpt.Handler(memory.Service{Store: httpStore}, verify, issuer, resource, "/mcp", "test"))
+	defer server.Close()
+	connect := func(owner, scope string) *sdk.ClientSession {
+		t.Helper()
+		raw, err := jwt.NewWithClaims(jwt.SigningMethodRS256, jwt.MapClaims{"iss": issuer, "aud": resource, "sub": owner, "exp": time.Now().Add(time.Hour).Unix(), "scope": scope}).SignedString(key)
+		if err != nil {
+			t.Fatal(err)
+		}
+		client := sdk.NewClient(&sdk.Implementation{Name: "e2e", Version: "1"}, nil)
+		session, err := client.Connect(ctx, &sdk.StreamableClientTransport{Endpoint: server.URL + "/mcp", HTTPClient: &http.Client{Transport: signedTransport{raw}}, DisableStandaloneSSE: true}, nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		t.Cleanup(func() { _ = session.Close() })
+		return session
+	}
+	call := func(session *sdk.ClientSession, name string, input any) memory.Result {
+		t.Helper()
+		r, err := session.CallTool(ctx, &sdk.CallToolParams{Name: name, Arguments: input})
+		if err != nil || r.IsError {
+			t.Fatalf("%s: %+v %v", name, r, err)
+		}
+		data, err := json.Marshal(r.StructuredContent)
+		if err != nil {
+			t.Fatal(err)
+		}
+		var out memory.Result
+		if err = json.Unmarshal(data, &out); err != nil {
+			t.Fatal(err)
+		}
+		return out
+	}
+	a := connect("owner-a", "tools:read tools:write")
+	b := connect("owner-b", "tools:read tools:write")
+	entry := call(a, "cully_log", memory.LogInput{Summary: "Port memory services to Go", Assistant: "codex", Section: "company"}).Entry
+	if entry == nil {
+		t.Fatal("missing source entry")
+	}
+	id := memory.IDInput{EntryID: entry.ID}
+	if call(b, "cully_get", id).Entry != nil {
+		t.Fatal("cross-owner MCP read")
+	}
+	if len(call(a, "cully_search", memory.SearchInput{Query: "memory"}).Entries) != 1 {
+		t.Fatal("MCP search failed")
+	}
+	if len(call(b, "cully_search", memory.SearchInput{Query: "memory"}).Entries) != 0 {
+		t.Fatal("cross-owner MCP search")
+	}
+	summary := "Go memory services verified"
+	if call(a, "cully_update", memory.UpdateInput{EntryID: entry.ID, Summary: &summary}).Entry.Summary != summary {
+		t.Fatal("MCP update failed")
+	}
+	reader := connect("owner-a", "tools:read")
+	denied, err := reader.CallTool(ctx, &sdk.CallToolParams{Name: "cully_delete", Arguments: id})
+	if err != nil || !denied.IsError {
+		t.Fatal("read-only token deleted memory")
+	}
+	if !call(a, "cully_delete", id).Deleted {
+		t.Fatal("MCP deletion failed")
+	}
+	if call(a, "cully_get", id).Entry != nil {
+		t.Fatal("deleted source still returned")
+	}
+}
+
+func testStore(t *testing.T) *Store {
+	t.Helper()
+	dsn := os.Getenv("CULLY_TEST_DATABASE_URL")
+	if dsn == "" {
+		t.Skip("CULLY_TEST_DATABASE_URL not set; CI uses a disposable pgvector database")
+	}
+	ctx := context.Background()
+	admin, err := pgxpool.New(ctx, dsn)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(admin.Close)
+	schema := "cully_test_" + uuid.NewString()
+	name := `"` + schema + `"`
+	if _, err = admin.Exec(ctx, "CREATE EXTENSION IF NOT EXISTS vector"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err = admin.Exec(ctx, "CREATE SCHEMA "+name); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _, _ = admin.Exec(context.Background(), "DROP SCHEMA "+name+" CASCADE") })
+	cfg, err := pgxpool.ParseConfig(dsn)
+	if err != nil {
+		t.Fatal(err)
+	}
+	cfg.ConnConfig.RuntimeParams["search_path"] = name + ",public"
+	cfg.MaxConns = 4
+	pool, err := pgxpool.NewWithConfig(ctx, cfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(pool.Close)
+	if err = migrations.Apply(ctx, pool); err != nil {
+		t.Fatal(err)
+	}
+	return &Store{Pool: pool}
+}
+func execute(t *testing.T, s *Store, owner string, r memory.Request) memory.Result {
+	t.Helper()
+	v, e := (memory.Service{Store: s}).Execute(context.Background(), owner, r)
+	if e != nil {
+		t.Fatal(e)
+	}
+	return v
+}
+func TestDatabaseMemoryLifecycle(t *testing.T) {
+	s := testStore(t)
+	project := "git@github.com:MCP-Runtime/Cully.git"
+	vector := make([]float64, 1536)
+	vector[0] = 1
+	input := memory.LogInput{Summary: "OAuth audience validation", Assistant: "Codex", Section: "company", ProjectURL: &project, Embedding: vector, OccurredAt: "2026-10-06T15:00:00+05:30", Tags: []string{"Auth"}}
+	logged := execute(t, s, "owner-a", memory.Request{Operation: "log", Log: &input}).Entry
+	if logged == nil || logged.ID == "" || logged.OccurredAt.Format(time.RFC3339) != "2026-10-06T15:00:00+05:30" {
+		t.Fatalf("bad entry %+v", logged)
+	}
+	if logged.ProjectURL == nil || *logged.ProjectURL != "https://github.com/mcp-runtime/cully" {
+		t.Fatal("project not normalized")
+	}
+	id := memory.IDInput{EntryID: logged.ID}
+	if execute(t, s, "owner-b", memory.Request{Operation: "get", ID: &id}).Entry != nil {
+		t.Fatal("cross-owner get")
+	}
+	if execute(t, s, "owner-b", memory.Request{Operation: "delete", ID: &id}).Deleted {
+		t.Fatal("cross-owner delete")
+	}
+	summary := "OAuth fix and lesson"
+	if execute(t, s, "owner-b", memory.Request{Operation: "update", Update: &memory.UpdateInput{EntryID: logged.ID, Summary: &summary}}).Entry != nil {
+		t.Fatal("cross-owner update")
+	}
+	for _, search := range []memory.SearchInput{{Query: "OAuth"}, {QueryEmbedding: vector}, {Query: "OAuth", QueryEmbedding: vector}} {
+		r := execute(t, s, "owner-a", memory.Request{Operation: "search", Search: &search})
+		if len(r.Entries) != 1 {
+			t.Fatalf("search failed %+v", r)
+		}
+		r = execute(t, s, "owner-b", memory.Request{Operation: "search", Search: &search})
+		if len(r.Entries) != 0 {
+			t.Fatal("cross-owner search")
+		}
+	}
+	learning := "Validate the public resource"
+	updated := execute(t, s, "owner-a", memory.Request{Operation: "update", Update: &memory.UpdateInput{EntryID: logged.ID, Learning: &learning, Summary: &summary}}).Entry
+	if updated.Learning == nil || *updated.Learning != learning {
+		t.Fatal("update lost")
+	}
+	empty := ""
+	updated = execute(t, s, "owner-a", memory.Request{Operation: "update", Update: &memory.UpdateInput{EntryID: logged.ID, Learning: &empty}}).Entry
+	if updated.Learning != nil {
+		t.Fatal("field was not cleared")
+	}
+	category := "reading"
+	execute(t, s, "owner-a", memory.Request{Operation: "log", Log: &memory.LogInput{Summary: "Read a book", Assistant: "chatgpt", Section: "personal", Category: &category}})
+	personal := "personal"
+	r := execute(t, s, "owner-a", memory.Request{Operation: "recent", Recent: &memory.RecentInput{Section: &personal}})
+	if len(r.Entries) != 1 || r.Entries[0].ProjectURL != nil {
+		t.Fatal("personal section lost")
+	}
+	projects := execute(t, s, "owner-a", memory.Request{Operation: "projects", Projects: &memory.ProjectsInput{}})
+	if len(projects.Projects) != 1 || projects.Projects[0].EntryCount != 1 {
+		t.Fatal("project summary failed")
+	}
+	// Simulate the pre-cutover table name, rerun the migration, and verify IDs
+	// and data survive. Tests use a generated schema in a disposable database.
+	if _, err := s.Pool.Exec(context.Background(), "ALTER TABLE cully_entries RENAME TO buddy_entries; DELETE FROM cully_schema_versions"); err != nil {
+		t.Fatal(err)
+	}
+	for _, suffix := range []string{"search_idx", "project_time_idx", "type_idx", "section_time_idx", "owner_project_time_idx", "embedding_idx"} {
+		if _, err := s.Pool.Exec(context.Background(), "ALTER INDEX cully_entries_"+suffix+" RENAME TO buddy_entries_"+suffix); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if _, err := s.Pool.Exec(context.Background(), "ALTER TABLE buddy_entries RENAME CONSTRAINT cully_entries_section_check TO buddy_entries_section_check"); err != nil {
+		t.Fatal(err)
+	}
+	if err := migrations.Apply(context.Background(), s.Pool); err != nil {
+		t.Fatal(err)
+	}
+	var vectorIndexes int
+	if err := s.Pool.QueryRow(context.Background(), "SELECT count(*) FROM pg_indexes WHERE schemaname=current_schema() AND tablename='cully_entries' AND indexdef LIKE '%USING hnsw%'").Scan(&vectorIndexes); err != nil || vectorIndexes != 1 {
+		t.Fatalf("duplicate vector indexes: %d %v", vectorIndexes, err)
+	}
+	if execute(t, s, "owner-a", memory.Request{Operation: "get", ID: &id}).Entry.ID != logged.ID {
+		t.Fatal("migration lost memory")
+	}
+	if !execute(t, s, "owner-a", memory.Request{Operation: "delete", ID: &id}).Deleted {
+		t.Fatal("delete failed")
+	}
+}
+func TestDurableMem0Projection(t *testing.T) {
+	s := testStore(t)
+	var stored []mem0.Hit
+	var outage bool
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if outage {
+			w.WriteHeader(503)
+			return
+		}
+		switch r.Method + " " + r.URL.Path {
+		case "GET /memories", "POST /search":
+			_ = json.NewEncoder(w).Encode(map[string]any{"results": stored})
+		case "POST /memories":
+			var v struct {
+				UserID   string         `json:"user_id"`
+				RunID    string         `json:"run_id"`
+				Metadata map[string]any `json:"metadata"`
+			}
+			_ = json.NewDecoder(r.Body).Decode(&v)
+			stored = []mem0.Hit{{ID: "projection", UserID: v.UserID, RunID: v.RunID, Metadata: v.Metadata}}
+			_, _ = w.Write([]byte(`{}`))
+		case "DELETE /memories/projection":
+			stored = nil
+			_, _ = w.Write([]byte(`{}`))
+		default:
+			t.Errorf("unexpected Mem0 call %s", r.URL.Path)
+			w.WriteHeader(404)
+		}
+	}))
+	defer server.Close()
+	s.Mem0, _ = mem0.New(server.URL, "test-key")
+	s.Mem0Enabled = true
+	e := execute(t, s, "owner-a", memory.Request{Operation: "log", Log: &memory.LogInput{Summary: "Remember OAuth", Assistant: "codex", Section: "company"}}).Entry
+	outage = true
+	if err := s.processMem0Job(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	var count int
+	if err := s.Pool.QueryRow(context.Background(), "SELECT count(*) FROM cully_mem0_jobs").Scan(&count); err != nil || count != 1 {
+		t.Fatal("outage lost durable job")
+	}
+	outage = false
+	if _, err := s.Pool.Exec(context.Background(), "UPDATE cully_mem0_jobs SET next_attempt=now()"); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.processMem0Job(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	recalled := execute(t, s, "owner-a", memory.Request{Operation: "recall", Search: &memory.SearchInput{Query: "OAuth"}})
+	if len(recalled.Entries) != 1 {
+		t.Fatalf("recall failed %+v", recalled)
+	}
+	if len(execute(t, s, "owner-b", memory.Request{Operation: "recall", Search: &memory.SearchInput{Query: "OAuth"}}).Entries) != 0 {
+		t.Fatal("Mem0 leaked another owner")
+	}
+	execute(t, s, "owner-a", memory.Request{Operation: "delete", ID: &memory.IDInput{EntryID: e.ID}})
+	if len(execute(t, s, "owner-a", memory.Request{Operation: "recall", Search: &memory.SearchInput{Query: "OAuth"}}).Entries) != 0 {
+		t.Fatal("deleted source returned before projection cleanup")
+	}
+	if err := s.processMem0Job(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	if len(stored) != 0 {
+		t.Fatal("Mem0 deletion not propagated")
+	}
+}

@@ -1,0 +1,15 @@
+interface:
+  display_name: "Cully"
+  short_description: "Your companion for better work and everyday life"
+  default_prompt: "Use $cully to recall how I work, help guide my coding agents, and suggest useful improvements. Remember personal context when I ask."
+
+dependencies:
+  tools:
+    - type: "mcp"
+      value: "cully"
+      description: "Shared Cully work memory"
+      transport: "streamable_http"
+      url: "https://mcp.mcpruntime.org/cully/mcp"
+
+policy:
+  allow_implicit_invocation: true

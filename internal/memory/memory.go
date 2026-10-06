@@ -1,0 +1,373 @@
+// Package memory owns the shared Cully memory contract and validation.
+package memory
+
+import (
+	"context"
+	"errors"
+	"fmt"
+	"math"
+	"net/url"
+	"regexp"
+	"strings"
+	"time"
+	"unicode/utf8"
+
+	"github.com/google/uuid"
+)
+
+var ErrInvalid = errors.New("invalid memory input")
+var ErrUnavailable = errors.New("memory service unavailable")
+var ErrForbidden = errors.New("insufficient permission")
+var IST = time.FixedZone("Asia/Kolkata", 19800)
+
+type Entry struct {
+	ID         string    `json:"id"`
+	Theme      string    `json:"theme"`
+	Section    string    `json:"section"`
+	ProjectURL *string   `json:"project_url"`
+	Category   *string   `json:"category"`
+	EntryType  string    `json:"entry_type"`
+	Summary    string    `json:"summary"`
+	Approach   *string   `json:"approach"`
+	Outcome    *string   `json:"outcome"`
+	Issue      *string   `json:"issue"`
+	Learning   *string   `json:"learning"`
+	NextSteps  *string   `json:"next_steps"`
+	Assistant  string    `json:"assistant"`
+	Tags       []string  `json:"tags"`
+	OccurredAt time.Time `json:"occurred_at"`
+	CreatedAt  time.Time `json:"created_at"`
+	UpdatedAt  time.Time `json:"updated_at"`
+}
+
+func (e *Entry) NormalizeTimes() {
+	e.OccurredAt = e.OccurredAt.In(IST)
+	e.CreatedAt = e.CreatedAt.In(IST)
+	e.UpdatedAt = e.UpdatedAt.In(IST)
+	if e.Tags == nil {
+		e.Tags = []string{}
+	}
+}
+
+type LogInput struct {
+	Summary    string    `json:"summary"`
+	Assistant  string    `json:"assistant"`
+	Section    string    `json:"section"`
+	ProjectURL *string   `json:"project_url,omitempty"`
+	Category   *string   `json:"category,omitempty"`
+	EntryType  string    `json:"entry_type,omitempty"`
+	Approach   *string   `json:"approach,omitempty"`
+	Outcome    *string   `json:"outcome,omitempty"`
+	Issue      *string   `json:"issue,omitempty"`
+	Learning   *string   `json:"learning,omitempty"`
+	NextSteps  *string   `json:"next_steps,omitempty"`
+	Tags       []string  `json:"tags,omitempty"`
+	Embedding  []float64 `json:"embedding,omitempty"`
+	OccurredAt string    `json:"occurred_at,omitempty"`
+}
+type SearchInput struct {
+	Query          string    `json:"query,omitempty"`
+	ProjectURL     *string   `json:"project_url,omitempty"`
+	EntryType      *string   `json:"entry_type,omitempty"`
+	Section        *string   `json:"section,omitempty"`
+	Category       *string   `json:"category,omitempty"`
+	Since          string    `json:"since,omitempty"`
+	Limit          int       `json:"limit,omitempty"`
+	QueryEmbedding []float64 `json:"query_embedding,omitempty"`
+}
+type RecentInput struct {
+	ProjectURL *string `json:"project_url,omitempty"`
+	EntryType  *string `json:"entry_type,omitempty"`
+	Section    *string `json:"section,omitempty"`
+	Category   *string `json:"category,omitempty"`
+	Limit      int     `json:"limit,omitempty"`
+}
+type IDInput struct {
+	EntryID string `json:"entry_id"`
+}
+type UpdateInput struct {
+	EntryID   string     `json:"entry_id"`
+	Summary   *string    `json:"summary,omitempty"`
+	Approach  *string    `json:"approach,omitempty"`
+	Outcome   *string    `json:"outcome,omitempty"`
+	Issue     *string    `json:"issue,omitempty"`
+	Learning  *string    `json:"learning,omitempty"`
+	NextSteps *string    `json:"next_steps,omitempty"`
+	Section   *string    `json:"section,omitempty"`
+	Category  *string    `json:"category,omitempty"`
+	Tags      *[]string  `json:"tags,omitempty"`
+	Embedding *[]float64 `json:"embedding,omitempty"`
+}
+type ProjectsInput struct {
+	Limit   int     `json:"limit,omitempty"`
+	Section *string `json:"section,omitempty"`
+}
+type Project struct {
+	ProjectURL   string    `json:"project_url"`
+	Section      string    `json:"section"`
+	EntryCount   int       `json:"entry_count"`
+	LastActivity time.Time `json:"last_activity"`
+}
+type Request struct {
+	Operation string         `json:"operation"`
+	Log       *LogInput      `json:"log,omitempty"`
+	Search    *SearchInput   `json:"search,omitempty"`
+	Recent    *RecentInput   `json:"recent,omitempty"`
+	ID        *IDInput       `json:"id,omitempty"`
+	Update    *UpdateInput   `json:"update,omitempty"`
+	Projects  *ProjectsInput `json:"projects,omitempty"`
+}
+type Result struct {
+	Entry    *Entry    `json:"entry,omitempty"`
+	Entries  []Entry   `json:"entries,omitempty"`
+	Projects []Project `json:"projects,omitempty"`
+	Deleted  bool      `json:"deleted,omitempty"`
+}
+type Repository interface {
+	Execute(context.Context, string, Request) (Result, error)
+}
+type Service struct{ Store Repository }
+
+func (s Service) Execute(ctx context.Context, owner string, r Request) (Result, error) {
+	if strings.TrimSpace(owner) == "" || len(owner) > 512 {
+		return Result{}, fmt.Errorf("%w: owner required", ErrInvalid)
+	}
+	if err := r.Validate(); err != nil {
+		return Result{}, err
+	}
+	ctx, cancel := context.WithTimeout(ctx, 15*time.Second)
+	defer cancel()
+	return s.Store.Execute(ctx, owner, r)
+}
+
+var ownerRE = regexp.MustCompile(`^[A-Za-z0-9](?:[A-Za-z0-9-]{0,37}[A-Za-z0-9])?$`)
+var repoRE = regexp.MustCompile(`^[A-Za-z0-9_.-]{1,100}$`)
+var assistantRE = regexp.MustCompile(`(?i)^(codex|claude|cursor|chatgpt|other)(?:[- ][a-z0-9_.-]{1,40})?$`)
+var secrets = []*regexp.Regexp{
+	regexp.MustCompile(`-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----`),
+	regexp.MustCompile(`\b(?:gh[pousr]_[A-Za-z0-9_]{20,}|github_pat_[A-Za-z0-9_]{20,})\b`),
+	regexp.MustCompile(`(?i)\b(?:password|secret|api[_-]?key|access[_-]?token)\s*[:=]\s*[^\s,;]{8,}`),
+}
+
+func NormalizeProject(value string) (string, error) {
+	value = strings.TrimSpace(value)
+	var parts []string
+	if strings.HasPrefix(strings.ToLower(value), "git@github.com:") {
+		parts = strings.Split(value[15:], "/")
+	} else {
+		u, err := url.Parse(value)
+		if err != nil || (u.Scheme != "https" && u.Scheme != "http") || !strings.EqualFold(u.Hostname(), "github.com") || u.User != nil || u.RawQuery != "" || u.Fragment != "" {
+			return "", fmt.Errorf("%w: project_url must be a GitHub repository URL", ErrInvalid)
+		}
+		parts = strings.Split(strings.Trim(u.Path, "/"), "/")
+	}
+	if len(parts) != 2 {
+		return "", fmt.Errorf("%w: project_url must point to OWNER/REPO", ErrInvalid)
+	}
+	parts[1] = strings.TrimSuffix(parts[1], ".git")
+	if !ownerRE.MatchString(parts[0]) || !repoRE.MatchString(parts[1]) {
+		return "", fmt.Errorf("%w: invalid GitHub repository", ErrInvalid)
+	}
+	return "https://github.com/" + strings.ToLower(strings.Join(parts, "/")), nil
+}
+func text(v *string, required bool) error {
+	if v == nil {
+		return nil
+	}
+	*v = strings.TrimSpace(*v)
+	if required && *v == "" {
+		return fmt.Errorf("%w: summary is required", ErrInvalid)
+	}
+	if utf8.RuneCountInString(*v) > 8000 {
+		return fmt.Errorf("%w: text exceeds 8000 characters", ErrInvalid)
+	}
+	for _, p := range secrets {
+		if p.MatchString(*v) {
+			return fmt.Errorf("%w: remove credentials before saving", ErrInvalid)
+		}
+	}
+	return nil
+}
+func category(v *string) error {
+	if v == nil {
+		return nil
+	}
+	switch *v {
+	case "", "career", "fitness", "relationship", "finance", "food", "water", "reading", "mood", "check-in", "other":
+		return nil
+	}
+	return fmt.Errorf("%w: invalid category", ErrInvalid)
+}
+func section(v *string) error {
+	if v != nil && *v != "personal" && *v != "company" {
+		return fmt.Errorf("%w: section must be personal or company", ErrInvalid)
+	}
+	return nil
+}
+func entryType(v *string) error {
+	if v != nil && *v != "work" && *v != "issue" && *v != "learning" && *v != "decision" {
+		return fmt.Errorf("%w: invalid entry_type", ErrInvalid)
+	}
+	return nil
+}
+func embedding(v []float64) error {
+	if v == nil {
+		return nil
+	}
+	if len(v) != 1536 {
+		return fmt.Errorf("%w: embedding must contain 1536 values", ErrInvalid)
+	}
+	for _, f := range v {
+		if math.IsNaN(f) || math.IsInf(f, 0) {
+			return fmt.Errorf("%w: embedding must be finite", ErrInvalid)
+		}
+	}
+	return nil
+}
+func tags(v *[]string) error {
+	if len(*v) > 20 {
+		return fmt.Errorf("%w: at most 20 tags", ErrInvalid)
+	}
+	out := []string{}
+	for _, t := range *v {
+		t = strings.ToLower(strings.TrimSpace(t))
+		if utf8.RuneCountInString(t) > 64 {
+			return fmt.Errorf("%w: tag too long", ErrInvalid)
+		}
+		if t != "" {
+			out = append(out, t)
+		}
+	}
+	*v = out
+	return nil
+}
+func project(v *string) error {
+	if v == nil {
+		return nil
+	}
+	p, e := NormalizeProject(*v)
+	if e == nil {
+		*v = p
+	}
+	return e
+}
+func stamp(v string) error {
+	if v == "" {
+		return nil
+	}
+	_, e := time.Parse(time.RFC3339, v)
+	if e != nil {
+		return fmt.Errorf("%w: timestamp requires RFC3339 with timezone offset", ErrInvalid)
+	}
+	return nil
+}
+func id(v string) error {
+	if _, e := uuid.Parse(v); e != nil {
+		return fmt.Errorf("%w: invalid entry_id", ErrInvalid)
+	}
+	return nil
+}
+func limit(v *int, max int) {
+	if *v == 0 {
+		*v = 20
+	}
+	if *v < 1 {
+		*v = 1
+	}
+	if *v > max {
+		*v = max
+	}
+}
+func (r *Request) Validate() error {
+	n := 0
+	for _, b := range []bool{r.Log != nil, r.Search != nil, r.Recent != nil, r.ID != nil, r.Update != nil, r.Projects != nil} {
+		if b {
+			n++
+		}
+	}
+	if n != 1 {
+		return fmt.Errorf("%w: provide exactly one operation input", ErrInvalid)
+	}
+	checks := []error{}
+	switch r.Operation {
+	case "log":
+		v := r.Log
+		if v == nil {
+			break
+		}
+		if v.EntryType == "" {
+			v.EntryType = "work"
+		}
+		v.Assistant = strings.ToLower(strings.TrimSpace(v.Assistant))
+		if !assistantRE.MatchString(v.Assistant) {
+			return fmt.Errorf("%w: invalid assistant", ErrInvalid)
+		}
+		checks = append(checks, text(&v.Summary, true), section(&v.Section), category(v.Category), entryType(&v.EntryType), project(v.ProjectURL), embedding(v.Embedding), stamp(v.OccurredAt), tags(&v.Tags))
+		for _, p := range []*string{v.Approach, v.Outcome, v.Issue, v.Learning, v.NextSteps} {
+			checks = append(checks, text(p, false))
+		}
+	case "search", "recall":
+		v := r.Search
+		if v == nil {
+			break
+		}
+		limit(&v.Limit, 50)
+		checks = append(checks, text(&v.Query, false), section(v.Section), category(v.Category), entryType(v.EntryType), project(v.ProjectURL), embedding(v.QueryEmbedding), stamp(v.Since))
+		if v.Query == "" && len(v.QueryEmbedding) == 0 {
+			return fmt.Errorf("%w: provide query or query_embedding", ErrInvalid)
+		}
+		if r.Operation == "recall" && v.Query == "" {
+			return fmt.Errorf("%w: recall requires query text", ErrInvalid)
+		}
+	case "recent":
+		v := r.Recent
+		if v == nil {
+			break
+		}
+		limit(&v.Limit, 50)
+		checks = append(checks, section(v.Section), category(v.Category), entryType(v.EntryType), project(v.ProjectURL))
+	case "get", "delete":
+		if r.ID == nil {
+			break
+		}
+		checks = append(checks, id(r.ID.EntryID))
+	case "update":
+		v := r.Update
+		if v == nil {
+			break
+		}
+		checks = append(checks, id(v.EntryID), section(v.Section), category(v.Category), text(v.Summary, true))
+		changed := v.Summary != nil || v.Section != nil || v.Category != nil || v.Tags != nil || v.Embedding != nil
+		for _, p := range []*string{v.Approach, v.Outcome, v.Issue, v.Learning, v.NextSteps} {
+			checks = append(checks, text(p, false))
+			changed = changed || p != nil
+		}
+		if !changed {
+			return fmt.Errorf("%w: provide a field to update", ErrInvalid)
+		}
+		if v.Tags != nil {
+			checks = append(checks, tags(v.Tags))
+		}
+		if v.Embedding != nil {
+			checks = append(checks, embedding(*v.Embedding))
+		}
+	case "projects":
+		if r.Projects == nil {
+			break
+		}
+		limit(&r.Projects.Limit, 100)
+		checks = append(checks, section(r.Projects.Section))
+	default:
+		return fmt.Errorf("%w: unknown operation", ErrInvalid)
+	}
+	valid := (r.Operation == "log" && r.Log != nil) || ((r.Operation == "search" || r.Operation == "recall") && r.Search != nil) || (r.Operation == "recent" && r.Recent != nil) || ((r.Operation == "get" || r.Operation == "delete") && r.ID != nil) || (r.Operation == "update" && r.Update != nil) || (r.Operation == "projects" && r.Projects != nil)
+	if !valid {
+		return fmt.Errorf("%w: mismatched operation input", ErrInvalid)
+	}
+	for _, e := range checks {
+		if e != nil {
+			return e
+		}
+	}
+	return nil
+}

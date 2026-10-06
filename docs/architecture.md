@@ -1,0 +1,63 @@
+# Architecture
+
+Cully has one Go module and three executable entry points. Domain validation is shared across the memory transports; PostgreSQL and HTTP adapters implement the same repository interface.
+
+```mermaid
+flowchart LR
+  A[Claude / Codex / Cursor] --> L[Cully CLI and daemon]
+  L --> S[Local session state and compact memory]
+  A -->|OAuth| M[Cully MCP]
+  M -->|Private authenticated HTTPS| D[Cully data API]
+  D --> P[(PostgreSQL + pgvector)]
+  P --> Q[Durable projection jobs]
+  Q --> F[Self-hosted Mem0]
+  D -->|Semantic recall| F
+```
+
+## Local session companion
+
+`cmd/cully` uses the imported session-control implementation in `internal/cully`. It renders instruments, discovers capabilities, runs advisory analysis, manages suggestions and records compact session summaries. Claude has the rich command-backed status line and hooks. Codex and Cursor use their available native integrations.
+
+The local daemon and memory work offline. A local transcript summary is not automatically a shared-memory write. Agents use the combined Cully skill to log substantive work through MCP; automatic daemon-to-remote upload is a roadmap item.
+
+## Public memory boundary
+
+`cmd/cully-mcp` exposes tools through the official Go MCP SDK and Streamable HTTP. `internal/identity` verifies the configured issuer, public resource audience, RS256 signature, expiration and subject. Each tool checks read or write permission.
+
+The verified subject becomes the owner. Public tool inputs cannot choose a different owner. Resource metadata advertises the configured public OAuth resource rather than relying on a proxy-rewritten Host header.
+
+`internal/store/remote` calls the private Go data API with a service token. Database and Mem0 credentials stay on the VM.
+
+## Private memory service
+
+`cmd/cully-data` hosts the private API, runs the Mem0 worker, and provides explicit `migrate`, `reindex` and `health` commands. `internal/memory` owns types and input validation. `internal/store/postgres` implements owner-scoped SQL using a bounded pgx pool.
+
+Full-text search uses PostgreSQL's generated search vector. Optional 1536-dimensional query vectors retrieve nearest candidates with pgvector. Hybrid search combines bounded text and vector candidate lists through reciprocal-rank fusion.
+
+## Semantic memory
+
+PostgreSQL is authoritative. When Mem0 is enabled, source edits and projection jobs commit in the same transaction. A worker reconciles one owner's source entry into self-hosted Mem0 and retries outages with backoff. Deletes remove the corresponding projection.
+
+`cully_recall` uses Mem0 to find candidates, then loads live records from PostgreSQL. It rejects another owner's records, deleted entries and projections with outdated source timestamps. It returns source records, not unverified raw Mem0 results.
+
+Projection uses `infer=false`: Mem0 embeds authored summaries without adding a fact-extraction model call. Its upstream runtime remains a separate dependency; Cully's own binaries are Go.
+
+## Repository map
+
+```text
+cmd/                 CLI, MCP and data entry points
+internal/cully/      local session controls and agent integration
+internal/memory/     shared memory types and validation
+internal/identity/   OAuth verification
+internal/mem0/       self-hosted REST adapter
+internal/store/      PostgreSQL and remote HTTP adapters
+internal/transport/  MCP and private HTTP handlers
+internal/app/        server lifecycle and composition
+internal/config/     typed configuration
+migrations/          explicit, versioned SQL
+skills/cully/        combined session and memory guidance
+deploy/              future VM and Runtime routing
+docs/                guides, roadmap and historical records
+```
+
+The intended cutover uses the VM currently running Buddy for PostgreSQL, the Cully data API and self-hosted Mem0. The public MCP service can continue in MCP Runtime. See [the VM runbook](migration.md) for preserving the existing volume and switching clients.
