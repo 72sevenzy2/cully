@@ -1,32 +1,28 @@
-@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@500;600;700;800&display=swap');
-
 :root {
   color-scheme: light;
-  --vp-c-brand-1: #174c38;
+  --vp-c-brand-1: #246b4d;
   --vp-c-brand-2: #2f664f;
-  --vp-c-brand-3: #0e3429;
-  --vp-c-brand-soft: #dfeee0;
-  --vp-c-bg: #f7f5ef;
-  --vp-c-bg-alt: #f1f2ea;
-  --vp-c-bg-elv: #fffefa;
-  --vp-c-bg-soft: #e9eee4;
-  --vp-c-border: #ccd8c9;
-  --vp-c-divider: #dcded4;
-  --vp-c-gutter: #dcded4;
-  --vp-c-text-1: #183b2d;
-  --vp-c-text-2: #516257;
-  --vp-c-text-3: #738578;
-  --vp-c-default-soft: #e9eee4;
-  --vp-nav-bg-color: #f7f5ef;
-  --vp-nav-screen-bg-color: #f7f5ef;
-  --vp-local-nav-bg-color: #f7f5ef;
-  --vp-sidebar-bg-color: #f1f2ea;
-  --vp-code-bg: #e2ecdf;
-  --vp-code-block-bg: #eef3e9;
-  --vp-custom-block-info-bg: #e5efe3;
-  --vp-custom-block-info-border: #b8d5b9;
-  --vp-font-family-base: 'DM Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  --vp-font-family-mono: 'SFMono-Regular', Consolas, 'Liberation Mono', monospace;
+  --vp-c-brand-3: #174c38;
+  --vp-c-brand-soft: #edf6ee;
+  --vp-c-bg: #ffffff;
+  --vp-c-bg-alt: #ffffff;
+  --vp-c-bg-elv: #ffffff;
+  --vp-c-bg-soft: #f7f7f7;
+  --vp-c-border: #e5e7eb;
+  --vp-c-divider: #e5e7eb;
+  --vp-c-gutter: #e5e7eb;
+  --vp-c-text-1: #1f2937;
+  --vp-c-text-2: #4b5563;
+  --vp-c-text-3: #6b7280;
+  --vp-c-default-soft: #f7f7f7;
+  --vp-nav-bg-color: #ffffff;
+  --vp-nav-screen-bg-color: #ffffff;
+  --vp-local-nav-bg-color: #ffffff;
+  --vp-sidebar-bg-color: #ffffff;
+  --vp-code-bg: #f3f4f6;
+  --vp-code-block-bg: #f7f7f7;
+  --vp-custom-block-info-bg: #f7f7f7;
+  --vp-custom-block-info-border: #e5e7eb;
 }
 
 body {
@@ -38,10 +34,7 @@ body {
 }
 
 .VPNavBarTitle .title {
-  color: var(--vp-c-brand-1);
-  font-family: Manrope, var(--vp-font-family-base);
-  font-weight: 800;
-  letter-spacing: -.05em;
+  font-weight: 700;
 }
 
 .VPNavBarTitle .logo {
@@ -49,41 +42,21 @@ body {
   height: 28px;
 }
 
-.VPDoc h1,
-.VPDoc h2,
-.VPDoc h3 {
-  font-family: Manrope, var(--vp-font-family-base);
-}
-
-.VPDoc h1 {
-  letter-spacing: -.05em;
-}
-
-.VPDoc h2 {
-  letter-spacing: -.035em;
-}
-
 .VPDoc a {
   text-underline-offset: 3px;
 }
 
 .vp-doc div[class*='language-'] {
-  border: 1px solid #d7e3d3;
-  border-radius: 12px;
-}
-
-.VPSidebarItem.level-0 > .item .text {
-  font-size: .75rem;
-  letter-spacing: .08em;
-  text-transform: uppercase;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
 }
 
 .vp-doc .mermaid {
   overflow-x: auto;
-  padding: 22px;
-  border: 1px solid #d7e3d3;
-  border-radius: 14px;
-  background: #fffefa;
+  padding: 16px;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  background: #ffffff;
 }
 
 .vp-doc .mermaid svg {

@@ -12,21 +12,21 @@ export default withMermaid(defineConfig({
     theme: 'base',
     securityLevel: 'strict',
     themeVariables: {
-      background: '#fffefa',
-      primaryColor: '#e4efe2',
-      primaryTextColor: '#183b2d',
+      background: '#ffffff',
+      primaryColor: '#ffffff',
+      primaryTextColor: '#1f2937',
       primaryBorderColor: '#7eaf88',
-      secondaryColor: '#f3e6d2',
-      secondaryTextColor: '#183b2d',
-      tertiaryColor: '#f7f5ef',
-      tertiaryTextColor: '#183b2d',
+      secondaryColor: '#f7f7f7',
+      secondaryTextColor: '#1f2937',
+      tertiaryColor: '#ffffff',
+      tertiaryTextColor: '#1f2937',
       lineColor: '#527b5d',
-      fontFamily: 'DM Sans, Arial, sans-serif'
+      fontFamily: 'system-ui, sans-serif'
     }
   },
   head: [
     ['link', { rel: 'icon', href: '/favicon.svg', type: 'image/svg+xml' }],
-    ['meta', { name: 'theme-color', content: '#f7f5ef' }],
+    ['meta', { name: 'theme-color', content: '#ffffff' }],
     ['meta', { property: 'og:type', content: 'website' }],
     ['meta', { property: 'og:site_name', content: 'Cully Docs' }]
   ],
