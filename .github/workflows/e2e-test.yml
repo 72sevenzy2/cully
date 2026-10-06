@@ -44,3 +44,16 @@ jobs:
         run: |
           cd deploy/self-hosted
           docker compose --env-file .env.example down -v --remove-orphans
+  customer-setup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+      - name: Install and use Cully like a new Codex user
+        run: bash tests/e2e/customer-setup.sh
