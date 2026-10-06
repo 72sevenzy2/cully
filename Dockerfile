@@ -8,5 +8,6 @@ RUN CGO_ENABLED=0 go build -trimpath -ldflags="-s -w -X main.version=${VERSION}"
 
 FROM gcr.io/distroless/static-debian12:nonroot
 COPY --from=build /cully-mcp /cully-mcp
+COPY LICENSE NOTICE /licenses/
 EXPOSE 8080
 ENTRYPOINT ["/cully-mcp"]

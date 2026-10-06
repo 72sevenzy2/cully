@@ -220,7 +220,7 @@ Initial engineering targets, not measured claims: warm cached status rendering p
 
 ### 1. Repository consolidation and baseline
 
-Transfer Flightdeck to the org; retain Buddy as the destination and rename it Cully. Import Flightdeck on an integration branch with unsquashed history, preferably a subtree under `cli/` as a temporary landing area. Then move its Go source into the final module layout. Preserve source licenses and copyright notices; verify Buddy's license before publishing combined releases. Git history import does not move issues, releases or GitHub settings: inventory these separately. Prefix/archive colliding old release tags rather than confusing Cully version tags.
+Transfer Flightdeck to the org; retain Buddy as the destination and rename it Cully. Import Flightdeck on an integration branch with unsquashed history, then move its Go source into the final module layout. Current Cully source and release packaging use Apache 2.0, as requested by the original source owner. Historical Git commits and archived binaries retain their original notices. Git history import does not move issues, releases or GitHub settings: inventory these separately. Prefix/archive colliding old release tags rather than confusing Cully version tags.
 
 Gate: both parent histories are reachable, CI baseline captured, features and known gaps recorded, no production route changes yet.
 

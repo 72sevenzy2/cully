@@ -184,4 +184,4 @@ macOS and Linux binaries.
 
 ## License
 
-The imported session-control source is MIT licensed. See [the original license](../../licenses/flightdeck-MIT.txt).
+Cully is licensed under [Apache 2.0](../../LICENSE).

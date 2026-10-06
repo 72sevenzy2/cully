@@ -8,6 +8,6 @@ Agent Flightdeck was transferred from Agent-Hellboy to mcp-runtime, then combine
 - Historical release notes and binary assets: the corresponding `flightdeck/*` releases in [Cully releases](https://github.com/mcp-runtime/cully/releases).
 - Original pull requests, comments, reviews, branches, tags, repository metadata and release metadata: the JSON snapshots in this directory. These are historical records, not newly recreated live GitHub pull requests.
 - Imported session-control documentation and screenshots: [docs/flightdeck](../../flightdeck/README.md).
-- Original MIT attribution: [licenses/flightdeck-MIT.txt](../../../licenses/flightdeck-MIT.txt).
+- Current Cully source license: [Apache 2.0](../../../LICENSE). Historical source history and release artifacts retain their original notices.
 
 Historical release assets retain their original filenames and binaries. They are archived artifacts, not current Cully installation packages or compatibility aliases. Original GitHub PR numbers and publication timestamps are retained in the snapshots; new archive release URLs and publication timestamps differ.

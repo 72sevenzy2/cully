@@ -26,17 +26,17 @@ archives:
     ids: [cully]
     name_template: 'cully_{{ .Os }}_{{ .Arch }}'
     formats: [tar.gz]
-    files: [README.md, licenses/*]
+    files: [README.md, LICENSE, NOTICE]
   - id: mcp
     ids: [cully-mcp]
     name_template: 'cully-mcp_{{ .Os }}_{{ .Arch }}'
     formats: [tar.gz]
-    files: [README.md, licenses/*]
+    files: [README.md, LICENSE, NOTICE]
   - id: data
     ids: [cully-data]
     name_template: 'cully-data_{{ .Os }}_{{ .Arch }}'
     formats: [tar.gz]
-    files: [README.md, licenses/*]
+    files: [README.md, LICENSE, NOTICE]
 checksum:
   name_template: checksums.txt
 release:

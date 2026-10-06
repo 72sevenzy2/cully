@@ -2,6 +2,8 @@
 
 **Your companion for better work and everyday life.**
 
+[Website](https://cully.net) · [Docs](https://docs.cully.net) (planned hosting)
+
 Cully remembers what you do and how you work. It helps you guide coding agents, manage projects, and spot ways to improve your workflow. When you ask it to remember personal things, it can help with your goals, routines and everyday life too.
 
 | Component | What it does |
@@ -33,6 +35,9 @@ Configure shared memory separately using the [installation guide](docs/installat
 - [Configuration](docs/configuration.md)
 - [Self-hosted Mem0](docs/mem0.md)
 - [VM migration](docs/migration.md)
+- [Website, docs and DNS](docs/website.md)
 - [Development and tests](docs/development.md)
 - [Roadmap](docs/roadmap.md)
 - [Source history and release archive](docs/archive/flightdeck/README.md)
+
+Licensed under [Apache 2.0](LICENSE).
