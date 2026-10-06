@@ -1,0 +1,54 @@
+name: One-time personal VM bootstrap access
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  install-key:
+    runs-on: ubuntu-latest
+    env:
+      DEPLOY_HOST: ${{ vars.CULLY_PERSONAL_HOST }}
+      DEPLOY_PORT: ${{ vars.CULLY_PERSONAL_SSH_PORT }}
+      DEPLOY_USER: ${{ vars.CULLY_PERSONAL_SSH_USER }}
+      VM_PASSWORD: ${{ secrets.CULLY_VM_BOOTSTRAP_PASSWORD }}
+      VM_KNOWN_HOSTS: ${{ secrets.CULLY_WEB_KNOWN_HOSTS }}
+      DEPLOY_KEY: ${{ secrets.CULLY_PERSONAL_SSH_KEY }}
+    steps:
+      - name: Install temporary Cully bootstrap key via pinned password login
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$VM_PASSWORD" || { echo '::error::Set the temporary CULLY_VM_BOOTSTRAP_PASSWORD repository secret.'; exit 1; }
+          test -n "$VM_KNOWN_HOSTS" && test -n "$DEPLOY_KEY"
+          test -n "$DEPLOY_HOST" && test -n "$DEPLOY_PORT"
+          test "$DEPLOY_USER" = root
+          install -d -m 700 "$RUNNER_TEMP/cully-bootstrap"
+          umask 077
+          printf '%s\n' "$VM_KNOWN_HOSTS" > "$RUNNER_TEMP/cully-bootstrap/known_hosts"
+          printf '%s\n' "$DEPLOY_KEY" > "$RUNNER_TEMP/cully-bootstrap/key"
+          cat > "$RUNNER_TEMP/cully-bootstrap/askpass" <<'ASKPASS'
+          #!/bin/sh
+          printf '%s\n' "$VM_PASSWORD"
+          ASKPASS
+          chmod 700 "$RUNNER_TEMP/cully-bootstrap/askpass"
+          export SSH_ASKPASS="$RUNNER_TEMP/cully-bootstrap/askpass"
+          export SSH_ASKPASS_REQUIRE=force
+          export DISPLAY=none
+          setsid -w ssh -T -p "$DEPLOY_PORT" \
+            -o UserKnownHostsFile="$RUNNER_TEMP/cully-bootstrap/known_hosts" \
+            -o StrictHostKeyChecking=yes -o PreferredAuthentications=password \
+            -o PubkeyAuthentication=no -o NumberOfPasswordPrompts=1 \
+            -o ConnectTimeout=15 "$DEPLOY_USER@$DEPLOY_HOST" sh -s <<'REMOTE'
+          set -eu
+          test "$(id -u)" = 0
+          key='ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIJDCpbZfi6+nslux6sKs9idb0lB7U6ZYOtb5GPRrJOmw cully-personal-actions'
+          install -d -m 700 /root/.ssh
+          touch /root/.ssh/authorized_keys
+          chmod 600 /root/.ssh/authorized_keys
+          grep -qxF "$key" /root/.ssh/authorized_keys || printf '%s\n' "$key" >> /root/.ssh/authorized_keys
+          echo 'Temporary Cully bootstrap key installed.'
+          REMOTE
+          ssh -i "$RUNNER_TEMP/cully-bootstrap/key" -T -p "$DEPLOY_PORT" \
+            -o UserKnownHostsFile="$RUNNER_TEMP/cully-bootstrap/known_hosts" \
+            -o StrictHostKeyChecking=yes -o BatchMode=yes -o ConnectTimeout=15 \
+            "$DEPLOY_USER@$DEPLOY_HOST" 'test "$(id -u)" = 0 && echo "Cully bootstrap SSH access verified."'
