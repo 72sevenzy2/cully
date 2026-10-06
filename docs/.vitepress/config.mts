@@ -67,7 +67,6 @@ export default withMermaid(defineConfig({
           { text: 'Team deployment', link: '/team-deployment' },
           { text: 'Architecture', link: '/architecture' },
           { text: 'Website and docs hosting', link: '/website' },
-          { text: 'Deploy on MCP Runtime ↗', link: 'https://docs.mcpruntime.org/publish-mcp-server/' },
           { text: 'MCP Auth connector guide ↗', link: 'https://github.com/mcp-runtime/mcp-auth/blob/main/docs/auth-server.md#connect-an-organizations-identity-provider' }
         ]
       },
