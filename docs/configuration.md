@@ -32,7 +32,7 @@ Keep the data API token identical on both sides. The MCP workload does not recei
 
 The [self-hosted Compose example](/hosting#minimal-single-user-compose-installation) uses plain PostgreSQL for Cully records. The [full-stack command](/hosting#one-command-full-stack) starts a separate pgvector database for Mem0. A separately operated Mem0 service must be reachable from the data service's network.
 
-The release-triggered [personal stack](/personal-deployment) uses [`deploy/personal-data.env.example`](https://github.com/mcp-runtime/cully/blob/main/deploy/personal-data.env.example) and creates fresh, project-scoped volumes: plain PostgreSQL for Cully and pgvector/PostgreSQL for Mem0. Keep its database password, data API token, Mem0 API key, JWT secret and embedding-provider key on the VM. The `workspace_workspace` network must already exist for the private Caddy data route.
+The release-triggered [personal stack](/personal-deployment) uses [`deploy/personal-data.env.example`](https://github.com/mcp-runtime/cully/blob/main/deploy/personal-data.env.example) and creates project-scoped volumes: plain PostgreSQL for Cully and pgvector/PostgreSQL for Mem0. Keep its database password, data API token, Mem0 API key and JWT secret on the VM. Mem0's local embedding model needs no provider key. The `workspace_workspace` network must already exist for the private Caddy data route.
 
 ## Local CLI
 

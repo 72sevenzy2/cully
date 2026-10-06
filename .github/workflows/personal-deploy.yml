@@ -38,12 +38,12 @@ jobs:
           python3 -c 'import os,re; assert re.fullmatch(r"v[0-9]+\.[0-9]+\.[0-9]+(?:[-.][A-Za-z0-9.-]+)?", os.environ["RELEASE_TAG"])'
           python3 -m unittest discover -s deploy -p 'test_personal_data_controller.py' -v
           sh -n deploy/bootstrap-personal-data.sh
-      - name: Check live MCP Auth issuer, scopes and signing keys
-        run: python3 deploy/check_personal_oauth.py auth
-      - name: Build data and pinned Mem0 images
+      - name: Check live MCP Auth issuer and signing keys
+        run: python3 deploy/check_personal_oauth.py issuer
+      - name: Build data and local-model Mem0 images
         run: |
           docker build -f Dockerfile.data-api -t "$DATA_IMAGE" .
-          docker build -t "$MEM0_IMAGE" 'https://github.com/mem0ai/mem0.git#c93420c49a6b14c3d446bdb156d96811908fd90a:server'
+          docker build -f Dockerfile.mem0 -t "$MEM0_IMAGE" .
       - name: Scan pinned Mem0 image
         uses: aquasecurity/trivy-action@v0.36.0
         with:
@@ -113,14 +113,16 @@ jobs:
           python3 -c 'import json,os; print(json.dumps({"action":"deploy","tag":os.environ["RELEASE_TAG"],"token":os.environ["GHCR_TOKEN"],"registry_user":os.environ["GITHUB_ACTOR"]}))' |
             ssh -i "$HOME/.ssh/cully-personal" -p "$DEPLOY_PORT" -o BatchMode=yes -o StrictHostKeyChecking=yes -o ConnectTimeout=15 "$DEPLOY_USER@$DEPLOY_HOST" deploy
       - name: Deploy personal MCP service
+        id: mcp
         run: mcp-runtime server deploy "$SERVER_NAME" --metadata-dir .mcp --update
       - name: Verify MCP Runtime placement and public OAuth route
         run: |
           mcp-runtime server get "$SERVER_NAME" --namespace mcp-servers
           mcp-runtime server status --namespace mcp-servers
+          python3 deploy/check_personal_oauth.py auth
           python3 deploy/check_personal_oauth.py resource
       - name: Roll back personal services if MCP deployment fails
-        if: failure() && steps.data.outcome == 'success'
+        if: failure() && steps.data.outcome == 'success' && steps.mcp.outcome == 'failure'
         run: |
           python3 -c 'import json,os; print(json.dumps({"action":"rollback","tag":os.environ["RELEASE_TAG"]}))' |
             ssh -i "$HOME/.ssh/cully-personal" -p "$DEPLOY_PORT" -o BatchMode=yes -o StrictHostKeyChecking=yes -o ConnectTimeout=15 "$DEPLOY_USER@$DEPLOY_HOST" deploy

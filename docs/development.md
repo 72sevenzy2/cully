@@ -3,7 +3,7 @@
 Use Go 1.25 or newer. All Cully production entry points build from the root module; upstream Mem0 is deployed separately.
 
 ```sh
-gofmt -w cmd internal migrations skills
+go fmt ./...
 go vet ./...
 go build ./...
 go test ./... -race -count=1
@@ -29,8 +29,8 @@ Separate workflows provide independent checks and badge targets:
 | Trivy | MCP, data, website and docs container vulnerability reports |
 | CodeQL | Go, Python and JavaScript/TypeScript analysis |
 
-These run on pushes and pull requests. The website and docs retain separate build/deploy workflows for their own paths. The actual personal VM instance is verified during release deployment after a tag is published and the cutover gate is enabled.
+These run on pushes and pull requests. The website and docs retain separate build/deploy workflows for their own paths. The hosted VM services are verified during release deployment after the deployment gate is enabled.
 
-Build server images with `docker build -t cully-mcp .` and `docker build -f Dockerfile.data-api -t cully-data .`. GoReleaser builds independent CLI, MCP and data archives from a Cully release tag. After release, the [personal deployment workflow](personal-deployment.md) publishes data and Mem0 images and deploys the isolated personal stack only when its cutover gate is enabled.
+Build server images with `docker build -t cully-mcp .` and `docker build -f Dockerfile.data-api -t cully-data .`. GoReleaser builds independent CLI, MCP and data archives from a Cully release tag. The [personal deployment workflow](personal-deployment.md) publishes data and Mem0 images and deploys the hosted stack after GoReleaser succeeds.
 
 Keep domain validation in `internal/memory`, SQL in `internal/store/postgres`, protocol handlers in `internal/transport`, and initialization in `internal/app`. Follow the [architecture](architecture.md) and [roadmap](roadmap.md) when extending session capture or synchronization.

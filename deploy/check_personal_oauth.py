@@ -26,20 +26,22 @@ def get_json(url):
         return json.load(response)
 
 
-def check_auth_server():
+def check_auth_server(require_scopes=True):
     metadata = get_json(DISCOVERY)
     require(metadata.get("issuer") == ISSUER, "MCP Auth issuer does not match Cully metadata")
     require(metadata.get("jwks_uri") == JWKS, "MCP Auth JWKS URL does not match Cully metadata")
     for endpoint in ("authorization_endpoint", "token_endpoint", "registration_endpoint"):
         require(str(metadata.get(endpoint, "")).startswith(ISSUER + "/"),
                 f"MCP Auth {endpoint} is missing or points outside the configured issuer")
-    require(SCOPES.issubset(set(metadata.get("scopes_supported", []))),
-            "MCP Auth must advertise tools:read and tools:write for Cully")
+    if require_scopes:
+        require(SCOPES.issubset(set(metadata.get("scopes_supported", []))),
+                "MCP Auth must advertise tools:read and tools:write for Cully")
     keys = get_json(JWKS).get("keys", [])
     require(any(key.get("kty") == "RSA" and key.get("kid") and
                 key.get("alg") in (None, "RS256") for key in keys),
             "MCP Auth has no RS256 signing key in its JWKS")
-    print("MCP Auth discovery, scopes and signing keys are ready for Cully")
+    print("MCP Auth discovery and signing keys are ready for Cully"
+          + ("; read/write scopes are ready" if require_scopes else ""))
 
 
 def check_resource_once():
@@ -80,12 +82,25 @@ def check_resource():
             time.sleep(5)
 
 
+def check_auth_with_retries():
+    for attempt in range(12):
+        try:
+            check_auth_server()
+            return
+        except (HTTPError, URLError, TimeoutError, ValueError) as error:
+            if attempt == 11:
+                raise SystemExit(f"MCP Auth did not become ready for Cully: {error}") from error
+            time.sleep(5)
+
+
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("phase", choices=("auth", "resource"))
+    parser.add_argument("phase", choices=("issuer", "auth", "resource"))
     args = parser.parse_args()
-    if args.phase == "auth":
-        check_auth_server()
+    if args.phase == "issuer":
+        check_auth_server(require_scopes=False)
+    elif args.phase == "auth":
+        check_auth_with_retries()
     else:
         check_resource()
 

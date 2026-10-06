@@ -8,7 +8,7 @@ Set `CULLY_MEM0_URL` and `CULLY_MEM0_API_KEY` on `cully-data`. Both are required
 
 [`deploy/self-hosted/compose.mem0.yaml`](https://github.com/mcp-runtime/cully/blob/main/deploy/self-hosted/compose.mem0.yaml) builds the pinned upstream Mem0 server, provisions its own persistent PostgreSQL database and history volume, and keeps its REST endpoint private. `./start.sh` brings it up with Cully's other services. Mem0 maintains its own Python runtime inside its container; the Cully CLI, MCP server and data API have no Python runtime dependency.
 
-The full-stack example uses OpenAI embeddings by default, so authored summaries leave the host for that provider. `infer=false` skips Mem0 fact extraction. Operators can configure a different embedder in their Mem0 build/configuration; a separate Mem0 instance can still be used through `CULLY_MEM0_URL` and `CULLY_MEM0_API_KEY`.
+The full-stack image uses FastEmbed with the open source `BAAI/bge-small-en-v1.5` model and 384-dimensional vectors. The model is cached in the image and runs on the host CPU, so indexing does not need an external embedding API. `infer=false` skips Mem0 fact extraction. Operators can configure a different embedder in their Mem0 build; a separate Mem0 instance can still be used through `CULLY_MEM0_URL` and `CULLY_MEM0_API_KEY`.
 
 Each source entry gets an owner-scoped Mem0 projection. The Mem0 user ID is a SHA-256 namespace derived from the Cully owner (fixed single-user owner or verified OAuth subject), and `run_id` is the Cully entry UUID. The projection carries section/project/category and source-update provenance. This is a service-mediated owner boundary; agents never receive the Mem0 service key.
 

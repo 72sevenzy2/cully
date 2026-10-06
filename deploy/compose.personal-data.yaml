@@ -43,7 +43,6 @@ services:
       POSTGRES_COLLECTION_NAME: cully_memories
       APP_DB_NAME: mem0_app
       HISTORY_DB_PATH: /app/history/history.db
-      OPENAI_API_KEY: ${CULLY_MEM0_OPENAI_API_KEY:?set embedding provider key}
       ADMIN_API_KEY: ${CULLY_MEM0_API_KEY:?set CULLY_MEM0_API_KEY}
       JWT_SECRET: ${CULLY_MEM0_JWT_SECRET:?set CULLY_MEM0_JWT_SECRET}
       AUTH_DISABLED: "false"

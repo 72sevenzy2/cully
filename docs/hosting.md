@@ -20,17 +20,17 @@ No-OAuth mode makes no identity-provider or JWKS requests. Cully never accepts a
 
 ## One-command full stack
 
-For a fresh self-hosted instance, copy [`deploy/self-hosted/.env.example`](https://github.com/mcp-runtime/cully/blob/main/deploy/self-hosted/.env.example) to `.env` and fill in the database password and URL, private API token, stable `CULLY_MCP_OWNER`, Mem0 database password, JWT secret, API key, and embedding-provider key. Keep `.env` private. From `deploy/self-hosted`, run:
+For a fresh self-hosted instance, copy [`deploy/self-hosted/.env.example`](https://github.com/mcp-runtime/cully/blob/main/deploy/self-hosted/.env.example) to `.env` and fill in the database password and URL, private API token, stable `CULLY_MCP_OWNER`, Mem0 database password, JWT secret and API key. Keep `.env` private. From `deploy/self-hosted`, run:
 
 ```sh
 ./start.sh codex
 ```
 
-The script starts Cully's PostgreSQL database, a separate persistent Mem0 database, the self-hosted Mem0 REST server, Cully's data API, and Cully MCP. It runs the Cully schema migration first. If the Cully CLI is already installed, the `codex` argument also installs its local integration and shared Cully skill and registers the loopback MCP URL. Use `claude` or `cursor` instead, or omit the argument to start services only. Restart the agent after setup. This is a fresh-install stack; do not point it at an existing personal database volume.
+The script starts Cully's PostgreSQL database, a separate persistent Mem0 database, the self-hosted Mem0 REST server, Cully's data API, and Cully MCP. It creates the Cully schema first. If the Cully CLI is already installed, the `codex` argument also installs its local integration and shared Cully skill and registers the loopback MCP URL. Use `claude` or `cursor` instead, or omit the argument to start services only. Restart the agent after setup.
 
 For OAuth, also fill in `CULLY_AUTH_ISSUER`, `CULLY_AUTH_RESOURCE`, `CULLY_JWKS_URL`, `CULLY_MCP_HOST`, and the HTTPS routing values in `.env`. The server cannot infer an issuer or signing keys from the client flag. With an existing authorization server, run `./start.sh --oauth existing`; with a new MCP Auth broker and Keycloak connector, prepare its connector JSON, signing key, and Keycloak client secret as described in [OAuth deployment](/oauth), then run `./start.sh --oauth mcp-auth`. To register an agent in that same command, append `--mcp-url https://mcp.example.com/mcp codex`; the URL must equal `CULLY_AUTH_RESOURCE` in `.env`.
 
-The full stack builds Mem0 from a [pinned upstream source commit](https://github.com/mem0ai/mem0/tree/c93420c49a6b14c3d446bdb156d96811908fd90a/server) because its published image is stale. It uses an OpenAI embedding key by default; authored memory text is sent to that embedding provider. Mem0 fact extraction is disabled. You can configure another Mem0 embedder separately. The Mem0 API and both databases stay on private Compose networks. The only published MCP port binds to loopback.
+The full stack builds Mem0 from a [pinned upstream source commit](https://github.com/mem0ai/mem0/tree/c93420c49a6b14c3d446bdb156d96811908fd90a/server) with [FastEmbed's local BGE small model](https://qdrant.github.io/fastembed/examples/Supported_Models/). The model runs on the host CPU; indexing does not require an embedding API key. Cully calls Mem0 with `infer=false`, so it does not ask an LLM to extract facts. The Mem0 API and both databases stay on private Compose networks. The only published MCP port binds to loopback.
 
 ## Minimal single-user Compose installation
 
@@ -54,9 +54,9 @@ Connect a local agent with `cully install codex --mcp-url http://127.0.0.1:8080/
 
 The same MCP binary supports OAuth. The [OAuth guide](/oauth) has commands for an existing authorization server and for a new MCP Auth broker with a Keycloak connector. The examples add Caddy for HTTPS. Register the exact public MCP resource and grant `tools:read` and `tools:write`. Clients sign in only in OAuth mode.
 
-## Existing personal deployment
+## Reference hosted deployment
 
-The [personal deployment guide](/personal-deployment) describes a release-triggered stack on the existing VM with fresh, isolated PostgreSQL and Mem0 volumes. It does not import records from another database. The personal `.mcp/servers.yaml` stays explicitly in OAuth mode for its public ingress; its issuer, JWKS URL and audience must match the authorization server. Do not reuse its public route in no-OAuth mode.
+The [personal deployment guide](/personal-deployment) describes a release-triggered stack with PostgreSQL and Mem0 volumes. The hosted `.mcp/servers.yaml` uses OAuth for its public ingress; its issuer, JWKS URL and audience must match the authorization server. Keep a no-OAuth deployment on a private route.
 
 Only the MCP URL belongs in agent configuration. The private API token, database credentials and Mem0 key stay with the operator. [Connect an agent](/agents) explains client setup.
 

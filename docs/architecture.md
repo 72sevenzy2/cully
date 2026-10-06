@@ -46,24 +46,4 @@ Projection uses `infer=false`: Mem0 embeds authored summaries without adding a f
 
 The product website and technical docs have separate images, Compose services, path-filtered CI workflows and rollback state. A change under `site/` deploys `cully-web`; a change under `docs/` deploys `cully-docs`. Caddy routes their domains to separate containers on the existing workspace network. See [website hosting](website.md).
 
-The personal services follow the release pipeline. A successful GoReleaser job publishes tagged data and Mem0 images. The gated [personal deployment workflow](personal-deployment.md) starts isolated PostgreSQL, Mem0 and data API services on the VM, runs the schema migration, then updates the MCP Runtime workload. Existing VM database volumes are not mounted by this new stack.
-
-## Repository map
-
-```text
-cmd/                 CLI, MCP and data entry points
-internal/cully/      local session controls and agent integration
-internal/memory/     shared memory types and validation
-internal/identity/   OAuth verification
-internal/mem0/       self-hosted REST adapter
-internal/store/      PostgreSQL and remote HTTP adapters
-internal/transport/  MCP and private HTTP handlers
-internal/app/        server lifecycle and composition
-internal/config/     typed configuration
-migrations/          explicit, versioned SQL
-skills/cully/        combined session and memory guidance
-deploy/              site and personal-service deployment files
-docs/                guides and roadmap
-```
-
-The personal VM cutover provisions fresh Cully databases and services. The public MCP service can continue in MCP Runtime. See the [VM runbook](migration.md) for provisioning and switching clients.
+The personal services follow the release pipeline. A successful GoReleaser job publishes tagged data and Mem0 images. The gated [personal deployment workflow](personal-deployment.md) starts isolated PostgreSQL, Mem0 and data API services on the VM, runs the schema migration, then updates the MCP Runtime workload.

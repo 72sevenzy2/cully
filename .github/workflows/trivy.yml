@@ -21,6 +21,8 @@ jobs:
             dockerfile: Dockerfile
           - image: data
             dockerfile: Dockerfile.data-api
+          - image: mem0
+            dockerfile: Dockerfile.mem0
           - image: website
             dockerfile: Dockerfile.website
           - image: docs

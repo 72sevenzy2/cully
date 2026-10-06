@@ -17,7 +17,9 @@ services:
       retries: 10
     networks: [private]
   mem0:
-    build: https://github.com/mem0ai/mem0.git#c93420c49a6b14c3d446bdb156d96811908fd90a:server
+    build:
+      context: ../..
+      dockerfile: Dockerfile.mem0
     restart: unless-stopped
     command: [sh, -c, 'alembic upgrade head && uvicorn main:app --host 0.0.0.0 --port 8000']
     environment:
@@ -29,7 +31,6 @@ services:
       POSTGRES_COLLECTION_NAME: cully_memories
       APP_DB_NAME: mem0_app
       HISTORY_DB_PATH: /app/history/history.db
-      OPENAI_API_KEY: ${CULLY_MEM0_OPENAI_API_KEY:?set embedding provider key}
       ADMIN_API_KEY: ${CULLY_MEM0_API_KEY:?set CULLY_MEM0_API_KEY}
       JWT_SECRET: ${CULLY_MEM0_JWT_SECRET:?set CULLY_MEM0_JWT_SECRET}
       AUTH_DISABLED: "false"

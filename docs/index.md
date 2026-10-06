@@ -30,4 +30,4 @@ The Cully hosted MCP endpoint is planned but has not yet been cut over. Local ad
 2. [Connect the coding agent you use](/agents).
 3. [Explore the memory tools](/memory) or [run your own service](/hosting).
 
-Browse the [architecture](/architecture), [configuration](/configuration), [OAuth deployment](/oauth), [VM cutover](/migration), and [website hosting](/website) guides when you operate Cully.
+Browse the [architecture](/architecture), [configuration](/configuration), [OAuth deployment](/oauth), [personal deployment](/personal-deployment), and [website hosting](/website) guides when you operate Cully.

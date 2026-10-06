@@ -1,0 +1,19 @@
+# Build the self-hosted Mem0 REST server from the pinned upstream commit.
+FROM alpine:3.20 AS upstream
+RUN apk add --no-cache git ca-certificates
+WORKDIR /src
+RUN git init -q && git remote add origin https://github.com/mem0ai/mem0.git && \
+    git fetch -q --depth=1 origin c93420c49a6b14c3d446bdb156d96811908fd90a && \
+    git checkout -q FETCH_HEAD
+
+FROM python:3.12-slim
+WORKDIR /app
+COPY --from=upstream /src/server/ ./
+COPY deploy/patch_mem0_server.py /tmp/patch_mem0_server.py
+RUN python /tmp/patch_mem0_server.py /app/main.py && \
+    pip install --no-cache-dir -r requirements.txt fastembed==0.7.4 && \
+    python -c 'from fastembed import TextEmbedding; TextEmbedding(model_name="BAAI/bge-small-en-v1.5")' && \
+    rm /tmp/patch_mem0_server.py
+ENV PYTHONUNBUFFERED=1 HF_HUB_OFFLINE=1
+EXPOSE 8000
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]

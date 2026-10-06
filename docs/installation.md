@@ -60,7 +60,3 @@ For a fresh self-hosted full stack, configure `deploy/self-hosted/.env` and run 
 In OAuth mode, read tools require `tools:read`; logging, editing and deletion require `tools:write`. The issuer must grant those scopes for the configured resource. In no-OAuth mode, private network access is the boundary and all tools use the configured single owner.
 
 The combined skill is also available at `skills/cully/SKILL.md`. Local controls work without a remote connection; shared memory requires the deployed MCP server. Agents do not need the private data API token or Mem0 API key.
-
-## Existing agent integrations
-
-Use the `cully` command, `cully_*` tools and `CULLY_*` configuration. Remove older managed agent integrations with their original uninstallers, then install Cully and reconnect its MCP server. Preserve user-owned agent configuration. Follow the [VM cutover guide](migration.md) before changing hosted services.

@@ -13,7 +13,7 @@ npm run site:build
 
 The combined build produces `dist/site` and `dist/docs`. Run `npm run website:build` or `npm run docs:build` to build one site. To preview the docs locally, run `npm run site:preview`. You can serve `dist/site` with any static file server. Do not serve the repository root: it includes source files and deployment notes.
 
-The docs source is Markdown in `docs/`. `docs/.vitepress/config.mts` defines the public navigation. Every Markdown guide under `docs/` is built, including architecture, migration, and website hosting. Product and documentation links assume the two production domains. Local previews can follow the corresponding links in the sidebar.
+The docs source is Markdown in `docs/`. `docs/.vitepress/config.mts` defines the public navigation. Every Markdown guide under `docs/` is built, including architecture and website hosting. Product and documentation links assume the two production domains. Local previews can follow the corresponding links in the sidebar.
 
 ## Publish on the existing VM
 
@@ -48,7 +48,7 @@ Point the apex and `docs` DNS records at the public web host, allow HTTPS certif
 
 Keep only `103.181.176.61` in the apex A records; remove the parking addresses `3.33.130.190` and `15.197.148.33`. Verify A/AAAA records and reachability on ports 80/443 before certificate issuance. The VM identifies itself as `devbox-2`; the local `devbox2` and `cully-vm` aliases use its configured SSH key.
 
-The website domains do not change the MCP resource URL. The planned hosted MCP endpoint is `https://mcp.mcpruntime.org/cully/mcp`; its service cutover has separate requirements in the [VM cutover guide](migration.md).
+The website domains do not change the MCP resource URL. The hosted MCP endpoint is `https://mcp.mcpruntime.org/cully/mcp`; its deployment requirements are in the [personal deployment guide](personal-deployment.md).
 
 ## Release installer copy
 

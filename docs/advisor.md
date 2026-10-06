@@ -1,8 +1,7 @@
 # Local advisor and session controls
 
 Cully helps you guide coding agents, review session pressure and apply useful
-workflow improvements. Shared memory is provided by Cully MCP, PostgreSQL and
-self-hosted Mem0. There is no separate local transcript-memory scanner.
+workflow improvements. Shared memory uses Cully MCP, PostgreSQL and Mem0.
 
 ## Setup
 
@@ -16,7 +15,7 @@ go build -o ./build/cully ./cmd/cully
 Use `install claude`, `install codex` or `install cursor` to select a local
 integration. Local installation can target `all`; MCP setup selects one agent
 per invocation. See [installation](installation.md) for hosted and self-hosted
-connections and OAuth sign-in. New Cully endpoints require the future server cutover.
+connections and OAuth sign-in.
 
 | Agent | Local integration |
 | --- | --- |
@@ -48,9 +47,7 @@ Review the dry run before applying a change. Existing user-owned agent settings
 and unrelated MCP connections are preserved.
 
 Hooks, workers and daemon execution use an internal entry point installed by
-Cully. They are not public user commands. The old memory, list, systems, plan,
-checklist, debrief and daemon command interfaces are removed. Existing local
-memory files are not deleted or automatically uploaded.
+Cully. They are not public user commands.
 
 ## Controls
 

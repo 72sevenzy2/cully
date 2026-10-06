@@ -39,4 +39,4 @@ See [self-hosted Mem0](mem0.md) for configuration, indexing and deletion behavio
 
 ## Local versus shared capture
 
-Shared memory is written through `cully_log`; the combined skill tells agents when useful work warrants a record. The CLI has no separate transcript scanner or local memory command. Local session diagnostics do not become memory records automatically. PostgreSQL stores durable personal/project records; self-hosted Mem0 does semantic indexing and recall when configured.
+Shared memory is written through `cully_log`; the Cully skill tells agents when useful work warrants a record. Local session diagnostics do not become memory records automatically. PostgreSQL stores durable personal/project records; self-hosted Mem0 does semantic indexing and recall when configured.
