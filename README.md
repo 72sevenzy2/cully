@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="assets/brand/cully-logo.png" alt="Cully" width="420">
+</p>
+
 # Cully
 
 **Your companion for better work and everyday life.**
