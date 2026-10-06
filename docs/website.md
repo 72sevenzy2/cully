@@ -1,28 +1,28 @@
-# Website and documentation
+# Website and documentation hosting
 
-Cully's website is **https://cully.net**. Documentation will be published at
-**https://docs.cully.net**. The Markdown guides in this repository are the source
-for the documentation; hosting is planned and has not been deployed by this merge.
+Cully's public website is intended for **https://cully.net** and its docs for **https://docs.cully.net**. Both sites are static. This repository produces the files; merging a PR does not change DNS or deploy them.
 
-## DNS on the existing Buddy VM
+## Build
 
-The existing Buddy VM is `103.181.176.61`. On 2026-10-06,
-`workspace.mcpruntime.org` resolved to that address; the deployment reference also
-identifies it as the Buddy VM. SSH inspection was unavailable with the current key.
+Use Node.js 20 or newer:
 
-| Type | Name | Value |
-| --- | --- | --- |
-| A | `@` | `103.181.176.61` |
-| A | `docs` | `103.181.176.61` |
-| CNAME | `www` (optional) | `cully.net` |
+```sh
+npm ci
+npm run site:build
+```
 
-Before publishing, configure separate Caddy routes for `cully.net` and
-`docs.cully.net`, serving the website and generated docs respectively. Preserve
-the existing workspace and Keycloak routes. Allow HTTPS certificate issuance and
-verify both domains after DNS propagation. Remove conflicting A/AAAA records if
-they target another host.
+The build produces `dist/site` for the product website and `dist/docs` for the docs. To preview the docs locally, run `npm run site:preview`. You can serve `dist/site` with any static file server. Do not serve the repository root: it includes source files and deployment notes.
 
-These domains serve the website and docs. The MCP resource remains
-`https://mcp.mcpruntime.org/cully/mcp`; changing a website domain does not change
-OAuth audiences or deploy the Cully services. Follow the [VM migration
-guide](migration.md) for the future service cutover.
+The docs source is Markdown in `docs/`. `docs/.vitepress/config.mts` defines the public navigation. Every Markdown guide under `docs/` is built, including architecture, migration, and website hosting. Product and documentation links assume the two production domains. Local previews can follow the corresponding links in the sidebar.
+
+## Publish on the existing VM
+
+Copy each built directory to its own read-only web root, such as `/srv/cully/site` and `/srv/cully/docs`. Use separate Caddy routes for `cully.net` and `docs.cully.net`, as shown in the [Caddy fragment](https://github.com/mcp-runtime/cully/blob/main/deploy/Caddyfile.website.fragment). The docs route needs a fallback from clean URLs such as `/quickstart` to `quickstart.html`. Preserve the existing workspace, Keycloak, and Cully service routes when adding these sites.
+
+Point the apex and `docs` DNS records at the public web host, allow HTTPS certificate issuance, then verify both domains and a deep docs link. On the currently planned VM (`103.181.176.61`), `workspace.mcpruntime.org` resolved to that address on 2026-10-06. Recheck the address before changing DNS.
+
+The website domains do not change the MCP resource URL. The planned hosted MCP endpoint is `https://mcp.mcpruntime.org/cully/mcp`; its service cutover has separate requirements in the [VM migration guide](migration.md).
+
+## Release installer copy
+
+The website defaults to the source build while current GitHub releases have no CLI archives. After the next release publishes the `cully_<os>_<arch>.tar.gz` files and `checksums.txt`, update the website install panel and docs to recommend the one-line installer, then rebuild and publish the static files.

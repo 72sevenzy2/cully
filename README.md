@@ -6,7 +6,7 @@
 
 **Your companion for better work and everyday life.**
 
-[Website](https://cully.net) · [Docs](https://docs.cully.net) (planned hosting)
+[Website](https://cully.net) · [Docs](https://docs.cully.net) (site source and build in this repository)
 
 Cully remembers what you do and how you work. It helps you guide coding agents, manage projects, and spot ways to improve your workflow. When you ask it to remember personal things, it can help with your goals, routines and everyday life too.
 
@@ -16,7 +16,7 @@ Cully remembers what you do and how you work. It helps you guide coding agents, 
 | `cully-mcp` | OAuth-protected shared memory tools |
 | `cully-data` | Private PostgreSQL/pgvector API and self-hosted Mem0 indexing |
 
-Works with Claude Code, Codex and Cursor. It combines Agent Flightdeck and Buddy in one Go repository, preserving both histories. PostgreSQL stores the original records; self-hosted Mem0 adds semantic recall.
+Works with Claude Code, Codex and Cursor. It brings local agent guidance and shared memory into one Go repository. PostgreSQL stores the original records; self-hosted Mem0 adds semantic recall.
 
 ## Get started
 
@@ -33,8 +33,10 @@ Configure shared memory separately using the [installation guide](docs/installat
 
 ## Documentation
 
+- [Quickstart](docs/quickstart.md)
 - [Install and connect agents](docs/installation.md)
-- [Session controls](docs/flightdeck/README.md)
+- [Agent-specific setup](docs/agents.md)
+- [Local advisor](docs/advisor.md)
 - [Shared memory and tools](docs/memory.md)
 - [Architecture](docs/architecture.md)
 - [Configuration](docs/configuration.md)
@@ -44,6 +46,9 @@ Configure shared memory separately using the [installation guide](docs/installat
 - [Website, docs and DNS](docs/website.md)
 - [Development and tests](docs/development.md)
 - [Roadmap](docs/roadmap.md)
-- [Source history and release archive](docs/archive/flightdeck/README.md)
 
 Licensed under [Apache 2.0](LICENSE).
+
+## Website and docs build
+
+The marketing site is in `site/`; the documentation site is built from `docs/` with VitePress. Run `npm ci && npm run site:build` to generate static files in `dist/site` and `dist/docs`. See [website hosting](docs/website.md) for Caddy routes and deployment notes.

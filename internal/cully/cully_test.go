@@ -421,7 +421,7 @@ func TestInstallCodexAndCursorProjectFiles(t *testing.T) {
 		t.Fatalf("Codex prompt should be removed on uninstall: %v", err)
 	}
 	if _, err := os.Stat(codexConfigPath()); !os.IsNotExist(err) {
-		t.Fatalf("Codex config created only by Flightdeck should be removed on uninstall: %v", err)
+		t.Fatalf("Codex config created only by Cully should be removed on uninstall: %v", err)
 	}
 	if _, err := os.Stat(cursorCommandPath(dir)); !os.IsNotExist(err) {
 		t.Fatalf("Cursor command should be removed on uninstall: %v", err)
@@ -543,7 +543,10 @@ func TestTailEntriesBounded(t *testing.T) {
 
 func TestGatherSignalsAndCadence(t *testing.T) {
 	dir := t.TempDir()
+	t.Setenv("HOME", dir)
 	t.Setenv("CLAUDE_CONFIG_DIR", dir)
+	t.Setenv("CODEX_HOME", filepath.Join(dir, "codex-home"))
+	t.Setenv("CURSOR_CONFIG_DIR", filepath.Join(dir, "cursor-home"))
 
 	// build a transcript: 5 grep Bash uses, same file read 3x, a user prompt.
 	var b strings.Builder

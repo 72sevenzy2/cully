@@ -1,6 +1,6 @@
 # Cully combination and optimization roadmap
 
-Cully combines Flightdeck's agent-session controls and Buddy's durable memory
+Cully combines local agent-session guidance and durable memory
 as one Go project. It helps the user orchestrate coding agents and projects,
 understand their working habits and suggest improvements. Personal context is
 remembered when the user asks.
