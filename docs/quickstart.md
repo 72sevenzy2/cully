@@ -1,11 +1,11 @@
 ---
 title: Quickstart
-description: Install Cully, start its memory stack and try it in your coding agent.
+description: Install Cully, try a task handoff, and use Mem0 recall and advisor suggestions.
 ---
 
 # Quickstart
 
-Set up Cully on your laptop with Docker Compose, Python 3 and Claude Code, Codex or Cursor.
+Set up Cully on your laptop with Docker Compose, Python 3 and Claude Code, Codex or Cursor. Then try one task and pick it up in a new session.
 
 ## 1. Install Cully
 
@@ -27,15 +27,36 @@ Make sure Docker is running, then run:
 cully setup codex
 ```
 
-Use the same agent name you installed. Setup starts PostgreSQL, Mem0, the private data API and Cully MCP in Docker, generates private service credentials, and connects your agent. Wait for `Cully MCP is configured at ...`, then restart the agent. In Codex, review and trust the installed Cully hooks in `/hooks` when Codex asks. No repository checkout or OAuth setup is needed. See [self-hosting](/hosting#one-command-full-stack) for details.
+Use the same agent name you installed. Setup starts PostgreSQL, Mem0, the private data API and Cully MCP in Docker, generates private service credentials, and connects your agent. Wait for `Cully MCP is configured at ...`, then restart the agent. In Codex, review and trust the installed Cully hooks in `/hooks` when asked. No repository checkout or OAuth setup is needed. See [what the local stack starts](/hosting#one-command-full-stack).
 
-## 3. Continue work in another session
+## How Cully keeps sessions focused
 
-Work on a real task in your connected agent. Cully's installed session instructions ask the agent to look up relevant project notes before substantial work and save one concise summary when it finishes. Start a new session or switch between Claude Code, Codex and Cursor with the same Cully MCP server; the agent can pick up the task, decisions, result and remaining steps from those notes. You can also ask what happened earlier.
+| Need | What Cully does | Details |
+| --- | --- | --- |
+| Start without rereading an old conversation | `cully_context` gives the agent three short note previews by default. It opens a full record with `cully_get` only if needed. | [Bounded context](/session-optimization#what-cully-optimizes) |
+| Find a decision phrased differently | Mem0 indexes authored note fields by meaning. Cully checks recall results against the owner’s live PostgreSQL records. | [Mem0 recall](/mem0#what-to-expect) |
+| Leave a usable handoff | Session and stop hooks ask the connected agent to look up relevant work and save one `cully_log` note with the task, approach, result, checks, gaps and next step. No transcript is uploaded. | [Saved notes](/memory#what-you-can-save) |
+| Catch repeated effort in the current session | The local advisor uses available agent signals to suggest context controls, narrower searches, useful tools or a missing check. You review changes before applying them. | [Advisor suggestions](/advisor#preview-a-suggestion) |
 
-The agent starts with a bounded `cully_context` lookup and uses `cully_get` only when it needs a full note. It saves the result with `cully_log` through its own MCP connection. Mem0 handles semantic recall; PostgreSQL keeps the source note. The advisor does not upload transcripts. If the MCP server is unavailable, the agent can keep working but cannot save shared continuity until it reconnects. See the [memory guide](/memory) and [session optimization guide](/session-optimization).
+These can reduce repeated reading and material in the model’s input. They are not a measured promise of lower billed tokens or faster work; MCP and advisor calls also have a cost. The [session optimization guide](/session-optimization) explains the full flow and each agent’s limits.
 
-## 4. Check suggestions
+## 3. Work on a real task
+
+Open a project in your connected agent and work as usual. You do not need to mention Cully in every prompt. Its [hooks and skill](/session-optimization#what-happens-during-a-task) guide the agent during substantive work. On your first task, no prior notes may exist yet.
+
+After a useful change or decision, ask “What did you save with Cully for this task?” Look for a successful `cully_log` result. The hook prompts the agent to make that MCP call; it does not write a note itself, and routine replies are skipped. When the client supplies a session ID, the hook gives the agent an opaque `session_ref` to group notes from that session without saving its transcript. If MCP is unavailable, the agent should say that shared memory was not saved.
+
+After a successful write, PostgreSQL holds the source note. Mem0 indexes it in the background, so [text search may find a new note first](/mem0#what-to-expect). The [memory tools](/memory#find-and-change-notes) let you search or correct it explicitly.
+
+## 4. Continue in a new session
+
+Start a fresh session in the same project, or use another agent connected to the same Cully server. Ask, for example, “Continue [task] in this repository. What changed, which checks passed and what remains?” The agent should ground its answer in the saved note. If text search misses a decision, it can try Mem0's semantic mode; if a preview is insufficient, it can open that one full note.
+
+Ask the new agent which Cully note supports its answer; it should give you a date or record ID. If MCP is unavailable, the agent can keep working but cannot retrieve shared notes until it reconnects.
+
+## 5. Check the local advisor
+
+The memory hooks handle continuity. Separately, the advisor watches session signals your agent makes available. Claude Code exposes richer live signals; Codex and Cursor expose fewer. Cully does not compact a session or run tests for you. See the [agent-specific controls](/session-optimization#use-the-agent-s-native-controls).
 
 In a terminal, run:
 
@@ -52,4 +73,4 @@ You can also use Cully inside your agent:
 | Codex | Run `/prompts:cully suggestions` or ask Codex to check suggestions. |
 | Cursor | Run the project `/cully suggestions` command or ask Cursor to check suggestions. |
 
-If Cully lists a numbered improvement, preview it with `cully apply 1 --dry-run`, using the number shown on your machine. Review the preview before applying. `cully status` also shows whether the advisor daemon is running; if startup failed, run `cully agent setup codex` to retry. The [advisor guide](/advisor) explains each agent's integration.
+If Cully lists a numbered improvement, use its number with `cully apply 1 --dry-run` to inspect the proposed change. Review it before applying. `cully status` also shows whether the advisor daemon is running; if startup failed, run `cully agent setup codex` with your agent name to retry. See the [advisor commands](/advisor#commands) for the rest.
