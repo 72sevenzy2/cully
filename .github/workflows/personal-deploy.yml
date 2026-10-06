@@ -118,10 +118,7 @@ jobs:
             ssh -i "$HOME/.ssh/cully-personal" -p "$DEPLOY_PORT" -o BatchMode=yes -o StrictHostKeyChecking=yes -o ConnectTimeout=15 "$DEPLOY_USER@$DEPLOY_HOST" deploy
       - name: Deploy personal MCP service
         id: mcp
-        env:
-          CULLY_DATA_API_TOKEN: ${{ secrets.CULLY_DATA_API_TOKEN }}
         run: |
-          python3 deploy/prepare_personal_metadata.py .mcp/servers.yaml
           mcp-runtime server validate --metadata-dir .mcp
           mcp-runtime server deploy "$SERVER_NAME" --metadata-dir .mcp --update
       - name: Verify MCP Runtime placement and public OAuth route
