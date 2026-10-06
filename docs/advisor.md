@@ -1,7 +1,30 @@
 # Local advisor and session controls
 
-Cully helps you guide coding agents, review session pressure and apply useful
-workflow improvements. Shared memory uses Cully MCP, PostgreSQL and Mem0.
+Cully's main feature is guidance while you work in your coding agent's terminal
+or chat interface: session signals, warnings, and practical workflow suggestions.
+The background advisor supports the session; the Cully commands and skill bring
+its suggestions into Claude Code, Codex, and Cursor. Shared memory uses Cully
+MCP, PostgreSQL and Mem0.
+
+## See suggestions as you work
+
+After setup, stay in your agent and ask Cully for session guidance:
+
+| Agent | In-session controls |
+| --- | --- |
+| Claude Code | The live Cully status line shows session signals and pending advice. Run `/cully suggestions` to see improvements, or `/cully status` for a session check. |
+| Codex | Native TUI status fields show session information. Run `/prompts:cully suggestions` or ask the agent to run `cully suggestions` through the installed skill. |
+| Cursor | Run the project `/cully suggestions` command, or ask the agent to check Cully guidance through the installed skill. |
+
+Suggestions can point to useful project instructions, skills, or MCP integrations.
+For a numbered suggestion, ask your agent to run `cully apply <n> --dry-run` and
+review the result before approving it. You can also run `cully status` and
+`cully suggestions` directly in a terminal at any time.
+
+Claude's hooks provide live session signals for background analysis. Codex and
+Cursor expose different integration surfaces: their commands and skills bring
+advice into the session, but they do not have Claude's command-backed Cully status
+line or automatic hook feed. Advice depends on the session signals available.
 
 ## Setup
 

@@ -1,7 +1,6 @@
 #!/bin/sh
-# Cully installer — downloads a prebuilt binary when a release has one, then
-# self-registers it for detected coding agents. Until then, it uses Go to
-# install the selected source ref into the temporary directory.
+# Cully installer — downloads a prebuilt binary, then self-registers it for
+# detected coding agents. Use --from-source to explicitly build with Go.
 #
 #   curl -fsSL https://cully.net/install.sh | sh -s -- --agent codex --mcp-url http://127.0.0.1:8080/mcp
 #
@@ -16,6 +15,7 @@ BIN_DIR="$CLAUDE_DIR/bin"
 agent=""
 mcp_url=""
 oauth=false
+from_source=false
 while [ "$#" -gt 0 ]; do
   case "$1" in
     --agent)
@@ -25,6 +25,7 @@ while [ "$#" -gt 0 ]; do
       [ "$#" -ge 2 ] || { echo '--mcp-url requires a value' >&2; exit 2; }
       mcp_url="$2"; shift 2 ;;
     --oauth) oauth=true; shift ;;
+    --from-source) from_source=true; shift ;;
     *) echo "unknown installer option: $1" >&2; exit 2 ;;
   esac
 done
@@ -65,33 +66,38 @@ fi
 tmp="$(mktemp -d)"
 trap 'rm -rf "$tmp"' EXIT
 say "Detected platform: $raw_os/$raw_arch -> $os/$arch"
-say "Downloading $asset ($ver)"
-if curl -fsSL "$url" -o "$tmp/c.tar.gz"; then
-  sums_url="$(dirname "$url")/checksums.txt"
-  if curl -fsSL "$sums_url" -o "$tmp/checksums.txt" 2>/dev/null; then
-    expected="$(awk -v asset="$asset" '$2 == asset {print $1; exit}' "$tmp/checksums.txt")"
-    if [ -n "$expected" ]; then
-      if command -v sha256sum >/dev/null 2>&1; then
-        actual="$(sha256sum "$tmp/c.tar.gz" | awk '{print $1}')"
-      else
-        actual="$(shasum -a 256 "$tmp/c.tar.gz" | awk '{print $1}')"
-      fi
-      [ "$actual" = "$expected" ] || die "checksum mismatch for $asset (expected $expected, got $actual) — aborting install"
-    else
-      say "warning: no checksum entry for $asset — skipping verification"
-    fi
-  else
-    say "warning: could not fetch checksums.txt — skipping verification"
-  fi
-
-  tar -xzf "$tmp/c.tar.gz" -C "$tmp" || die "extract failed"
-  [ -f "$tmp/cully" ] || die "archive did not contain the cully binary"
-else
-  command -v go >/dev/null 2>&1 || die "No CLI archive is published for $ver. Install Go 1.26 or newer, then rerun this installer."
+if [ "$from_source" = true ]; then
+  command -v go >/dev/null 2>&1 || die "Source installation requires Go 1.26 or newer."
   ref="$ver"
   [ "$ref" != latest ] || ref=main
-  say "No CLI archive is published for $ver; installing Cully from $ref"
-  GOBIN="$tmp" go install "github.com/mcp-runtime/cully/cmd/cully@$ref" || die "source install failed for $ref"
+  say "Building Cully from $ref; downloading the Go toolchain and dependencies can take several minutes"
+  GOBIN="$tmp" go install -v "github.com/mcp-runtime/cully/cmd/cully@$ref" || die "source install failed for $ref"
+else
+  say "Downloading $asset ($ver)"
+  if curl -fL --progress-bar --connect-timeout 10 --max-time 120 --speed-limit 1024 --speed-time 30 "$url" -o "$tmp/c.tar.gz"; then
+    sums_url="$(dirname "$url")/checksums.txt"
+    say "Verifying download"
+    if curl -fsSL --connect-timeout 10 --max-time 30 "$sums_url" -o "$tmp/checksums.txt"; then
+      expected="$(awk -v asset="$asset" '$2 == asset {print $1; exit}' "$tmp/checksums.txt")"
+      if [ -n "$expected" ]; then
+        if command -v sha256sum >/dev/null 2>&1; then
+          actual="$(sha256sum "$tmp/c.tar.gz" | awk '{print $1}')"
+        else
+          actual="$(shasum -a 256 "$tmp/c.tar.gz" | awk '{print $1}')"
+        fi
+        [ "$actual" = "$expected" ] || die "checksum mismatch for $asset (expected $expected, got $actual) — aborting install"
+      else
+        say "warning: no checksum entry for $asset — skipping verification"
+      fi
+    else
+      say "warning: could not fetch checksums.txt — skipping verification"
+    fi
+
+    tar -xzf "$tmp/c.tar.gz" -C "$tmp" || die "extract failed"
+    [ -f "$tmp/cully" ] || die "archive did not contain the cully binary"
+  else
+    die "Could not download $asset ($ver). Check your connection and the release at https://github.com/$REPO/releases, then retry. To build with Go instead, rerun with: sh -s -- --from-source"
+  fi
 fi
 [ -f "$tmp/cully" ] || die "installer did not produce the cully binary"
 

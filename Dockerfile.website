@@ -6,11 +6,20 @@ RUN node site/build.mjs
 ARG REVISION=local
 RUN printf '{"revision":"%s"}\n' "$REVISION" > dist/site/_deployment.json
 
-FROM nginx:stable-alpine
-COPY deploy/nginx.website.conf /etc/nginx/nginx.conf
+FROM golang:1.26-alpine AS api
+WORKDIR /src
+COPY go.mod go.sum ./
+RUN go mod download
+COPY internal/website ./internal/website
+COPY cmd/cully-web ./cmd/cully-web
+RUN CGO_ENABLED=0 go build -trimpath -ldflags='-s -w' -o /cully-web ./cmd/cully-web
+
+FROM alpine:3.22
+RUN apk add --no-cache ca-certificates && addgroup -S -g 10001 cully && adduser -S -u 10001 -G cully cully && mkdir -p /var/lib/cully-web && chown cully:cully /var/lib/cully-web
 COPY --from=build /src/dist/site /srv/site
-USER nginx
+COPY --from=api /cully-web /usr/local/bin/cully-web
+USER cully
 EXPOSE 8080
 HEALTHCHECK --interval=10s --timeout=3s --start-period=10s --retries=3 \
   CMD wget -q -O /dev/null --header='Host: cully.net' http://127.0.0.1:8080/
-ENTRYPOINT ["nginx", "-g", "daemon off;"]
+ENTRYPOINT ["/usr/local/bin/cully-web"]

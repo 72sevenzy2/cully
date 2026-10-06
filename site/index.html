@@ -36,7 +36,7 @@
         <div class="hero-copy">
           <div class="eyebrow"><span class="eyebrow-line"></span> The companion for your coding agents</div>
           <h1 id="hero-title">Make every session<br><em>work better.</em></h1>
-          <p class="hero-lead">Cully helps you see what is happening in your coding session, improve your workflow, and carry useful context to the next agent.</p>
+          <p class="hero-lead">Get useful suggestions while you work in Claude Code, Codex, or Cursor. Cully's background advisor brings session guidance into your agent through status displays, commands, and skills, and helps you carry useful context to the next session.</p>
           <div id="install" class="hero-try">
             <div class="hero-try-heading"><strong>Try it out</strong><span>macOS and Linux</span></div>
             <div class="hero-command"><code>curl -fsSL https://cully.net/install.sh | sh</code><button class="copy-button" type="button" aria-label="Copy Cully install command">Copy</button></div>
@@ -46,7 +46,7 @@
             <a class="button button-primary" href="https://docs.cully.net/quickstart">Read the quickstart <span aria-hidden="true">↗</span></a>
             <a class="button button-text" href="#how-it-works">See how it works <span aria-hidden="true">↓</span></a>
           </div>
-          <div class="hero-footnote"><span class="pulse-dot" aria-hidden="true"></span> Open source · Built for Claude Code, Codex and Cursor · Mem0-powered recall</div>
+          <div class="hero-footnote"><span class="pulse-dot" aria-hidden="true"></span><span>Open source · Built for Claude Code, Codex and Cursor · Recall powered by <a href="https://mem0.ai/" target="_blank" rel="noopener noreferrer">Mem0 ↗</a></span></div>
         </div>
 
         <div class="hero-art" aria-label="Illustration of Cully's local guidance and shared memory">
@@ -90,8 +90,53 @@
 
       <section id="how-it-works" class="workflow-section" aria-labelledby="workflow-title"><div class="section-wrap workflow-inner"><div class="workflow-heading"><div class="kicker">02 / GET GOING</div><h2 id="workflow-title">A simple path to<br><em>better continuity.</em></h2><p>Start locally. Connect memory when you are ready. Cully keeps those choices separate so you can adopt what fits your workflow.</p><a class="inline-link" href="https://docs.cully.net/quickstart">Read the quickstart <span aria-hidden="true">↗</span></a></div><div class="workflow-steps"><article><div class="step-number">01</div><div><h3>Install the local advisor</h3><p>Run Cully on your machine and choose the coding agents you use. Your local session view works without a server.</p></div></article><article><div class="step-number">02</div><div><h3>See and improve your workflow</h3><p>Check status, review suggestions, and preview changes before you apply them.</p></div></article><article><div class="step-number">03</div><div><h3>Connect shared memory</h3><p>Point an agent at your Cully MCP service and keep useful records across devices and tools. Sign in only if the operator enabled OAuth.</p></div></article></div></div></section>
 
-      <section class="section-wrap architecture-section" aria-labelledby="architecture-title"><div class="section-intro"><div><div class="kicker">03 / UNDER THE HOOD</div><h2 id="architecture-title">Built for the way<br><em>agents actually work.</em></h2></div><p>The local CLI guides your session. PostgreSQL keeps durable source records, while self-hosted Mem0 does the heavy lifting for semantic indexing and recall when enabled.</p></div><div class="architecture-flow"><div class="flow-node"><span class="flow-icon">⌘</span><strong>Your machine</strong><small>CLI · status · suggestions</small></div><span class="flow-arrow" aria-hidden="true">→</span><div class="flow-node"><span class="flow-icon">✳</span><strong>Cully MCP</strong><small>Optional OAuth · owner-scoped tools</small></div><span class="flow-arrow" aria-hidden="true">→</span><div class="flow-node"><span class="flow-icon">▤</span><strong>Your records</strong><small>PostgreSQL · self-hosted Mem0</small></div></div><p class="architecture-note">Shared memory is optional. Run your own service when you need it. <a href="https://docs.cully.net/hosting">Self-hosting guide →</a></p></section>
+      <section class="section-wrap architecture-section" aria-labelledby="architecture-title">
+        <div class="section-intro"><div><div class="kicker">03 / UNDER THE HOOD</div><h2 id="architecture-title">Built for the way<br><em>agents actually work.</em></h2></div><p>Cully brings together a background advisor, local session controls, skills, and MCP tools. Use them with your coding agents, then connect durable memory when you need it.</p></div>
+        <div class="architecture-flow">
+          <div class="flow-node"><span class="flow-icon">⌘</span><strong>Your coding agents</strong><small>Claude Code · Codex · Cursor</small><p>Keep working in the tools you already use.</p></div>
+          <span class="flow-arrow" aria-hidden="true">↔</span>
+          <div class="flow-node"><span class="flow-icon">✳</span><strong>Cully at work</strong><small>Background advisor · CLI · skills · MCP</small><p>Session status, workflow suggestions, agent integrations, and tools to save and recall useful context.</p></div>
+          <span class="flow-arrow" aria-hidden="true">↔</span>
+          <div class="flow-node"><span class="flow-icon">▤</span><strong>Your records</strong><small>PostgreSQL · self-hosted Mem0</small><p>Durable source records and optional semantic recall, accessed through owner-scoped MCP tools.</p></div>
+        </div>
+        <p class="architecture-note">The advisor and skills work locally. Shared memory is optional, with OAuth available when you need sign-in. <a href="https://docs.cully.net/hosting">Self-hosting guide →</a></p>
+        <div class="memory-foundation">
+          <div><div class="kicker">THE MEMORY ENGINE</div><h3>Semantic recall, powered by Mem0.</h3><p>Cully uses self-hosted Mem0 to index saved decisions, lessons, and project context by meaning. Your next agent can find relevant records even when it asks in different words. PostgreSQL keeps the source records; Mem0 powers semantic search across them.</p></div>
+          <a class="inline-link" href="https://mem0.ai/" target="_blank" rel="noopener noreferrer">Explore Mem0 <span aria-hidden="true">↗</span></a>
+        </div>
+      </section>
 
+      <section id="testimonials" class="testimonials-section" aria-labelledby="testimonials-title">
+        <div class="section-wrap">
+          <div class="section-intro"><div><div class="kicker">04 / FROM THE COMMUNITY</div><h2 id="testimonials-title">Your workflow.<br><em>Your words.</em></h2></div><p>Using Cully? Tell us what changed in your day-to-day work. Community testimonials will appear here after review.</p></div>
+          <div class="testimonial-toolbar"><span id="testimonial-caption">Be among the first to share your experience.</span><div class="testimonial-controls"><button type="button" data-testimonial-direction="-1" aria-label="Scroll testimonials left" aria-controls="testimonial-track">←</button><button type="button" data-testimonial-direction="1" aria-label="Scroll testimonials right" aria-controls="testimonial-track">→</button></div></div>
+          <div id="testimonial-track" class="testimonial-track" tabindex="0" role="region" aria-label="Community testimonials. Scroll left or right.">
+            <article class="testimonial-card testimonial-invitation"><span class="quote-mark" aria-hidden="true">“</span><span class="testimonial-label">YOUR STORY GOES HERE</span><h3>A better coding session?</h3><p>Tell us how Cully's background advisor, status, or suggestions fit into your workflow.</p><a href="#share-testimonial">Share your experience ↗</a></article>
+            <article class="testimonial-card testimonial-invitation"><span class="quote-mark" aria-hidden="true">“</span><span class="testimonial-label">YOUR STORY GOES HERE</span><h3>Less starting over?</h3><p>Has shared memory helped your next agent find a decision or lesson from an earlier session?</p><a href="#share-testimonial">Tell us what worked ↗</a></article>
+            <article class="testimonial-card testimonial-invitation"><span class="quote-mark" aria-hidden="true">“</span><span class="testimonial-label">YOUR STORY GOES HERE</span><h3>Cully with your team?</h3><p>Share how skills, agent integrations, and your own memory service work together for your team.</p><a href="#share-testimonial">Add your perspective ↗</a></article>
+            <article class="testimonial-card testimonial-invitation"><span class="quote-mark" aria-hidden="true">“</span><span class="testimonial-label">YOUR STORY GOES HERE</span><h3>Something we can improve?</h3><p>Useful feedback matters too. Tell us what could make Cully a better companion for your agents.</p><a href="#share-testimonial">Help shape Cully ↗</a></article>
+          </div>
+          <form id="share-testimonial" class="testimonial-form" aria-labelledby="testimonial-form-title">
+            <div class="testimonial-form-intro"><div class="kicker">ADD YOUR VOICE</div><h3 id="testimonial-form-title">How has Cully worked for you?</h3><p>Share your experience right here. Your name, workplace, photo, and testimonial may appear after review. Leave out private project details.</p><div class="testimonial-photo-preview"><img id="testimonial-photo-preview" alt="Your selected profile photo" hidden><span id="testimonial-photo-placeholder" aria-hidden="true">☺</span></div><p id="testimonial-photo-status" aria-live="polite">Add a photo to put a face to your story.</p></div>
+            <div class="testimonial-fields">
+              <div class="testimonial-identity"><label>Your name<input name="name" autocomplete="name" required maxlength="80" placeholder="Name to display"></label><label>Where you work <span>(optional)</span><input name="workplace" autocomplete="organization" maxlength="100" placeholder="Company, team, or independent"></label></div>
+              <label>Your role <span>(optional)</span><input name="context" autocomplete="organization-title" maxlength="100" placeholder="Software engineer"></label>
+              <label>Profile photo <span>(optional · JPG, PNG, or WebP · up to 5 MB)</span><input id="testimonial-photo" type="file" name="photo" accept="image/jpeg,image/png,image/webp" aria-describedby="testimonial-photo-help"></label>
+              <p id="testimonial-photo-help" class="testimonial-field-help">Your photo is uploaded with your testimonial and published only after review.</p>
+              <label>LinkedIn profile <span>(optional)</span><input name="linkedin" type="url" maxlength="300" placeholder="https://www.linkedin.com/in/your-name" aria-describedby="testimonial-linkedin-help"></label>
+              <div class="linkedin-import"><button id="import-linkedin" class="profile-import-button" type="button">Import public profile details <span aria-hidden="true">↗</span></button><span id="linkedin-import-status" role="status"></span></div>
+              <p id="testimonial-linkedin-help" class="testimonial-field-help">Import a publicly available name, workplace, and photo, then check the details. If LinkedIn restricts access, fill them in yourself.</p>
+              <input name="importedPhoto" type="hidden">
+              <label class="testimonial-honeypot" aria-hidden="true">Website<input name="website" tabindex="-1" autocomplete="off"></label>
+              <label>Your experience<textarea name="quote" required minlength="20" maxlength="1000" rows="4" placeholder="What did Cully help you do? What could be better?"></textarea></label>
+              <label class="testimonial-consent"><input type="checkbox" name="consent" required><span>I agree to have my submitted name, workplace, photo, profile link, and testimonial published on cully.net after review.</span></label>
+              <button class="button button-primary" type="submit">Share your testimonial <span aria-hidden="true">↗</span></button>
+              <p id="testimonial-submit-status" role="status" aria-live="polite"></p>
+              <noscript><p>Enable JavaScript to upload your photo and submit this form.</p></noscript>
+            </div>
+          </form>
+        </div>
+      </section>
     </main>
 
     <footer class="site-footer section-wrap"><div><a class="brand" href="/" aria-label="Cully home"><span class="brand-mark" aria-hidden="true"><span></span></span><span>cully<span class="brand-dot">.</span></span></a><p>Your companion for better work<br>with AI agents.</p></div><div class="footer-links"><div><strong>Explore</strong><a href="#product">Product</a><a href="#how-it-works">How it works</a><a href="https://docs.cully.net/quickstart">Get started</a></div><div><strong>Resources</strong><a href="https://docs.cully.net/">Documentation</a><a href="https://github.com/mcp-runtime/cully">GitHub</a><a href="https://github.com/mcp-runtime/cully/releases">Releases</a></div></div><div class="footer-bottom"><span>© <span id="year">2026</span> Cully. Built in the open.</span><span>Make the next session a little better.</span></div></footer>

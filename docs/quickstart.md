@@ -15,7 +15,19 @@ curl -fsSL https://cully.net/install.sh | sh -s -- --agent codex
 
 Use `--agent claude` or `--agent cursor` for another agent. The installer adds the local advisor and Cully skill. Restart your agent after setup. See [installation](/installation) for options.
 
-## 2. Check your setup
+## 2. See guidance inside your agent
+
+Restart your coding agent, then check Cully while you work:
+
+- **Claude Code:** watch the live Cully status line and run `/cully suggestions`.
+- **Codex:** run `/prompts:cully suggestions`, or ask the agent to run `cully suggestions`.
+- **Cursor:** run the project `/cully suggestions` command, or ask the agent to check Cully suggestions.
+
+The installed skill helps the agent use Cully's local guidance. Claude supplies
+live hook signals; Codex and Cursor use their supported commands, skills, and
+native session displays. See [in-session guidance](/advisor#see-suggestions-as-you-work).
+
+You can also check from your terminal:
 
 ```sh
 cully status

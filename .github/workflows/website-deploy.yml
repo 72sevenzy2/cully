@@ -5,6 +5,10 @@ on:
     paths:
       - 'site/**'
       - 'install.sh'
+      - 'cmd/cully-web/**'
+      - 'internal/website/**'
+      - 'go.mod'
+      - 'go.sum'
       - 'Dockerfile.website'
       - 'deploy/nginx.website.conf'
       - 'deploy/compose.website.yaml'
@@ -16,6 +20,10 @@ on:
     paths:
       - 'site/**'
       - 'install.sh'
+      - 'cmd/cully-web/**'
+      - 'internal/website/**'
+      - 'go.mod'
+      - 'go.sum'
       - 'Dockerfile.website'
       - 'deploy/nginx.website.conf'
       - 'deploy/compose.website.yaml'
@@ -50,7 +58,7 @@ jobs:
         run: docker build --build-arg REVISION="$GITHUB_SHA" -f Dockerfile.website -t "$IMAGE" .
       - name: Smoke test website
         run: |
-          docker run -d --name cully-web-test --read-only --tmpfs /tmp -p 127.0.0.1:18080:8080 "$IMAGE"
+          docker run -d --name cully-web-test --read-only --tmpfs /tmp --tmpfs /var/lib/cully-web:uid=10001,gid=10001 -p 127.0.0.1:18080:8080 "$IMAGE"
           trap 'docker rm -f cully-web-test' EXIT
           curl --fail --retry 10 --retry-delay 2 --retry-all-errors -H 'Host: cully.net' http://127.0.0.1:18080/ -o /dev/null
           curl --fail -H 'Host: cully.net' http://127.0.0.1:18080/_deployment.json | python3 -c 'import json,os,sys; assert json.load(sys.stdin)["revision"] == os.environ["GITHUB_SHA"]'

@@ -18,6 +18,18 @@ Omit `--oauth` when your MCP server does not require sign-in. The agent needs on
 
 If your shell cannot find `cully` afterward, use the binary path printed by the installer or add that directory to `PATH`.
 
+### If installation is slow
+
+The default installer downloads a prebuilt CLI, shows download progress, and limits the binary download to two minutes. A stalled or failed download exits with a retry message; it does not automatically compile Cully. Check access to GitHub release downloads if this step fails.
+
+To build from source explicitly, install Go 1.26 or newer and run:
+
+```sh
+curl -fsSL https://cully.net/install.sh | sh -s -- --from-source --agent codex
+```
+
+Source builds can take several minutes on the first run while Go downloads its toolchain and dependencies. The installer prints build progress. `CULLY_VERSION` selects the source tag; the default source build uses `main`.
+
 ## Start a self-hosted Cully server
 
 With Docker Compose and Python 3 installed, the Cully CLI can start the full stack and connect your agent:

@@ -4,11 +4,14 @@ services:
     restart: unless-stopped
     read_only: true
     tmpfs: [/tmp]
+    volumes: [testimonials:/var/lib/cully-web]
     cap_drop: [ALL]
     security_opt: [no-new-privileges:true]
     mem_limit: 256m
     expose: ["8080"]
     networks: [workspace]
+volumes:
+  testimonials:
 networks:
   workspace:
     external: true

@@ -1,6 +1,6 @@
 # Architecture
 
-Cully has one Go module and three executable entry points. Domain validation is shared across the memory transports; PostgreSQL and HTTP adapters implement the same repository interface.
+Cully has one Go module with three agent/data entry points and a separate website server. Domain validation is shared across the memory transports; PostgreSQL and HTTP adapters implement the same repository interface.
 
 ```mermaid
 flowchart LR
@@ -43,6 +43,13 @@ PostgreSQL is authoritative. When Mem0 is enabled, source edits and projection j
 Projection uses `infer=false`: Mem0 embeds authored summaries without adding a fact-extraction model call. Its upstream runtime remains a separate dependency; Cully's own binaries are Go.
 
 ## Delivery boundaries
+
+`cmd/cully-web` serves public website assets and a moderated testimonial inbox.
+It stores direct submissions and photos in a dedicated persistent website volume,
+separate from personal/project memory and its authenticated owner scope. Pending
+submissions are private; an operator approves them through the container CLI before
+they appear on the homepage. Public LinkedIn metadata imports are best effort and
+fall back to manual entry when access is restricted.
 
 The product website and technical docs have separate images, Compose services, path-filtered CI workflows and rollback state. A change under `site/` deploys `cully-web`; a change under `docs/` deploys `cully-docs`. Caddy routes their domains to separate containers on the existing workspace network. See [website hosting](website.md).
 

@@ -5,6 +5,10 @@ description: Set up Cully's local advisor and optional shared memory in Claude C
 
 # Connect an agent
 
+Cully brings session guidance and workflow suggestions into the agent you are
+working in. For the in-session commands and differences between each client's
+terminal or chat interface, see [suggestions as you work](/advisor#see-suggestions-as-you-work).
+
 When your MCP server is running, one command installs the Cully skill and local advisor integration **and** registers the server with your agent:
 
 ```sh

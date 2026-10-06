@@ -5,10 +5,11 @@ description: Install Cully, connect your coding agents, and understand local gui
 
 # Make every session count
 
-Cully helps you work with coding agents across projects and devices. The local CLI watches the session signals your agent exposes, shows useful warnings, and suggests improvements you can review. The optional MCP service stores durable records that the same owner can retrieve from another connected agent. Self-hosted Mem0 handles semantic indexing and recall when configured.
+Cully's main feature is useful suggestions while you work in Claude Code, Codex, or Cursor. Its local advisor uses the session signals your agent exposes to show warnings and suggest workflow improvements through supported status displays, commands, and skills. You can review advice inside your agent and preview a change before applying it. The optional MCP service stores durable records that the same owner can retrieve from another connected agent. Self-hosted Mem0 handles semantic indexing and recall when configured.
 
 | I want to… | Start here |
 | --- | --- |
+| See suggestions while I work in my agent | [In-session guidance](/advisor#see-suggestions-as-you-work) |
 | Try the local CLI | [Quickstart](/quickstart) |
 | Set up Claude Code, Codex, or Cursor | [Connect an agent](/agents) |
 | Save and find durable notes | [Shared memory](/memory) |
@@ -26,4 +27,4 @@ Cully helps you work with coding agents across projects and devices. The local C
 | --- | --- |
 | [Install Cully](/quickstart) for local session guidance. When you want shared memory, [start your own Docker stack](/hosting) and connect your agent. | [Plan a team deployment](/team-deployment) on Docker Compose, Kubernetes or your container platform. Connect [MCP Auth](/oauth) to your organization's identity provider so each person signs in. |
 
-For the service contract, see [configuration](/configuration) and [architecture](/architecture). [MCP Runtime](https://mcpruntime.org) is a platform where you can deploy an MCP server. See [website and docs hosting](/website) for this project's static sites.
+For the service contract, see [configuration](/configuration) and [architecture](/architecture). [MCP Runtime](https://mcpruntime.org) is a platform where you can deploy an MCP server. See [website and docs hosting](/website) for this project's public website and documentation.
