@@ -9,13 +9,15 @@ import (
 	"testing"
 )
 
+const testMCPURL = "https://mcp.example.test/mcp"
+
 func TestMCPJSONPreservesOtherConfig(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "mcp.json")
 	original := `{"theme":"dark","mcpServers":{"other":{"command":"other"}}}`
 	if err := os.WriteFile(path, []byte(original), 0600); err != nil {
 		t.Fatal(err)
 	}
-	if err := addJSONMCP(path, HostedMCPURL, true); err != nil {
+	if err := addJSONMCP(path, testMCPURL, true); err != nil {
 		t.Fatal(err)
 	}
 	b, _ := os.ReadFile(path)
@@ -27,7 +29,7 @@ func TestMCPJSONPreservesOtherConfig(t *testing.T) {
 	if config["theme"] != "dark" || servers["other"].(map[string]any)["command"] != "other" || servers["cully"].(map[string]any)["type"] != "http" {
 		t.Fatalf("changed config: %s", b)
 	}
-	if err := addJSONMCP(path, HostedMCPURL, true); err != nil {
+	if err := addJSONMCP(path, testMCPURL, true); err != nil {
 		t.Fatal(err)
 	}
 	if err := addJSONMCP(path, "https://self.example/mcp", true); err == nil {
@@ -47,14 +49,14 @@ func TestMCPQuotedTOMLAndConflicts(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "config.toml")
 	original := "# keep this comment\nmodel = \"custom\"\n[mcp_servers.\"other\"]\ncommand = \"other\"\n"
 	os.WriteFile(path, []byte(original), 0600)
-	if err := addTOMLMCP(path, HostedMCPURL); err != nil {
+	if err := addTOMLMCP(path, testMCPURL); err != nil {
 		t.Fatal(err)
 	}
 	b, _ := os.ReadFile(path)
 	if !strings.HasPrefix(string(b), original) {
 		t.Fatalf("lost original formatting: %s", b)
 	}
-	if err := addTOMLMCP(path, HostedMCPURL); err != nil {
+	if err := addTOMLMCP(path, testMCPURL); err != nil {
 		t.Fatal(err)
 	}
 	if err := addTOMLMCP(path, "https://self.example/mcp"); err == nil {
@@ -66,7 +68,7 @@ func TestMCPQuotedTOMLAndConflicts(t *testing.T) {
 	}
 	quoted := []byte("[mcp_servers.\"cully\"]\nurl = \"https://user.example/mcp\"\n")
 	os.WriteFile(path, quoted, 0600)
-	if err := addTOMLMCP(path, HostedMCPURL); err == nil {
+	if err := addTOMLMCP(path, testMCPURL); err == nil {
 		t.Fatal("missed quoted Cully table")
 	}
 	after, _ = os.ReadFile(path)
@@ -79,7 +81,7 @@ func TestMCPInvalidConfigPreserved(t *testing.T) {
 	for _, initial := range []string{`null`, `{"mcpServers":[]}`, `{bad json`, `{"mcpServers":{"cully":{"command":"user-owned"}}}`} {
 		path := filepath.Join(t.TempDir(), "mcp.json")
 		os.WriteFile(path, []byte(initial), 0600)
-		if err := addJSONMCP(path, HostedMCPURL, true); err == nil {
+		if err := addJSONMCP(path, testMCPURL, true); err == nil {
 			t.Fatalf("accepted: %s", initial)
 		}
 		after, _ := os.ReadFile(path)
@@ -136,14 +138,14 @@ func TestAddMCPAutoDetectionChoosesOneAgent(t *testing.T) {
 	os.Mkdir(claude, 0700)
 	os.Mkdir(codex, 0700)
 	var out bytes.Buffer
-	if err := AddMCP(&out, "", HostedMCPURL, false); err == nil {
+	if err := AddMCP(&out, "", testMCPURL, false); err == nil {
 		t.Fatal("ambiguous detection should require an explicit agent")
 	}
 	if _, err := os.Stat(filepath.Join(claude, ".claude.json")); !os.IsNotExist(err) {
 		t.Fatal("ambiguous detection wrote config")
 	}
 	os.Remove(codex)
-	if err := AddMCP(&out, "", HostedMCPURL, false); err != nil {
+	if err := AddMCP(&out, "", testMCPURL, false); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := os.Stat(filepath.Join(claude, ".claude.json")); err != nil {

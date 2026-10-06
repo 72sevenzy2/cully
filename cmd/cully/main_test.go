@@ -42,3 +42,9 @@ func TestSetupMCPOptionsFailBeforeChangingAgentSetup(t *testing.T) {
 		}
 	}
 }
+
+func TestMCPAddRequiresDeploymentURL(t *testing.T) {
+	if err := run([]string{"mcp", "add", "--agent", "codex"}); err == nil {
+		t.Fatal("mcp add accepted a missing deployment URL")
+	}
+}

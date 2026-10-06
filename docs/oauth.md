@@ -6,17 +6,15 @@ Cully uses the [MCP Auth Go client SDK](https://github.com/mcp-runtime/mcp-auth/
 
 ## Example: the maintainer's deployment on MCP Runtime
 
-The Cully maintainer runs a personal deployment at `https://mcp.mcpruntime.org/cully/mcp` on MCP Runtime. It uses the platform's OAuth service. MCP Runtime runs MCP Auth with an identity-provider connector; the identity provider manages users and sign-in. MCP Auth issues a token for this deployment's MCP URL, which Cully checks before running a tool. Its server manifest declares the resource URL and `tools:read` and `tools:write` scopes. It contains no identity-provider configuration or secret.
+[MCP Runtime](https://mcpruntime.org) is a platform where you can deploy an MCP server. The Cully maintainer uses it for a personal Cully deployment at `https://mcp.mcpruntime.org/cully/mcp`. MCP Runtime provides OAuth through MCP Auth, so this Cully deployment only declares its public resource URL and `tools:read` and `tools:write` scopes. Its manifest contains no identity-provider secret.
 
 1. An agent connects to `https://mcp.mcpruntime.org/cully/mcp`. Without a token, Cully returns an OAuth challenge and protected-resource metadata pointing to MCP Auth.
 2. MCP Runtime's MCP Auth service sends the user to the configured identity provider, then issues a token for Cully's MCP URL.
 3. Cully validates the token and its tool scope before handling the request.
 
-MCP Runtime configures the authorization service and passes the issuer and resource URL to this Cully deployment. The platform operator configures the identity-provider connector separately. See the [MCP Runtime OAuth guide](https://docs.mcpruntime.org/mcp-oauth/) for that platform setup and [the example Cully server manifest](https://github.com/mcp-runtime/cully/blob/main/.mcp/servers.yaml) for its resource and scopes.
+MCP Runtime configures the authorization service and passes the issuer and resource URL to Cully. See [publish an MCP server on MCP Runtime](https://docs.mcpruntime.org/publish-mcp-server/), the [platform OAuth guide](https://docs.mcpruntime.org/mcp-oauth/), and [this deployment's server manifest](https://github.com/mcp-runtime/cully/blob/main/.mcp/servers.yaml).
 
-The [Docker Compose stack](/hosting#one-command-full-stack) starts Caddy for HTTPS in OAuth mode and replaces the fixed owner with token subjects. Set public DNS and allow ports 80/443 to reach the host before starting Caddy. Keep the data API and PostgreSQL private.
-
-An agent needs only the MCP URL and `--oauth` when connecting. For a self-hosted endpoint, its operator supplies the issuer, exact resource URL, JWKS URL and HTTPS routing. The full-stack `./setup.sh` script starts Cully, Mem0 and both databases after those values are configured.
+You can use the same pattern in your environment: deploy Cully MCP, connect an authorization server, and configure that server to use your organization's identity provider. [MCP Auth](https://github.com/mcp-runtime/mcp-auth) is a provider-neutral OAuth broker that supports OIDC and OAuth 2.0 connectors; it does not replace the organization's identity provider. An agent only needs the MCP URL and `--oauth` when connecting.
 
 ## Self-hosted Docker with an existing authorization server
 
@@ -27,42 +25,49 @@ Set these values in `deploy/self-hosted/.env`:
 ```dotenv
 CULLY_MCP_HOST=mcp.example.com
 CULLY_AUTH_ISSUER=https://auth.example.com/mcp-auth
-CULLY_AUTH_RESOURCE=https://mcp.example.com/mcp
-CULLY_JWKS_URL=https://auth.example.com/mcp-auth/.well-known/jwks.json
 ```
 
-The issuer URL is only an example. `CULLY_AUTH_RESOURCE` must equal the public MCP URL and the token audience. Use the actual signing-key endpoint of your server for `CULLY_JWKS_URL`. Register the resource and grant `tools:read` and `tools:write` with that server. Configure its OAuth discovery and clients according to its own documentation. Then run:
+`setup.sh` derives the MCP resource URL as `https://mcp.example.com/mcp` and defaults the signing-key URL to `<issuer>/.well-known/jwks.json`. Set `CULLY_JWKS_URL` in `.env` only when your authorization server uses another endpoint. Register that exact resource and grant `tools:read` and `tools:write` with your authorization server. Configure its OAuth discovery and clients according to its documentation. Then run:
 
 ```sh
 cd deploy/self-hosted
-./setup.sh --oauth existing
+./setup.sh --oauth existing codex
 curl -fsS https://mcp.example.com/.well-known/oauth-protected-resource/mcp
 ```
 
 `Caddyfile.existing-auth` routes only the MCP host. The existing authorization server and its TLS route remain independently operated. The base Compose file also binds port 8080 on loopback for local diagnostics; public traffic enters through Caddy.
 
-`setup.sh` generates the database passwords and service tokens in `~/.cully/config.json` if they do not exist. With an installed Cully CLI, append `--mcp-url https://mcp.example.com/mcp codex` to configure the agent. Pass the exact `CULLY_AUTH_RESOURCE` value as `--mcp-url`.
+`setup.sh` generates database passwords and service tokens in `~/.cully/config.json`, starts the Docker stack and, when the CLI is installed, configures Codex with the derived MCP URL. Use `claude` or `cursor` instead for those agents. Set public DNS and allow ports 80/443 to reach Caddy; keep the data API and PostgreSQL private.
 
 ## Self-hosted Docker with MCP Auth
 
-[MCP Auth](https://github.com/mcp-runtime/mcp-auth/blob/main/docs/auth-server.md) can run beside Cully in the same Docker Compose stack. Configure its connector to use your organization's identity provider. The provided JSON is a Keycloak example; use the [MCP Auth connector guide](https://github.com/mcp-runtime/mcp-auth/blob/main/docs/auth-server.md) for your provider's endpoints, claims and callback settings.
+[MCP Auth](https://github.com/mcp-runtime/mcp-auth/blob/main/docs/auth-server.md) can run beside Cully in the same Docker Compose stack. Configure its connector to use an identity provider supported by your organization. The provided JSON is one Keycloak example; use the [MCP Auth connector guide](https://github.com/mcp-runtime/mcp-auth/blob/main/docs/auth-server.md) for your provider's endpoints, claims and callback settings.
 
 1. Register an MCP Auth client with your identity provider. Set its redirect URI to your MCP Auth callback, for example `https://auth.example.com/mcp-auth/identity/callback`.
-2. Create `deploy/self-hosted/connectors.json` with a named connector for that provider. For Keycloak, copy `connectors.keycloak.example.json` to `connectors.json` and replace the example realm, client and claim values. The connector name must match `CULLY_MCP_AUTH_CONNECTOR` in `.env` (default `keycloak`). Put the upstream client secret in `MCP_AUTH_UPSTREAM_CLIENT_SECRET` in the private `.env`, not in JSON.
-3. In `.env`, set the issuer, resource and JWKS URLs shown above, plus `CULLY_AUTH_HOST=auth.example.com`. Generate a persistent RSA signing key at `deploy/self-hosted/.secrets/signing-key.pem`; for example, run `mkdir -p .secrets` and `openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:3072 -out .secrets/signing-key.pem` from that directory. Make the file readable by the MCP Auth container. Back it up along with the Compose `auth-state` volume. Keep `.env`, connector settings and key out of Git.
-4. Start the stack:
+2. Create `deploy/self-hosted/connectors.json` with a named connector for that provider. For Keycloak, copy `connectors.keycloak.example.json` to `connectors.json` and replace the example realm, client and claim values. If the file has one connector, setup selects it automatically; set `CULLY_MCP_AUTH_CONNECTOR` only if it has more than one. Keep the upstream client secret in the private `.env`, not in JSON.
+3. Set these values in `.env`:
 
-```sh
-cd deploy/self-hosted
-./setup.sh --oauth mcp-auth
-curl -fsS https://auth.example.com/mcp-auth/.well-known/jwks.json
-curl -fsS https://mcp.example.com/.well-known/oauth-protected-resource/mcp
-```
+   ```dotenv
+   CULLY_MCP_HOST=mcp.example.com
+   CULLY_AUTH_HOST=auth.example.com
+   MCP_AUTH_UPSTREAM_CLIENT_SECRET=your-private-client-secret
+   ```
+
+   `setup.sh` derives the resource URL, issuer and JWKS URL from the two hostnames. Generate a persistent RSA signing key at `deploy/self-hosted/.secrets/signing-key.pem`; for example, run `mkdir -p .secrets` and `openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:3072 -out .secrets/signing-key.pem` from that directory. Make the file readable by the MCP Auth container. Back it up along with the Compose `auth-state` volume. Keep `.env`, connector settings and key out of Git.
+
+4. Start the stack and configure an agent:
+
+   ```sh
+   cd deploy/self-hosted
+   ./setup.sh --oauth mcp-auth codex
+   curl -fsS https://auth.example.com/mcp-auth/.well-known/jwks.json
+   curl -fsS https://mcp.example.com/.well-known/oauth-protected-resource/mcp
+   ```
 
 This stack pins `princekrroshan01/mcp-auth-server:0.4.4` and assigns Cully's read and write scopes to its resource URL. Keep the signing key and SQLite state across upgrades so existing tokens, registrations and sessions continue working. Your organization can also run MCP Auth separately and use the `--oauth existing` setup above.
 
-With the CLI installed, append `--mcp-url https://mcp.example.com/mcp codex` for agent setup in the same command. `setup.sh` checks the OAuth values, connector JSON and signing-key file before starting this mode.
+`setup.sh` checks the OAuth values, connector JSON and signing-key file before starting this mode. The CLI must be installed to configure the agent in the same command.
 
 ## Connect an agent
 
-Register the public URL with `cully mcp add --agent codex --url https://mcp.example.com/mcp --oauth`, then follow that agent's sign-in instructions. The `--oauth` flag on `cully mcp add` changes setup instructions; the **server** must also enable OAuth. See [connect an agent](/agents).
+For an already-running server, use `cully setup codex --mcp-url https://mcp.example.com/mcp --oauth` to install the skill and register the MCP connection together. Then follow the agent's sign-in instructions. See [connect an agent](/agents).

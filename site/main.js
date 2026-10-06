@@ -14,27 +14,6 @@ nav?.querySelectorAll('a').forEach(link => link.addEventListener('click', () => 
   nav.classList.remove('is-open')
 }))
 
-const tabs = [...document.querySelectorAll('[role="tab"]')]
-tabs.forEach((tab, index) => {
-  tab.addEventListener('click', () => selectTab(index))
-  tab.addEventListener('keydown', event => {
-    if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return
-    event.preventDefault()
-    const next = (index + (event.key === 'ArrowRight' ? 1 : -1) + tabs.length) % tabs.length
-    selectTab(next)
-    tabs[next].focus()
-  })
-})
-
-function selectTab(index) {
-  tabs.forEach((tab, current) => {
-    const selected = current === index
-    tab.setAttribute('aria-selected', String(selected))
-    tab.tabIndex = selected ? 0 : -1
-    document.getElementById(tab.getAttribute('aria-controls')).hidden = !selected
-  })
-}
-
 document.querySelectorAll('.copy-button').forEach(button => button.addEventListener('click', async () => {
   const code = button.parentElement.querySelector('code')?.textContent
   if (!code) return

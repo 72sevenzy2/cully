@@ -18,11 +18,7 @@ Cully helps you work with coding agents across projects and devices. The local C
 
 **Local advisor.** `cully setup` configures supported integrations on your machine. `cully status` shows session state, and `cully suggestions` offers changes you can preview before applying. It works without a server. See the [local advisor guide](/advisor).
 
-**Shared memory.** `cully mcp add` registers a remote MCP connection for one agent. Cully tools can save and search your own personal or project records. PostgreSQL holds the source records; optional self-hosted Mem0 handles semantic indexing and recall. A single-user server needs no login by default; operators can enable OAuth for per-user access.
-
-::: info Hosted service status
-The Cully hosted MCP endpoint is planned but has not yet been cut over. Local advisor features work now. To use shared memory today, deploy the server yourself and pass its URL to `cully mcp add --url`.
-:::
+**Shared memory.** `cully setup codex --mcp-url URL` installs the skill and registers your MCP server with Codex in one step; use `claude` or `cursor` for another agent. Cully tools can save and search your own personal or project records. PostgreSQL holds the source records; optional self-hosted Mem0 handles semantic indexing and recall. A single-user server needs no login by default; operators can enable OAuth for per-user access.
 
 ## Choose a path
 
@@ -30,4 +26,4 @@ The Cully hosted MCP endpoint is planned but has not yet been cut over. Local ad
 2. [Connect the coding agent you use](/agents).
 3. [Explore the memory tools](/memory) or [run your own service](/hosting).
 
-Browse the [architecture](/architecture), [configuration](/configuration), [OAuth deployment](/oauth), [personal deployment](/personal-deployment), and [website hosting](/website) guides when you operate Cully.
+To operate Cully, see [Docker self-hosting](/hosting), [MCP OAuth](/oauth), [configuration](/configuration), and [architecture](/architecture). [MCP Runtime](https://mcpruntime.org) is a platform where you can deploy an MCP server; the maintainer's [personal Cully deployment](/personal-deployment) is one example. [MCP Auth](https://github.com/mcp-runtime/mcp-auth) can broker OAuth through your organization's identity provider. See [website and docs hosting](/website) for this project's static sites.

@@ -127,34 +127,61 @@ def exports(current):
 def validate_oauth(mode, endpoint, directory=None):
     directory = Path(directory) if directory else Path(__file__).parent
     values = read_env(directory / ".env")
-    values.update({key: value for key, value in os.environ.items() if key.startswith("CULLY_AUTH_") or key in {"CULLY_MCP_HOST", "CULLY_MCP_AUTH_CONNECTOR", "MCP_AUTH_UPSTREAM_CLIENT_SECRET"}})
-    required = ["CULLY_AUTH_ISSUER", "CULLY_AUTH_RESOURCE", "CULLY_JWKS_URL", "CULLY_MCP_HOST"]
+    values.update({key: value for key, value in os.environ.items() if key.startswith("CULLY_AUTH_") or key in {"CULLY_MCP_HOST", "CULLY_MCP_AUTH_CONNECTOR", "CULLY_JWKS_URL", "MCP_AUTH_UPSTREAM_CLIENT_SECRET"}})
+    required = ["CULLY_MCP_HOST"]
     if mode == "mcp-auth":
         required += ["CULLY_AUTH_HOST", "MCP_AUTH_UPSTREAM_CLIENT_SECRET"]
+    else:
+        required += ["CULLY_AUTH_ISSUER"]
     missing = [key for key in required if not values.get(key) or "example.com" in values[key] or values[key].startswith("replace-with-")]
     if missing:
         raise ValueError("set real OAuth values in .env: " + ", ".join(missing))
+    for key in ("CULLY_MCP_HOST", "CULLY_AUTH_HOST"):
+        if values.get(key) and ("/" in values[key] or "://" in values[key]):
+            raise ValueError(f"{key} must be a hostname, not a URL")
+    resource = f"https://{values['CULLY_MCP_HOST']}/mcp"
+    if values.get("CULLY_AUTH_RESOURCE") and values["CULLY_AUTH_RESOURCE"] != resource:
+        raise ValueError("CULLY_AUTH_RESOURCE must equal the public MCP URL derived from CULLY_MCP_HOST")
+    values["CULLY_AUTH_RESOURCE"] = resource
+    if mode == "mcp-auth" and not values.get("CULLY_AUTH_ISSUER"):
+        values["CULLY_AUTH_ISSUER"] = f"https://{values['CULLY_AUTH_HOST']}/mcp-auth"
+    if not values.get("CULLY_JWKS_URL"):
+        values["CULLY_JWKS_URL"] = values["CULLY_AUTH_ISSUER"].rstrip("/") + "/.well-known/jwks.json"
     for key in ("CULLY_AUTH_ISSUER", "CULLY_AUTH_RESOURCE", "CULLY_JWKS_URL"):
+        if "example.com" in values[key] or values[key].startswith("replace-with-"):
+            raise ValueError(f"set a real {key} in .env")
         if not values[key].startswith("https://"):
             raise ValueError(f"{key} must use HTTPS")
     if endpoint and endpoint != values["CULLY_AUTH_RESOURCE"]:
         raise ValueError("--mcp-url must equal CULLY_AUTH_RESOURCE")
     if mode == "mcp-auth":
-        selected = values.get("CULLY_MCP_AUTH_CONNECTOR") or "keycloak"
         connectors = json.loads((directory / "connectors.json").read_text())
-        if not isinstance(connectors, dict) or not isinstance(connectors.get(selected), dict):
+        if not isinstance(connectors, dict) or not connectors:
+            raise ValueError("connectors.json must define at least one connector")
+        selected = values.get("CULLY_MCP_AUTH_CONNECTOR")
+        if not selected:
+            if len(connectors) != 1:
+                raise ValueError("set CULLY_MCP_AUTH_CONNECTOR when connectors.json defines multiple connectors")
+            selected = next(iter(connectors))
+        if not isinstance(connectors.get(selected), dict):
             raise ValueError(f"connectors.json must define selected connector {selected!r}")
         if connectors[selected].get("client_secret_env") != "MCP_AUTH_UPSTREAM_CLIENT_SECRET":
             raise ValueError("selected connector must use client_secret_env MCP_AUTH_UPSTREAM_CLIENT_SECRET")
+        values["CULLY_MCP_AUTH_CONNECTOR"] = selected
+    return values
 
 
 def main():
-    if len(sys.argv) < 2 or sys.argv[1] not in {"ensure", "export", "validate-oauth"}:
-        raise ValueError("usage: credentials.py ensure|export|validate-oauth MODE [URL]")
-    if sys.argv[1] == "validate-oauth":
+    if len(sys.argv) < 2 or sys.argv[1] not in {"ensure", "export", "validate-oauth", "oauth-env"}:
+        raise ValueError("usage: credentials.py ensure|export|validate-oauth|oauth-env MODE [URL]")
+    if sys.argv[1] in {"validate-oauth", "oauth-env"}:
         if len(sys.argv) not in {3, 4} or sys.argv[2] not in {"existing", "mcp-auth"}:
-            raise ValueError("usage: credentials.py validate-oauth existing|mcp-auth [URL]")
-        validate_oauth(sys.argv[2], sys.argv[3] if len(sys.argv) == 4 else "")
+            raise ValueError("usage: credentials.py validate-oauth|oauth-env existing|mcp-auth [URL]")
+        values = validate_oauth(sys.argv[2], sys.argv[3] if len(sys.argv) == 4 else "")
+        if sys.argv[1] == "oauth-env":
+            for key in ("CULLY_AUTH_ISSUER", "CULLY_AUTH_RESOURCE", "CULLY_JWKS_URL", "CULLY_MCP_AUTH_CONNECTOR"):
+                if values.get(key):
+                    print(f"export {key}={shlex.quote(values[key])}")
         return
     if len(sys.argv) != 2:
         raise ValueError("usage: credentials.py ensure|export")

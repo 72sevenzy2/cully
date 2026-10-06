@@ -2,12 +2,7 @@
 
 Cully currently supports Docker Compose for self-hosting on a local machine or VM. The local advisor runs on the user's machine. The MCP service talks to a private data API. PostgreSQL stores authoritative source records; Mem0 uses its own pgvector database for semantic indexing and recall. See [architecture](/architecture) and [Mem0](/mem0).
 
-| Component | Planned Cully hosted service | Self-hosted service |
-| --- | --- | --- |
-| Local CLI and advisor | User's machine | User's machine |
-| `cully-mcp` | Cully operator | Self-hosting operator |
-| `cully-data` and PostgreSQL | Cully operator | Self-hosting operator |
-| Self-hosted Mem0 runtime | Cully operator | Self-hosting operator |
+You can run all Cully services in Docker Compose. [MCP Runtime](https://mcpruntime.org) is a separate platform for deploying MCP servers; the Cully maintainer uses it for a personal Cully MCP deployment while operating the data services separately. See [that deployment example](/personal-deployment) and [MCP Runtime's publishing guide](https://docs.mcpruntime.org/publish-mcp-server/).
 
 ## Choose MCP access
 
@@ -20,7 +15,7 @@ No-OAuth mode makes no identity-provider or JWKS requests. Cully never accepts a
 
 ## One-command full stack
 
-Install Docker with the Compose plugin and Python 3. From the repository checkout, run:
+Install Docker with the Compose plugin, Python 3 and the [Cully CLI](/installation). From a Cully checkout, run:
 
 ```sh
 cd deploy/self-hosted
@@ -31,7 +26,7 @@ On first run, setup generates the PostgreSQL passwords, MCP-to-data token, data-
 
 [`compose.yaml`](https://github.com/mcp-runtime/cully/blob/main/deploy/self-hosted/compose.yaml) defines the full stack: Cully PostgreSQL, a separate Mem0 pgvector/PostgreSQL database, Mem0 REST, the data API, MCP, and optional Caddy and MCP Auth. `setup.sh` creates the Cully schema, then starts the services. MCP binds only to loopback by default. If the Cully CLI is already installed, `codex` also configures its local integration, shared skill and MCP connection. Use `claude` or `cursor`, or omit the agent to start only Docker services. Restart the agent after setup.
 
-OAuth applies only to MCP. For OAuth, set the real `CULLY_AUTH_ISSUER`, `CULLY_AUTH_RESOURCE`, `CULLY_JWKS_URL` and HTTPS host values in `.env`. Then run `./setup.sh --oauth existing` for an existing authorization server. To run MCP Auth and Caddy in this same Compose stack, prepare the connector JSON, signing key and upstream client secret described in [OAuth deployment](/oauth), then run `./setup.sh --oauth mcp-auth`. Add `--mcp-url https://mcp.example.com/mcp codex` to configure an agent at the same time; the URL must equal `CULLY_AUTH_RESOURCE`. The database passwords and service tokens still come from `config.json` in either mode.
+OAuth applies only to MCP. For an existing authorization server, set `CULLY_MCP_HOST` and `CULLY_AUTH_ISSUER` in `.env`, then run `./setup.sh --oauth existing codex`. For MCP Auth in the same Compose stack, set `CULLY_MCP_HOST`, `CULLY_AUTH_HOST` and the upstream client secret, prepare the connector and signing key, then run `./setup.sh --oauth mcp-auth codex`. Setup derives the resource URL and the conventional JWKS URL; set `CULLY_JWKS_URL` only if an existing server uses a different key endpoint. It starts the services and connects the selected agent in one command. See [MCP OAuth](/oauth) for the connector setup.
 
 The full stack builds Mem0 from a [pinned upstream source commit](https://github.com/mem0ai/mem0/tree/c93420c49a6b14c3d446bdb156d96811908fd90a/server) with [FastEmbed's local BGE small model](https://qdrant.github.io/fastembed/examples/Supported_Models/). The model runs on the host CPU; indexing does not require an embedding API key. Cully calls Mem0 with `infer=false`, so it does not ask an LLM to extract facts. The Mem0 API and both databases stay on private Compose networks. The only published MCP port binds to loopback.
 

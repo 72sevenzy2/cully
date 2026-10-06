@@ -5,39 +5,40 @@ description: Set up Cully's local advisor and optional shared memory in Claude C
 
 # Connect an agent
 
-Cully has two setup commands. `cully setup` adds the local advisor integration. `cully mcp add` adds one remote shared-memory connection. You can use the local advisor on its own.
+When your MCP server is running, one command installs the Cully skill and local advisor integration **and** registers the server with your agent:
 
-You can do both setup steps together with `cully setup codex --mcp-url URL`, or pass `--agent codex --mcp-url URL` to the [release installer](/installation#release-installer). Add `--oauth` only if that endpoint uses OAuth. The Cully skill then guides session checks and calls the configured `cully_*` memory tools when useful.
+```sh
+cully setup codex --mcp-url https://mcp.example.com/mcp
+```
+
+Replace `codex` with `claude` or `cursor`. Add `--oauth` if that MCP endpoint requires sign-in. The skill guides local session checks and calls the configured `cully_*` memory tools when useful. `cully setup` does not deploy a server; [self-hosting](/hosting) explains how to start one.
 
 ## Claude Code
 
 ```sh
-cully setup claude
-cully mcp add --agent claude --url https://your-server.example/mcp
+cully setup claude --mcp-url https://your-server.example/mcp
 ```
 
-Restart Claude Code. The local integration includes a status line, session hooks, a `/cully` command, and a skill. If your MCP server enables OAuth, add `--oauth` to `cully mcp add`, then open `/mcp` to sign in. Use the URL of your deployed MCP service.
+Restart Claude Code. The local integration includes a status line, session hooks, a `/cully` command, and a skill. If the server uses OAuth, append `--oauth` to the setup command and use `/mcp` to sign in.
 
 ## Codex
 
 ```sh
-cully setup codex
-cully mcp add --agent codex --url https://your-server.example/mcp
+cully setup codex --mcp-url https://your-server.example/mcp
 ```
 
-Restart Codex. The local integration uses native status fields, a `/prompts:cully` prompt, an AGENTS.md pointer, and a skill. For an OAuth-protected MCP server, add `--oauth` to `cully mcp add` and then run `codex mcp login cully`. The default no-OAuth server connects directly.
+Restart Codex. The local integration uses native status fields, a `/prompts:cully` prompt, an AGENTS.md pointer, and a skill. For an OAuth-protected server, append `--oauth` to the setup command, then run `codex mcp login cully`.
 
 ## Cursor
 
 ```sh
-cully setup cursor
-cully mcp add --agent cursor --url https://your-server.example/mcp
+cully setup cursor --mcp-url https://your-server.example/mcp
 ```
 
-Restart Cursor. If the MCP server enables OAuth, add `--oauth` to `cully mcp add` and sign in from its MCP settings. The local integration provides a project `/cully` command and skill.
+Restart Cursor. If the server uses OAuth, append `--oauth` to the setup command and sign in from Cursor's MCP settings. The local integration provides a project `/cully` command and skill.
 
 ## What setup changes
 
-`cully setup` configures the selected local agent and starts the advisor daemon. `cully mcp add` registers one user-level MCP connection. It does not deploy a server, sign you in automatically, or replace a Cully entry that points at another URL. Use `cully status` to inspect local integration state.
+`cully setup AGENT` without `--mcp-url` installs only the local advisor and skill. If that integration is already installed and you only need to add an MCP connection, use `cully mcp add --agent AGENT --url URL` (plus `--oauth` when needed). Both commands preserve unrelated agent settings; neither signs you in automatically or replaces a Cully entry that points at another URL. Use `cully status` to inspect local integration state.
 
 For operator requirements, see [self-hosting](/hosting) and [OAuth deployment](/oauth). For all client configuration details, see the [client reference](https://github.com/mcp-runtime/cully/blob/main/clients/README.md).

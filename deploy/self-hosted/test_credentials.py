@@ -75,6 +75,36 @@ class CredentialTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "selected connector 'acme'"):
                 credentials.validate_oauth("mcp-auth", "https://mcp.acme.test/mcp", root)
 
+    def test_oauth_urls_and_single_connector_are_derived(self):
+        with tempfile.TemporaryDirectory() as directory, patch.dict(os.environ, {}, clear=True):
+            root = Path(directory)
+            (root / ".env").write_text(
+                "CULLY_MCP_HOST=mcp.acme.test\n"
+                "CULLY_AUTH_HOST=auth.acme.test\n"
+                "MCP_AUTH_UPSTREAM_CLIENT_SECRET=private-value\n"
+            )
+            (root / "connectors.json").write_text(json.dumps({
+                "org": {"client_secret_env": "MCP_AUTH_UPSTREAM_CLIENT_SECRET"}
+            }))
+            values = credentials.validate_oauth("mcp-auth", "https://mcp.acme.test/mcp", root)
+            self.assertEqual(values["CULLY_AUTH_RESOURCE"], "https://mcp.acme.test/mcp")
+            self.assertEqual(values["CULLY_AUTH_ISSUER"], "https://auth.acme.test/mcp-auth")
+            self.assertEqual(values["CULLY_JWKS_URL"],
+                             "https://auth.acme.test/mcp-auth/.well-known/jwks.json")
+            self.assertEqual(values["CULLY_MCP_AUTH_CONNECTOR"], "org")
+
+    def test_external_authorization_server_can_override_jwks(self):
+        with tempfile.TemporaryDirectory() as directory, patch.dict(os.environ, {}, clear=True):
+            root = Path(directory)
+            (root / ".env").write_text(
+                "CULLY_MCP_HOST=mcp.acme.test\n"
+                "CULLY_AUTH_ISSUER=https://login.acme.test/oauth\n"
+                "CULLY_JWKS_URL=https://login.acme.test/keys\n"
+            )
+            values = credentials.validate_oauth("existing", "https://mcp.acme.test/mcp", root)
+            self.assertEqual(values["CULLY_AUTH_RESOURCE"], "https://mcp.acme.test/mcp")
+            self.assertEqual(values["CULLY_JWKS_URL"], "https://login.acme.test/keys")
+
 
 if __name__ == "__main__":
     unittest.main()

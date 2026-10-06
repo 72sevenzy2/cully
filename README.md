@@ -20,13 +20,10 @@ Works with Claude Code, Codex and Cursor. It brings local session guidance, work
 
 ## Get started
 
-From this checkout, with Go 1.26 or newer:
-
 ```sh
-go build -o ./build/cully ./cmd/cully
-./build/cully setup
-./build/cully status
-./build/cully mcp add --agent codex
+curl -fsSL https://raw.githubusercontent.com/mcp-runtime/cully/main/install.sh | bash -s -- --agent codex
 ```
+
+See the [documentation](https://docs.cully.net) to deploy Cully MCP and connect shared memory.
 
 Licensed under [Apache 2.0](LICENSE).

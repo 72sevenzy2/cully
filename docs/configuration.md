@@ -2,7 +2,7 @@
 
 ## MCP access mode
 
-`cully-mcp` defaults to no OAuth. Set `CULLY_MCP_OWNER` to a stable, single-user owner (1–512 bytes, without surrounding whitespace or control characters). Every tool call uses it; the caller cannot choose another owner. The listener defaults to `127.0.0.1` in this mode. Keep access on a loopback, private network or trusted tunnel. No issuer or JWKS request is made.
+`cully-mcp` defaults to no OAuth. Set `CULLY_MCP_OWNER` to a stable, single-user owner (1–512 bytes, without surrounding whitespace or control characters). Every tool call uses it; the caller cannot choose another owner. The listener defaults to `127.0.0.1` in this mode. Keep access on a loopback, private network or trusted tunnel. No issuer or JWKS request is made. Docker `setup.sh` generates this owner automatically.
 
 Set `CULLY_MCP_AUTH_MODE=oauth` or start `cully-mcp --oauth` for OAuth. In that mode, unset `CULLY_MCP_OWNER` and explicitly set issuer, exact public resource audience and JWKS URL. The server verifies RS256 signature, issuer, audience, expiration, subject and read/write scopes. The `--oauth` flag overrides `CULLY_MCP_AUTH_MODE=none`.
 
@@ -24,7 +24,7 @@ Set `CULLY_MCP_AUTH_MODE=oauth` or start `cully-mcp --oauth` for OAuth. In that 
 | `CULLY_AUTH_RESOURCE` | OAuth MCP service | Required exact public MCP resource URL and token audience |
 | `CULLY_JWKS_URL` | OAuth MCP service | Required signing-key endpoint; configure explicitly because issuer paths vary |
 
-MCP Runtime can inject `MCP_AUTH_ISSUER`, `MCP_AUTH_RESOURCE` and `MCP_PATH`. Platform issuer/resource values take precedence over `CULLY_AUTH_ISSUER` and `CULLY_AUTH_RESOURCE` in OAuth mode. `MCP_PATH` selects the internal transport path, default `/mcp`; the public resource may include an external route prefix. None of these variables implicitly enable OAuth. See [OAuth deployment](/oauth) for MCP Auth and existing-server examples.
+MCP Runtime can inject `MCP_AUTH_ISSUER`, `MCP_AUTH_RESOURCE` and `MCP_PATH`. Platform issuer/resource values take precedence over `CULLY_AUTH_ISSUER` and `CULLY_AUTH_RESOURCE` in OAuth mode. `MCP_PATH` selects the internal transport path, default `/mcp`; the public resource may include an external route prefix. None of these variables implicitly enable OAuth. Docker `setup.sh` derives the resource URL from `CULLY_MCP_HOST` and, when it runs MCP Auth, derives the issuer and JWKS URL from `CULLY_AUTH_HOST`. Set an explicit JWKS URL only when an existing authorization server uses a different endpoint. See [MCP OAuth](/oauth) for examples.
 
 Keep the data API token identical on both sides. The MCP workload does not receive database credentials or a Mem0 key. The data service accepts forwarded owner identity only from authenticated service calls.
 

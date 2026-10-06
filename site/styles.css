@@ -177,15 +177,13 @@ h1 em { color: #54926b; }
 .install-copy > a { display: inline-block; margin-top: 14px; font-size: 13px; font-weight: 800; color: #e9f4df; }
 .install-copy > a span { margin-left: 15px; }
 .install-panel { background: #143e31; border: 1px solid #3f6950; border-radius: 15px; padding: 24px; box-shadow: 0 22px 40px rgba(0, 0, 0, .1); }
-.install-tabs { display: flex; gap: 23px; border-bottom: 1px solid #365d4a; margin-bottom: 23px; }
-.install-tabs button { background: none; border: 0; border-bottom: 2px solid transparent; color: #91b49a; padding: 0 0 13px; font-size: 11px; font-weight: 800; }
-.install-tabs button[aria-selected="true"] { color: #e7f7df; border-color: #b7dcad; }
-.install-panel [role="tabpanel"] { position: relative; }
-.install-panel [hidden] { display: none; }
+.install-command { position: relative; }
 .code-caption { color: #91b69a; font-size: 11px; margin-bottom: 16px; }
-.install-panel pre { min-height: 112px; overflow-x: auto; margin: 0; color: #dce9d8; font: 12px/1.75 'SFMono-Regular', Consolas, monospace; }
+.install-panel pre { min-height: 75px; overflow-x: auto; margin: 0; padding-right: 56px; color: #dce9d8; font: 12px/1.75 'SFMono-Regular', Consolas, monospace; }
 .copy-button { position: absolute; right: 0; top: 0; border: 1px solid #5f8267; background: #285743; color: #e4f1df; border-radius: 6px; padding: 4px 10px; font-size: 10px; }
 .copy-button:hover { background: #376b51; }
+.install-hint { color: #c8dfcc; font-size: 12px; line-height: 1.6; margin: 10px 0 0; }
+.install-hint code { color: #e3f2dc; }
 .install-panel-footer { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 10px; border-top: 1px solid #365d4a; margin-top: 21px; padding-top: 18px; color: #8fb09a; font-size: 10px; }
 .install-panel-footer a { color: #cfe5cc; font-weight: 800; }
 
@@ -253,8 +251,6 @@ h1 em { color: #54926b; }
   .agent-strip-inner > div { font-size: 12px; }
   .section-intro h2, .workflow-heading h2, .install-copy h2 { font-size: 39px; }
   .install-panel { padding: 18px; }
-  .install-tabs { gap: 14px; }
-  .install-tabs button { font-size: 10px; }
   .install-panel pre { font-size: 10px; }
   .footer-bottom { flex-direction: column; gap: 7px; }
 }

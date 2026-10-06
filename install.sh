@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
-# cully installer — downloads a prebuilt, dependency-free binary and
-# self-registers it for detected coding agents. No Go, no jq, no runtime required.
+# Cully installer — downloads a prebuilt binary when a release has one, then
+# self-registers it for detected coding agents. Until then, it uses Go to
+# install the selected source ref into the temporary directory.
 #
 #   curl -fsSL https://raw.githubusercontent.com/mcp-runtime/cully/main/install.sh | bash -s -- --agent codex --mcp-url http://127.0.0.1:8080/mcp
 #
@@ -65,28 +66,34 @@ tmp="$(mktemp -d)"
 trap 'rm -rf "$tmp"' EXIT
 say "Detected platform: $raw_os/$raw_arch -> $os/$arch"
 say "Downloading $asset ($ver)"
-curl -fsSL "$url" -o "$tmp/c.tar.gz" || die "download failed: $url
-If this is a new release, check that the matching asset exists on GitHub."
-
-sums_url="$(dirname "$url")/checksums.txt"
-if curl -fsSL "$sums_url" -o "$tmp/checksums.txt" 2>/dev/null; then
-  expected="$(grep " ${asset}\$" "$tmp/checksums.txt" | awk '{print $1}')"
-  if [ -n "$expected" ]; then
-    if command -v sha256sum >/dev/null 2>&1; then
-      actual="$(sha256sum "$tmp/c.tar.gz" | awk '{print $1}')"
+if curl -fsSL "$url" -o "$tmp/c.tar.gz"; then
+  sums_url="$(dirname "$url")/checksums.txt"
+  if curl -fsSL "$sums_url" -o "$tmp/checksums.txt" 2>/dev/null; then
+    expected="$(awk -v asset="$asset" '$2 == asset {print $1; exit}' "$tmp/checksums.txt")"
+    if [ -n "$expected" ]; then
+      if command -v sha256sum >/dev/null 2>&1; then
+        actual="$(sha256sum "$tmp/c.tar.gz" | awk '{print $1}')"
+      else
+        actual="$(shasum -a 256 "$tmp/c.tar.gz" | awk '{print $1}')"
+      fi
+      [ "$actual" = "$expected" ] || die "checksum mismatch for $asset (expected $expected, got $actual) — aborting install"
     else
-      actual="$(shasum -a 256 "$tmp/c.tar.gz" | awk '{print $1}')"
+      say "warning: no checksum entry for $asset — skipping verification"
     fi
-    [ "$actual" = "$expected" ] || die "checksum mismatch for $asset (expected $expected, got $actual) — aborting install"
   else
-    say "warning: no checksum entry for $asset — skipping verification"
+    say "warning: could not fetch checksums.txt — skipping verification"
   fi
-else
-  say "warning: could not fetch checksums.txt — skipping verification"
-fi
 
-tar -xzf "$tmp/c.tar.gz" -C "$tmp" || die "extract failed"
-[ -f "$tmp/cully" ] || die "archive did not contain the cully binary"
+  tar -xzf "$tmp/c.tar.gz" -C "$tmp" || die "extract failed"
+  [ -f "$tmp/cully" ] || die "archive did not contain the cully binary"
+else
+  command -v go >/dev/null 2>&1 || die "No CLI archive is published for $ver. Install Go 1.26 or newer, then rerun this installer."
+  ref="$ver"
+  [ "$ref" != latest ] || ref=main
+  say "No CLI archive is published for $ver; installing Cully from $ref"
+  GOBIN="$tmp" go install "github.com/mcp-runtime/cully/cmd/cully@$ref" || die "source install failed for $ref"
+fi
+[ -f "$tmp/cully" ] || die "installer did not produce the cully binary"
 
 tmp_bin="$tmp/cully"
 old_ver=""
@@ -109,6 +116,9 @@ install -m 0755 "$tmp_bin" "$BIN_DIR/cully"
 [ "$os" = "darwin" ] && xattr -d com.apple.quarantine "$BIN_DIR/cully" 2>/dev/null || true
 
 say "Installed binary -> $BIN_DIR/cully ($("$BIN_DIR/cully" version 2>/dev/null || echo "$ver"))"
+if ! command -v cully >/dev/null 2>&1; then
+  say "For later CLI commands, add $BIN_DIR to PATH or use $BIN_DIR/cully"
+fi
 install_args=()
 [ -z "$agent" ] || install_args+=("$agent")
 [ -z "$mcp_url" ] || install_args+=(--mcp-url "$mcp_url")

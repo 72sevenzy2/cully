@@ -1,62 +1,36 @@
 # Installation
 
-Cully's local CLI can be built from source now. The repository also includes a release installer for macOS and Linux; it needs a release with CLI archives before the one-line command can succeed.
+## Install and set up an agent
 
-## Local CLI
-
-Build from the Cully checkout using Go 1.26 or newer:
+Run the repository installer and choose the agent you use:
 
 ```sh
-go build -o ./build/cully ./cmd/cully
-./build/cully setup
+curl -fsSL https://raw.githubusercontent.com/mcp-runtime/cully/main/install.sh | bash -s -- --agent codex
 ```
 
-The installer detects configured agents, adds their supported session integrations and installs the combined Cully skill. The installer starts the local advisor daemon. Target an agent explicitly with `cully setup claude`, `cully setup codex`, `cully setup cursor`, or `cully setup all`. Restart the agent after configuration changes.
-
-Use `cully status` to inspect integrations, `cully suggestions` to review suggestions and `cully apply 1 --dry-run` to preview a change. The full command list is in [local advisor](advisor.md).
-
-To install an agent's local Cully skill and register an already-running MCP endpoint in one step, run `cully setup codex --mcp-url http://127.0.0.1:8080/mcp`. Use `claude` or `cursor` instead as needed. Add `--oauth` when that server requires OAuth; complete sign-in in the agent afterward. Installing the CLI or skill does not start the server.
-
-## Release installer
-
-After the next Cully release publishes CLI archives, install from the repository script:
+Use `--agent claude` or `--agent cursor` instead. The installer installs the Cully CLI, local advisor, and Cully skill. Restart your agent afterward. If you already have a Cully MCP server, connect it in the same command:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/mcp-runtime/cully/main/install.sh | bash
-```
-
-The script selects a prebuilt archive for macOS or Linux on amd64 or arm64, installs the binary and runs `cully setup` for detected agents. Set `CULLY_VERSION` to a tag to install a specific release. The current `v0.2.0` and `v0.2.1` GitHub releases have no downloadable CLI assets, so use the source build until the new release is published. Inspect the [installer source](https://github.com/mcp-runtime/cully/blob/main/install.sh) before piping it to a shell.
-
-After a release with CLI archives, pass the MCP URL and the auth choice during the same one-line installation. Omit `--oauth` for a private no-OAuth server:
-
-```sh
-curl -fsSL https://raw.githubusercontent.com/mcp-runtime/cully/main/install.sh | bash -s -- --agent codex --mcp-url http://127.0.0.1:8080/mcp
-# For an OAuth-protected hosted or self-hosted endpoint:
 curl -fsSL https://raw.githubusercontent.com/mcp-runtime/cully/main/install.sh | bash -s -- --agent codex --mcp-url https://mcp.example.com/mcp --oauth
 ```
 
-The installer also accepts `--agent claude`, `cursor`, or `all`. `--mcp-url` registers a connection and installs the combined Cully skill; it does not deploy any service. The client-side `--oauth` flag needs no issuer or key values. The server operator must configure the [OAuth issuer, resource, JWKS and routing](/oauth) beforehand; sign-in remains a separate step in the coding agent.
+Omit `--oauth` when your MCP server does not require sign-in. The installer and `cully setup` configure the agent; they do not deploy the server. The agent needs only its MCP URL and whether OAuth is enabled. The operator keeps database and service credentials.
 
-## Shared memory connection
+If your shell cannot find `cully` afterward, use the binary path printed by the installer or add that directory to `PATH`.
 
-The planned endpoint is `https://mcp.mcpruntime.org/cully/mcp`. It becomes available after the future deployment. Configure one coding agent at a time. For a server with OAuth enabled, add `--oauth` to print sign-in instructions:
+## Start a self-hosted Cully server
+
+From a Cully checkout, run the Docker setup after installing the CLI:
 
 ```sh
-cully mcp add --agent codex --url http://127.0.0.1:8080/mcp
-cully mcp add --agent claude --url http://127.0.0.1:8080/mcp
-cully mcp add --agent cursor --url https://my-server.example/mcp
-# For a server that requires OAuth:
-cully mcp add --agent codex --url https://my-server.example/mcp --oauth
+cd deploy/self-hosted
+./setup.sh codex
 ```
 
-With no `--agent`, setup proceeds only if exactly one agent is detected. There is no `--agent all`. `--url` selects a self-hosted or other operator-managed endpoint; the command's default URL selects the planned public Cully service, which is configured for OAuth and therefore needs `--oauth` for sign-in instructions. Setup adds a user-level connection and preserves unrelated client settings. An existing Cully entry with a different endpoint is preserved: edit that entry explicitly before switching.
+This creates private service credentials, starts PostgreSQL, Mem0, the data API and MCP, then installs the skill and registers the new MCP URL for Codex. For OAuth with your organization's identity provider, prepare the [MCP Auth connector](/oauth#self-hosted-docker-with-mcp-auth), then run `./setup.sh --oauth mcp-auth codex`. The setup script derives the MCP URL from your configured hostname; no separate agent URL flag is needed. See [Docker self-hosting](/hosting) for prerequisites.
 
-No-OAuth servers connect directly. For OAuth servers, Codex signs in with `codex mcp login cully`; Claude Code uses `/mcp`; Cursor uses its MCP settings. See [connect an agent](agents.md), [OAuth deployment](oauth.md), or the [full client reference](https://github.com/mcp-runtime/cully/blob/main/clients/README.md).
+## After installation
 
-For a self-hosted Docker stack, run `./setup.sh codex` from `deploy/self-hosted`. It creates `~/.cully/config.json` with private service credentials, then starts PostgreSQL, Mem0, the data API and MCP through one Compose file. With an installed Cully CLI, it also configures the agent. [Hosting](/hosting#one-command-full-stack) explains the requirements. For the planned hosted service, users only register its MCP URL, for example `cully mcp add --agent codex --url https://mcp.mcpruntime.org/cully/mcp --oauth`, once that endpoint is live.
+Use `cully status` to inspect the local integration. `cully setup codex --mcp-url URL` can add the skill and MCP connection together later. If the skill is already installed and you only need a new MCP connection, use `cully mcp add --agent codex --url URL` (and `--oauth` when needed). See [connect an agent](/agents) for sign-in steps.
 
-`cully setup` configures the local advisor, hooks, commands and skill. `cully mcp add` configures a remote connection. `deploy/self-hosted/setup.sh` deploys Docker services and can call `cully setup` to configure the local agent. [Server operators](hosting.md) configure those components.
-
-In OAuth mode, read tools require `tools:read`; logging, editing and deletion require `tools:write`. The issuer must grant those scopes for the configured resource. In no-OAuth mode, private network access is the boundary and all tools use the configured single owner.
-
-The combined skill is also available at `skills/cully/SKILL.md`. Local controls work without a remote connection; shared memory requires the deployed MCP server. Agents do not need the private data API token or Mem0 API key.
+`CULLY_VERSION` selects a release tag when running the installer. Inspect the [installer source](https://github.com/mcp-runtime/cully/blob/main/install.sh) before running it.

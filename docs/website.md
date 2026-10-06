@@ -42,8 +42,8 @@ The current VM has separate `cully-web` and `cully-docs` Compose projects. Its C
 
 To rebuild the controller on a replacement VM, copy `deploy/` and the dedicated deployment public key there, then run `sh deploy/bootstrap-website.sh /path/to/deployment-key.pub` as root. Install the two Caddy routes from `deploy/Caddyfile.website.fragment`, validate the Caddyfile and reload Caddy. Set the three deployment variables to `true` after the routes and controller are ready. Changes to either site then deploy that site from `main`.
 
-The website domains do not change the MCP resource URL. The hosted MCP endpoint is `https://mcp.mcpruntime.org/cully/mcp`; its deployment requirements are in the [personal deployment guide](personal-deployment.md).
+The website domains do not change the MCP resource URL. The maintainer's personal MCP endpoint is `https://mcp.mcpruntime.org/cully/mcp`; its deployment requirements are in the [maintainer deployment example](personal-deployment.md).
 
-## Release installer copy
+## Installation copy
 
-The website defaults to the source build while current GitHub releases have no CLI archives. After the next release publishes the `cully_<os>_<arch>.tar.gz` files and `checksums.txt`, update the website install panel and docs to recommend the one-line installer, then rebuild and publish the static files.
+The website points to `install.sh`. The installer uses a release archive when one is available and otherwise installs the selected source ref with Go. Keep the website command aligned with [installation](installation.md); users do not need a separate source-build guide.

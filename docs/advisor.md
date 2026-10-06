@@ -6,16 +6,13 @@ workflow improvements. Shared memory uses Cully MCP, PostgreSQL and Mem0.
 ## Setup
 
 ```sh
-go build -o ./build/cully ./cmd/cully
-./build/cully setup
-./build/cully status
-./build/cully mcp add --agent codex
+curl -fsSL https://raw.githubusercontent.com/mcp-runtime/cully/main/install.sh | bash -s -- --agent codex
+cully status
 ```
 
-Use `install claude`, `install codex` or `install cursor` to select a local
-integration. Local installation can target `all`; MCP setup selects one agent
-per invocation. See [installation](installation.md) for hosted and self-hosted
-connections and OAuth sign-in.
+Use `--agent claude` or `--agent cursor` for another local integration. To add
+shared memory, run `cully setup codex --mcp-url URL`; see [agent setup](agents.md)
+for sign-in when the server uses OAuth.
 
 | Agent | Local integration |
 | --- | --- |
@@ -38,7 +35,7 @@ to restart a stopped advisor. Inspect its state using `cully status`.
 | `cully suggestions` | Review numbered improvements and informational notes |
 | `cully apply <n> --dry-run` | Preview an improvement |
 | `cully apply <n>` | Apply a selected improvement after confirmation |
-| `cully mcp add --agent <agent> [--url URL]` | Configure one remote MCP connection |
+| `cully mcp add --agent <agent> --url URL` | Configure one MCP connection for an existing agent setup |
 | `cully version` | Print the CLI version |
 
 Apply can update project instructions and skills, add relevant project MCP

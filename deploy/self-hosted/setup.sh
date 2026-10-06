@@ -25,10 +25,6 @@ case "$mode" in
   none|existing|mcp-auth) ;;
   *) echo 'Choose --oauth existing or --oauth mcp-auth.' >&2; exit 2 ;;
 esac
-if [ "$mode" != none ] && [ -n "$agent" ] && [ -z "$endpoint" ]; then
-  echo 'Agent setup with OAuth requires --mcp-url set to the exact public CULLY_AUTH_RESOURCE.' >&2
-  exit 2
-fi
 command -v python3 >/dev/null 2>&1 || { echo 'Python 3 is required for local credential setup.' >&2; exit 1; }
 command -v docker >/dev/null 2>&1 || { echo 'Docker Compose is required for self-hosting.' >&2; exit 1; }
 docker compose version >/dev/null 2>&1 || { echo 'Docker Compose is required for self-hosting.' >&2; exit 1; }
@@ -44,15 +40,19 @@ if [ "$mode" = mcp-auth ]; then
   [ -f .secrets/signing-key.pem ] || { echo 'Create .secrets/signing-key.pem first.' >&2; exit 2; }
 fi
 if [ "$mode" != none ]; then
-  python3 ./credentials.py validate-oauth "$mode" "$endpoint"
+  oauth_exports=$(python3 ./credentials.py oauth-env "$mode" "$endpoint")
+  eval "$oauth_exports"
+  if [ -z "$endpoint" ]; then endpoint=$CULLY_AUTH_RESOURCE; fi
 fi
 if [ -n "$agent" ]; then
   cli=cully
   if ! command -v "$cli" >/dev/null 2>&1; then
-    if [ -x ../../build/cully ]; then
+    if [ -x "${CLAUDE_CONFIG_DIR:-$HOME/.claude}/bin/cully" ]; then
+      cli="${CLAUDE_CONFIG_DIR:-$HOME/.claude}/bin/cully"
+    elif [ -x ../../build/cully ]; then
       cli=../../build/cully
     else
-      echo 'Install or build the Cully CLI first, then rerun this command with the agent name.' >&2
+      echo 'Install the Cully CLI first, then rerun this command with the agent name.' >&2
       exit 1
     fi
   fi
@@ -78,11 +78,7 @@ esac
 if [ "$mode" = none ]; then
   endpoint="http://$(compose port mcp 8080)/mcp"
 fi
-if [ -n "$endpoint" ]; then
-  echo "Cully MCP is configured at $endpoint"
-else
-  echo 'Cully services are running. Connect an agent to CULLY_AUTH_RESOURCE from .env.'
-fi
+echo "Cully MCP is configured at $endpoint"
 if [ -n "$agent" ]; then
   if [ "$mode" = none ]; then
     "$cli" setup "$agent" --mcp-url "$endpoint"

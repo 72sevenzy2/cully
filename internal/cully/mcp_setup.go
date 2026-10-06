@@ -13,8 +13,6 @@ import (
 	"github.com/pelletier/go-toml/v2"
 )
 
-const HostedMCPURL = "https://mcp.mcpruntime.org/cully/mcp"
-
 // AddMCP registers a remote service. It neither deploys servers nor stores OAuth tokens.
 func AddMCP(w io.Writer, agent, endpoint string, oauth bool) error {
 	if err := validateMCPURL(endpoint); err != nil {
