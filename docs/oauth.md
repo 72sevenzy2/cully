@@ -4,22 +4,23 @@ OAuth is optional. `cully-mcp` starts without it by default; use `cully-mcp --oa
 
 Cully uses the [MCP Auth Go client SDK](https://github.com/Agent-Hellboy/mcp-auth/tree/main/auth-client/go) to verify OAuth tokens. The official MCP Go SDK handles MCP transport and the OAuth challenge. The MCP-to-data service token and Mem0 API key are separate from a caller's OAuth token.
 
-## Personal hosted deployment on MCP Runtime
+## How hosted Cully uses OAuth
 
-This deployment uses the platform's existing MCP Auth at `https://auth.mcpruntime.org/mcp-auth`, backed by its Keycloak identity provider. Cully runs as an MCP workload on MCP Runtime; its data API, PostgreSQL and Mem0 run separately on the personal VM. The platform's MCP Auth connector authenticates the user through Keycloak and issues an MCP access token. Cully validates that token before running a tool. The private MCP-to-data API token and data-to-Mem0 API key are unrelated to user sign-in.
+Cully's hosted MCP endpoint is configured to use MCP Auth deployed on MCP Runtime. MCP Auth is connected to an identity provider, currently Keycloak. The identity provider manages the realm, users and sign-in. MCP Auth handles the MCP authorization flow and issues an access token for Cully's public MCP resource. Cully validates that token before calling a tool. The data API and Mem0 use separate private service credentials; they do not use the user's OAuth token.
 
-1. **Configure the identity provider in MCP Runtime.** The platform operator keeps Keycloak's realm issuer, authorization/token/JWKS endpoints, confidential `mcp-auth` client ID, client secret reference, stable identity claim and exact `https://auth.mcpruntime.org/mcp-auth/identity/callback` URI in the selected MCP Auth connector. Reuse the platform's working connector; add `"tools:write"` beside `"tools:read"` in its `mcp_scopes`. Its upstream `scopes` (`openid`, `profile`, and so on) serve Keycloak login and are separate. Keep the client secret in the platform's connector Secret. The historical Buddy MCP manifest contained only the platform issuer and Buddy's resource audience; it did not contain Keycloak settings.
-2. **Publish Cully's resource.** [`.mcp/servers.yaml`](https://github.com/mcp-runtime/cully/blob/main/.mcp/servers.yaml) sets `auth.mode: oauth`, `issuerURL: https://auth.mcpruntime.org/mcp-auth`, `audience: https://mcp.mcpruntime.org/cully/mcp`, and `CULLY_MCP_AUTH_MODE=oauth`. Its `CULLY_JWKS_URL` points to MCP Auth's signing keys. The Runtime operator reconciles this audience into MCP Auth and injects `MCP_AUTH_ISSUER`, `MCP_AUTH_RESOURCE` and `MCP_PATH` into Cully. Keycloak configuration does not belong in this manifest.
-3. **Deploy the services.** A `v*` release runs [the personal deployment workflow](https://github.com/mcp-runtime/cully/blob/main/.github/workflows/personal-deploy.yml). It deploys PostgreSQL, Mem0 and the data API on the VM, then builds, pushes and deploys the Cully MCP image through the pinned `mcp-runtime` CLI and the platform API key. The MCP workload receives its private `CULLY_DATA_API_TOKEN`; it does not receive PostgreSQL or Mem0 credentials. The [personal deployment runbook](/personal-deployment) lists the VM and Actions settings.
-4. **Connect an agent.** Register `https://mcp.mcpruntime.org/cully/mcp` with `cully mcp add --agent codex --url https://mcp.mcpruntime.org/cully/mcp --oauth`, then run `codex mcp login cully`. The client follows Cully's protected-resource metadata to MCP Auth, which sends the browser to Keycloak. MCP Auth returns a resource-bound token; read tools require `tools:read` and write/delete tools require `tools:write`.
+1. An agent connects to `https://mcp.mcpruntime.org/cully/mcp`. Without a token, Cully returns an OAuth challenge and protected-resource metadata pointing to MCP Auth.
+2. MCP Auth sends the user to the configured identity provider to sign in, then issues a token whose audience is Cully's MCP URL.
+3. Cully checks the token's signature, issuer, audience, expiry, subject and scopes. Reading requires `tools:read`; logging, updating and deleting require `tools:write`.
 
-The release workflow checks MCP Auth discovery and JWKS, both tool scopes, Cully's protected-resource metadata and an unauthenticated `401` challenge. After deployment, complete one interactive sign-in and authorized tool call from an agent to verify the Keycloak callback and claim mapping; metadata checks alone cannot prove those. The [MCP Runtime OAuth guide](https://docs.mcpruntime.org/mcp-oauth/) describes the platform connector setup. The Docker options below apply when you operate the stack yourself.
+The platform operator configures the identity-provider connector for MCP Auth, including the Keycloak realm, client, callback, identity claims and supported MCP scopes. [Cully's MCP Runtime metadata](https://github.com/mcp-runtime/cully/blob/main/.mcp/servers.yaml) specifies its issuer and resource audience; it contains no Keycloak secret. MCP Runtime currently selects one connector for its MCP Auth instance rather than a separate connector in each server manifest. Tool descriptions and policy are configured per server; Cully also enforces scopes for each tool. See the [MCP Runtime OAuth guide](https://docs.mcpruntime.org/mcp-oauth/) for connector setup.
 
 The [Docker Compose stack](/hosting#one-command-full-stack) starts Caddy for HTTPS in OAuth mode and replaces the fixed owner with token subjects. Set public DNS and allow ports 80/443 to reach the host before starting Caddy. Keep the data API and PostgreSQL private.
 
 The **agent** only needs the MCP URL and `--oauth` at setup. The **operator** needs the issuer, exact resource URL, JWKS URL and HTTPS routing before starting the server. A new MCP Auth broker additionally needs a selected upstream connector, signing key, persistent state and upstream client secret. The full-stack `./setup.sh` script starts Mem0 and both databases in either OAuth option after these values are configured.
 
 ## Self-hosted Docker with an existing authorization server
+
+Use `--oauth existing` when an MCP-compatible OAuth authorization server already issues resource-bound tokens for your MCP URL. This could be MCP Auth deployed elsewhere. A Keycloak realm used only for identity and login is not itself this option; use the bundled MCP Auth setup below to connect that realm to Cully.
 
 Set these values in `deploy/self-hosted/.env`:
 
@@ -65,27 +66,3 @@ With the CLI installed, append `--mcp-url https://mcp.example.com/mcp codex` for
 ## Connect an agent
 
 Register the public URL with `cully mcp add --agent codex --url https://mcp.example.com/mcp --oauth`, then follow that agent's sign-in instructions. The `--oauth` flag on `cully mcp add` changes setup instructions; the **server** must also enable OAuth. See [connect an agent](/agents).
-
-## MCP Runtime metadata
-
-The active [`.mcp/servers.yaml`](https://github.com/mcp-runtime/cully/blob/main/.mcp/servers.yaml) is the personal **public OAuth deployment**, with `auth.mode: oauth`, `CULLY_MCP_AUTH_MODE=oauth`, an explicit issuer, audience and JWKS URL, and no fixed owner. MCP Runtime derives and injects the matching MCP resource and issuer values into the container. Its ingress, audience and issuer must match. An [isolated no-OAuth metadata example](https://github.com/mcp-runtime/cully/blob/main/.mcp/examples/no-oauth/servers.yaml) shows the same image with `auth.mode: none`, a fixed owner from a secret, a private ingress host and the private data API token. Copy and adapt that file only for a private single-user deployment; MCP Runtime network policy must keep the hostname inaccessible to untrusted callers. Relevant server-entry fields:
-
-```yaml
-ingressHost: private-mcp.example.internal
-envVars:
-  - name: CULLY_MCP_AUTH_MODE
-    value: none
-  - name: CULLY_DATA_API_URL
-    value: http://data-api:8083
-secretEnvVars:
-  - name: CULLY_MCP_OWNER
-    secretKeyRef:
-      name: cully-single-owner
-      key: CULLY_MCP_OWNER
-auth:
-  mode: none
-gateway:
-  enabled: false
-```
-
-Do not point a public gateway at this no-OAuth entry. Runtime `auth.mode` and the Cully process mode must match. In either mode, supply the private API token as a secret and keep PostgreSQL and Mem0 off public ingress.
