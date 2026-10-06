@@ -82,9 +82,11 @@ jobs:
         env:
           DEPLOY_KEY: ${{ secrets.CULLY_PERSONAL_SSH_KEY }}
           DEPLOY_KNOWN_HOSTS: ${{ secrets.CULLY_PERSONAL_KNOWN_HOSTS || secrets.CULLY_WEB_KNOWN_HOSTS }}
+          DATA_API_TOKEN: ${{ secrets.CULLY_DATA_API_TOKEN }}
         run: |
           test "$DEPLOY_ENABLED" = true || { echo '::error::Set CULLY_PERSONAL_DEPLOY_ENABLED=true after the VM bootstrap; a release must not silently skip deployment.'; exit 1; }
           test -n "$MCP_PLATFORM_API_TOKEN"
+          test -n "$DATA_API_TOKEN"
           test -n "$DEPLOY_HOST" && test -n "$DEPLOY_USER" && test -n "$DEPLOY_PORT"
           test -n "$DEPLOY_KEY" && test -n "$DEPLOY_KNOWN_HOSTS"
           install -d -m 700 "$HOME/.ssh"
@@ -114,7 +116,12 @@ jobs:
             ssh -i "$HOME/.ssh/cully-personal" -p "$DEPLOY_PORT" -o BatchMode=yes -o StrictHostKeyChecking=yes -o ConnectTimeout=15 "$DEPLOY_USER@$DEPLOY_HOST" deploy
       - name: Deploy personal MCP service
         id: mcp
-        run: mcp-runtime server deploy "$SERVER_NAME" --metadata-dir .mcp --update
+        env:
+          CULLY_DATA_API_TOKEN: ${{ secrets.CULLY_DATA_API_TOKEN }}
+        run: |
+          python3 deploy/prepare_personal_metadata.py .mcp/servers.yaml
+          mcp-runtime server validate --metadata-dir .mcp
+          mcp-runtime server deploy "$SERVER_NAME" --metadata-dir .mcp --update
       - name: Verify MCP Runtime placement and public OAuth route
         run: |
           mcp-runtime server get "$SERVER_NAME" --namespace mcp-servers

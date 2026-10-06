@@ -5,4 +5,4 @@
 - Preserve user-owned agent configuration; apply managed changes explicitly.
 - Run Go formatting, vet and race tests before publishing changes.
 - Keep credentials, transcripts and personal memory out of Git.
-- See docs/architecture.md for the consolidation and migration plan.
+- See docs/architecture.md for the current system design.

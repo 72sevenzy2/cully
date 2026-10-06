@@ -20,7 +20,7 @@ Works with Claude Code, Codex and Cursor. It brings local session guidance, work
 
 ## Get started
 
-From this checkout, with Go 1.25 or newer:
+From this checkout, with Go 1.26 or newer:
 
 ```sh
 go build -o ./build/cully ./cmd/cully

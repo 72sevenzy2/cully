@@ -15,7 +15,7 @@ Set `CULLY_MCP_AUTH_MODE=oauth` or start `cully-mcp --oauth` for OAuth. In that 
 | `CULLY_DATA_API_TOKEN` | Both services | Shared private API bearer token; required for serving |
 | `CULLY_DATA_API_URL` | MCP service | Private API base URL; required |
 | `CULLY_MEM0_URL` | Data service | Self-hosted REST base URL; optional with matching key |
-| `CULLY_MEM0_API_KEY` | Data service | Mem0 service API key; required when URL is set |
+| `CULLY_MEM0_API_KEY` | Data service | Authenticates data API requests to Mem0; required when URL is set. This is not an embedding-provider key |
 | `CULLY_HOST` | Both services | Bind address; MCP defaults to `127.0.0.1` without OAuth, `0.0.0.0` with OAuth; data service defaults to `0.0.0.0` |
 | `CULLY_PORT` | Both services | Default 8080 for MCP, 8083 for data |
 | `CULLY_MCP_AUTH_MODE` | MCP service | `none` (default) or `oauth` |
@@ -27,6 +27,19 @@ Set `CULLY_MCP_AUTH_MODE=oauth` or start `cully-mcp --oauth` for OAuth. In that 
 MCP Runtime can inject `MCP_AUTH_ISSUER`, `MCP_AUTH_RESOURCE` and `MCP_PATH`. Platform issuer/resource values take precedence over `CULLY_AUTH_ISSUER` and `CULLY_AUTH_RESOURCE` in OAuth mode. `MCP_PATH` selects the internal transport path, default `/mcp`; the public resource may include an external route prefix. None of these variables implicitly enable OAuth. See [OAuth deployment](/oauth) for MCP Auth and existing-server examples.
 
 Keep the data API token identical on both sides. The MCP workload does not receive database credentials or a Mem0 key. The data service accepts forwarded owner identity only from authenticated service calls.
+
+## Service authentication boundaries
+
+| Connection | Credential | Where it belongs |
+| --- | --- | --- |
+| Agent to Cully MCP | OAuth bearer when enabled; otherwise a private single-user MCP endpoint | Agent and MCP service |
+| Cully MCP to data API | `CULLY_DATA_API_TOKEN`, independent of MCP OAuth | MCP workload Secret and data service environment |
+| Data API to Mem0 | `CULLY_MEM0_API_KEY` | Data service and Mem0 only |
+| Data API to PostgreSQL | Database credentials in `CULLY_DATABASE_URL` | Data service and PostgreSQL only |
+
+Keep the data API, Mem0 and databases on private networks. The MCP service derives the record owner from the verified OAuth subject or the configured single-user owner, then sends it to the data API. The data API trusts that owner only after checking its service token, so protect that token as access to all owners' records.
+
+For the personal release deployment, set this token in the VM `.env` and the `CULLY_DATA_API_TOKEN` GitHub Actions secret. The workflow injects it into the hosted MCP workload environment through MCP Runtime's deploy API. Mem0's API key stays on the VM and is never sent to the hosted MCP workload.
 
 ## VM Compose
 

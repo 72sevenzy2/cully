@@ -1,6 +1,6 @@
 # Development
 
-Use Go 1.25 or newer. All Cully production entry points build from the root module; upstream Mem0 is deployed separately.
+Use Go 1.26 or newer. All Cully production entry points build from the root module; upstream Mem0 is deployed separately.
 
 ```sh
 go fmt ./...

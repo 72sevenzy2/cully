@@ -9,7 +9,7 @@ Get the local advisor running first. It does not need a Cully account or remote 
 
 ## 1. Install the CLI
 
-For now, build from source with Go 1.25 or newer:
+For now, build from source with Go 1.26 or newer:
 
 ```sh
 git clone https://github.com/mcp-runtime/cully.git

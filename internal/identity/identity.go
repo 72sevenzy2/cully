@@ -4,19 +4,33 @@ package identity
 import (
 	"context"
 	"net/http"
+	"sort"
 	"strings"
+	"time"
 
-	"github.com/MicahParks/keyfunc/v3"
+	"github.com/Agent-Hellboy/mcp-auth/auth-client/go/mcpauth"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/modelcontextprotocol/go-sdk/auth"
 )
 
-func NewVerifier(ctx context.Context, issuer, resource, jwksURL string) (auth.TokenVerifier, error) {
-	keys, err := keyfunc.NewDefaultCtx(ctx, []string{jwksURL})
-	if err != nil {
-		return nil, err
-	}
-	return Verifier(keys.Keyfunc, issuer, resource), nil
+func NewVerifier(_ context.Context, issuer, resource, jwksURL string) (auth.TokenVerifier, error) {
+	verifier := &mcpauth.JWTVerifier{Issuer: issuer, Audience: resource, JWKSURL: jwksURL}
+	return func(ctx context.Context, token string, _ *http.Request) (*auth.TokenInfo, error) {
+		claims, err := verifier.VerifyContext(ctx, token)
+		if err != nil || strings.TrimSpace(claims.Subject) == "" || strings.TrimSpace(claims.Subject) != claims.Subject || len(claims.Subject) > 512 {
+			return nil, auth.ErrInvalidToken
+		}
+		exp, ok := claims.Raw["exp"].(float64)
+		if !ok {
+			return nil, auth.ErrInvalidToken
+		}
+		scopes := make([]string, 0, len(claims.Scopes))
+		for scope := range claims.Scopes {
+			scopes = append(scopes, scope)
+		}
+		sort.Strings(scopes)
+		return &auth.TokenInfo{UserID: claims.Subject, Expiration: time.Unix(int64(exp), 0), Scopes: scopes}, nil
+	}, nil
 }
 func Verifier(key jwt.Keyfunc, issuer, resource string) auth.TokenVerifier {
 	return func(ctx context.Context, token string, _ *http.Request) (*auth.TokenInfo, error) {

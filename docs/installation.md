@@ -4,7 +4,7 @@ Cully's local CLI can be built from source now. The repository also includes a r
 
 ## Local CLI
 
-Build from the Cully checkout using Go 1.25 or newer:
+Build from the Cully checkout using Go 1.26 or newer:
 
 ```sh
 go build -o ./build/cully ./cmd/cully

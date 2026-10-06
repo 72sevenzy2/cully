@@ -2,6 +2,8 @@
 
 OAuth is optional. `cully-mcp` starts without it by default; use `cully-mcp --oauth` or `CULLY_MCP_AUTH_MODE=oauth` to enable bearer validation. Cully accepts a compatible authorization server that issues RS256 JWTs with an exact issuer, MCP resource audience, subject, expiration and `tools:read` or `tools:write` scopes. Your authorization server and identity provider determine login, users and grants.
 
+Cully uses the [MCP Auth Go client SDK](https://github.com/Agent-Hellboy/mcp-auth/tree/main/auth-client/go) to verify OAuth tokens. The official MCP Go SDK handles MCP transport and the OAuth challenge. The MCP-to-data service token and Mem0 API key are separate from a caller's OAuth token.
+
 The Compose examples reuse the [single-user stack](/hosting#minimal-single-user-compose-installation). They add Caddy for HTTPS and replace the fixed owner with token subjects. Set public DNS and allow ports 80/443 to reach the host before starting Caddy. Keep the data API and PostgreSQL private.
 
 The **agent** only needs the MCP URL and `--oauth` at installation. The **operator** needs the issuer, exact resource URL, JWKS URL and HTTPS routing before starting the server. A new MCP Auth broker additionally needs a selected upstream connector, signing key, persistent state and upstream client secret. The full-stack `./start.sh` script can start Mem0 and both databases in either OAuth option after these values are configured.
