@@ -5,13 +5,13 @@
 Run the repository installer and choose the agent you use:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/mcp-runtime/cully/main/install.sh | bash -s -- --agent codex
+curl -fsSL https://cully.net/install.sh | sh -s -- --agent codex
 ```
 
 Use `--agent claude` or `--agent cursor` instead. The installer installs the Cully CLI, local advisor, and Cully skill. Restart your agent afterward. If you already have a Cully MCP server, connect it in the same command:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/mcp-runtime/cully/main/install.sh | bash -s -- --agent codex --mcp-url https://mcp.example.com/mcp --oauth
+curl -fsSL https://cully.net/install.sh | sh -s -- --agent codex --mcp-url https://mcp.example.com/mcp --oauth
 ```
 
 Omit `--oauth` when your MCP server does not require sign-in. The installer and `cully setup` configure the agent; they do not deploy the server. The agent needs only its MCP URL and whether OAuth is enabled. The operator keeps database and service credentials.

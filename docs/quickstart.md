@@ -10,7 +10,7 @@ Get the local advisor running first. It does not need a Cully account or remote 
 ## 1. Install Cully for your agent
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/mcp-runtime/cully/main/install.sh | bash -s -- --agent codex
+curl -fsSL https://cully.net/install.sh | sh -s -- --agent codex
 ```
 
 Use `--agent claude` or `--agent cursor` for another agent. The installer adds the local advisor and Cully skill. Restart your agent after setup. See [installation](/installation) for options.

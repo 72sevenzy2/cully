@@ -23,8 +23,7 @@ jobs:
         run: go vet ./...
       - name: Shell syntax
         run: |
-          bash -n install.sh
-          for script in deploy/bootstrap-personal-data.sh deploy/bootstrap-website.sh deploy/self-hosted/setup.sh; do
+          for script in install.sh deploy/bootstrap-personal-data.sh deploy/bootstrap-website.sh deploy/self-hosted/setup.sh; do
             sh -n "$script"
           done
       - name: Self-hosted Compose configurations

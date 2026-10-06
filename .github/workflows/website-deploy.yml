@@ -4,6 +4,7 @@ on:
     branches: [main]
     paths:
       - 'site/**'
+      - 'install.sh'
       - 'Dockerfile.website'
       - 'deploy/nginx.website.conf'
       - 'deploy/compose.website.yaml'
@@ -14,6 +15,7 @@ on:
   pull_request:
     paths:
       - 'site/**'
+      - 'install.sh'
       - 'Dockerfile.website'
       - 'deploy/nginx.website.conf'
       - 'deploy/compose.website.yaml'
@@ -52,6 +54,7 @@ jobs:
           trap 'docker rm -f cully-web-test' EXIT
           curl --fail --retry 10 --retry-delay 2 --retry-all-errors -H 'Host: cully.net' http://127.0.0.1:18080/ -o /dev/null
           curl --fail -H 'Host: cully.net' http://127.0.0.1:18080/_deployment.json | python3 -c 'import json,os,sys; assert json.load(sys.stdin)["revision"] == os.environ["GITHUB_SHA"]'
+          curl --fail --silent --show-error -H 'Host: cully.net' http://127.0.0.1:18080/install.sh | cmp - install.sh
       - uses: docker/login-action@v3
         if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
         with:

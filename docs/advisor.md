@@ -6,7 +6,7 @@ workflow improvements. Shared memory uses Cully MCP, PostgreSQL and Mem0.
 ## Setup
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/mcp-runtime/cully/main/install.sh | bash -s -- --agent codex
+curl -fsSL https://cully.net/install.sh | sh -s -- --agent codex
 cully status
 ```
 

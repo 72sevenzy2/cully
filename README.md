@@ -21,7 +21,7 @@ Works with Claude Code, Codex and Cursor. It brings local session guidance, work
 ## Get started
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/mcp-runtime/cully/main/install.sh | bash -s -- --agent codex
+curl -fsSL https://cully.net/install.sh | sh -s -- --agent codex
 ```
 
 See the [documentation](https://docs.cully.net) to deploy Cully MCP and connect shared memory.

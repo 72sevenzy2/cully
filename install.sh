@@ -1,13 +1,13 @@
-#!/usr/bin/env bash
+#!/bin/sh
 # Cully installer — downloads a prebuilt binary when a release has one, then
 # self-registers it for detected coding agents. Until then, it uses Go to
 # install the selected source ref into the temporary directory.
 #
-#   curl -fsSL https://raw.githubusercontent.com/mcp-runtime/cully/main/install.sh | bash -s -- --agent codex --mcp-url http://127.0.0.1:8080/mcp
+#   curl -fsSL https://cully.net/install.sh | sh -s -- --agent codex --mcp-url http://127.0.0.1:8080/mcp
 #
 # Env overrides: CULLY_VERSION (e.g. v0.1.0), CLAUDE_CONFIG_DIR, CODEX_HOME,
 # CURSOR_CONFIG_DIR. Add --oauth only when the MCP server requires OAuth.
-set -euo pipefail
+set -eu
 
 REPO="mcp-runtime/cully"
 CLAUDE_DIR="${CLAUDE_CONFIG_DIR:-$HOME/.claude}"
@@ -119,9 +119,9 @@ say "Installed binary -> $BIN_DIR/cully ($("$BIN_DIR/cully" version 2>/dev/null 
 if ! command -v cully >/dev/null 2>&1; then
   say "For later CLI commands, add $BIN_DIR to PATH or use $BIN_DIR/cully"
 fi
-install_args=()
-[ -z "$agent" ] || install_args+=("$agent")
-[ -z "$mcp_url" ] || install_args+=(--mcp-url "$mcp_url")
-[ "$oauth" = false ] || install_args+=(--oauth)
+set --
+[ -z "$agent" ] || set -- "$@" "$agent"
+[ -z "$mcp_url" ] || set -- "$@" --mcp-url "$mcp_url"
+[ "$oauth" = false ] || set -- "$@" --oauth
 say "Registering coding agents${mcp_url:+ and MCP endpoint}"
-"$BIN_DIR/cully" setup "${install_args[@]}"
+"$BIN_DIR/cully" setup "$@"

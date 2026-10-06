@@ -1,6 +1,7 @@
 FROM node:24-alpine AS build
 WORKDIR /src
 COPY site ./site
+COPY install.sh ./install.sh
 RUN node site/build.mjs
 ARG REVISION=local
 RUN printf '{"revision":"%s"}\n' "$REVISION" > dist/site/_deployment.json

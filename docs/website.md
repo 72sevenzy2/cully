@@ -46,4 +46,4 @@ The website domains do not change the MCP resource URL. The maintainer's persona
 
 ## Installation copy
 
-The website points to `install.sh`. The installer uses a release archive when one is available and otherwise installs the selected source ref with Go. Keep the website command aligned with [installation](installation.md); users do not need a separate source-build guide.
+The website serves the repository's installer at `https://cully.net/install.sh`. The website build copies `install.sh` into its static image, and an installer change triggers only the website deployment. Keep the displayed `curl -fsSL https://cully.net/install.sh | sh` command aligned with [installation](installation.md).

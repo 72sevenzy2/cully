@@ -63,7 +63,7 @@ func InstallWithMCP(endpoint string, oauth bool, targets ...string) error {
 		fmt.Println("Advisor started; inspect with cully status")
 	}
 	if endpoint == "" {
-		fmt.Println("Connect shared memory with: cully mcp add")
+		fmt.Println("Connect shared memory with: cully mcp add --url URL")
 	}
 	return nil
 }
