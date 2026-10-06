@@ -1,6 +1,6 @@
-# Personal Cully deployment
+# Maintainer deployment example
 
-Your personal Cully deployment has a separate release flow. A `v*` tag first runs GoReleaser. After that succeeds, `personal-deploy.yml` builds and publishes tagged Cully data and pinned self-hosted Mem0 images. The restricted VM controller starts two PostgreSQL databases, Mem0 and the data API, runs the Cully schema migration, and then the workflow updates Cully MCP on MCP Runtime. The deployment job fails if `CULLY_PERSONAL_DEPLOY_ENABLED` is unset. Website and docs changes do not trigger this release flow.
+The Cully maintainer's personal deployment has a separate release flow. A `v*` tag first runs GoReleaser. After that succeeds, `personal-deploy.yml` builds and publishes tagged Cully data and pinned self-hosted Mem0 images. The restricted VM controller starts two PostgreSQL databases, Mem0 and the data API, runs the Cully schema migration, and then the workflow updates Cully MCP on MCP Runtime. The deployment job fails if `CULLY_PERSONAL_DEPLOY_ENABLED` is unset. Website and docs changes do not trigger this release flow.
 
 Keep the deployment gate disabled until the VM network, secrets, OAuth and Caddy route are ready. A release with the gate disabled fails its deployment job explicitly. This Compose project uses named volumes: plain PostgreSQL for Cully's authoritative records and a separate pgvector database for Mem0.
 

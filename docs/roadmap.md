@@ -4,7 +4,7 @@ Cully provides local session guidance and owner-scoped shared memory through MCP
 
 ## Planned work
 
-1. Finish the [personal Cully deployment on MCP Runtime](personal-deployment.md) and verify an OAuth sign-in, tool write and read, full-text search, and Mem0 recall through an agent.
+1. Finish the [maintainer's personal Cully deployment on MCP Runtime](personal-deployment.md) and verify an OAuth sign-in, tool write and read, full-text search, and Mem0 recall through an agent.
 2. Measure advisor latency and project isolation before changing its job scheduling. Coalesce repeated work and use bounded concurrency where measurements justify it.
 3. Measure PostgreSQL search plans and Mem0 recall latency. Keep source-record hydration and owner checks in Cully as the system scales.
 4. Add opt-in capture of selected work summaries after defining consent, project identity, idempotency, ownership and deletion behavior.

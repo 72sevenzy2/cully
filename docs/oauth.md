@@ -4,9 +4,9 @@ OAuth is optional for Cully's MCP endpoint. `cully-mcp` starts without it by def
 
 Cully uses the [MCP Auth Go client SDK](https://github.com/mcp-runtime/mcp-auth/tree/main/auth-client/go) to verify RS256 signatures, exact issuer and resource audience, expiration, subject and scopes. The official MCP Go SDK handles MCP transport and the OAuth challenge. Read tools require `tools:read`; writes require `tools:write`.
 
-## Example: a personal Cully deployment on MCP Runtime
+## Example: the maintainer's deployment on MCP Runtime
 
-The Cully deployment at `https://mcp.mcpruntime.org/cully/mcp` is a personal deployment on MCP Runtime. It uses the platform's OAuth service. MCP Runtime runs MCP Auth with an identity-provider connector; the identity provider manages users and sign-in. MCP Auth issues a token for this deployment's MCP URL, which Cully checks before running a tool. Its server manifest declares the resource URL and `tools:read` and `tools:write` scopes. It contains no identity-provider configuration or secret.
+The Cully maintainer runs a personal deployment at `https://mcp.mcpruntime.org/cully/mcp` on MCP Runtime. It uses the platform's OAuth service. MCP Runtime runs MCP Auth with an identity-provider connector; the identity provider manages users and sign-in. MCP Auth issues a token for this deployment's MCP URL, which Cully checks before running a tool. Its server manifest declares the resource URL and `tools:read` and `tools:write` scopes. It contains no identity-provider configuration or secret.
 
 1. An agent connects to `https://mcp.mcpruntime.org/cully/mcp`. Without a token, Cully returns an OAuth challenge and protected-resource metadata pointing to MCP Auth.
 2. MCP Runtime's MCP Auth service sends the user to the configured identity provider, then issues a token for Cully's MCP URL.

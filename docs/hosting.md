@@ -43,7 +43,7 @@ PostgreSQL uses its native password authentication. The data API receives a Post
 
 The same MCP binary supports OAuth. The [OAuth guide](/oauth) has commands for an existing authorization server and for MCP Auth connected to your organization's identity provider. The examples add Caddy for HTTPS. Register the exact public MCP resource and grant `tools:read` and `tools:write`. Clients sign in only in OAuth mode.
 
-## Example personal deployment on MCP Runtime
+## Maintainer deployment example on MCP Runtime
 
 The [personal deployment guide](/personal-deployment) describes an example release-triggered stack with PostgreSQL and Mem0 volumes. Its `.mcp/servers.yaml` uses OAuth for public ingress; its issuer, JWKS URL and audience must match the authorization server. Keep a no-OAuth deployment on a private route.
 
