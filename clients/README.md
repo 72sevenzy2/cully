@@ -16,7 +16,7 @@ Cully VM at `https://workspace.mcpruntime.org/cully-data` and is used only by th
 MCP workload.
 
 Install the latest shared Cully skill in the current user's Codex, Claude Code,
-and Cursor directories by running `cully install` from the
+and Cursor directories by running `cully setup` from the
 Cully checkout.
 
 ## Codex

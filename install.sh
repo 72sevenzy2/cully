@@ -98,7 +98,7 @@ if [ -x "$BIN_DIR/cully" ]; then
   fi
   # A running advisor daemon holds the OLD binary's code in memory; installing
   # over it silently leaves the stale version running. Stop it first so
-  # `cully install` (below) starts the new binary fresh.
+  # `cully setup` (below) starts the new binary fresh.
   say "Stopping any running advisor daemon before upgrade"
   "$BIN_DIR/cully" daemon stop >/dev/null 2>&1 || true
 fi
@@ -114,4 +114,4 @@ install_args=()
 [ -z "$mcp_url" ] || install_args+=(--mcp-url "$mcp_url")
 [ "$oauth" = false ] || install_args+=(--oauth)
 say "Registering coding agents${mcp_url:+ and MCP endpoint}"
-"$BIN_DIR/cully" install "${install_args[@]}"
+"$BIN_DIR/cully" setup "${install_args[@]}"

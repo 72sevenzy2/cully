@@ -41,9 +41,9 @@ Keep the data API, Mem0 and databases on private networks. The MCP service deriv
 
 For the personal release deployment, set this token in the VM `.env` and the `CULLY_DATA_API_TOKEN` GitHub Actions secret. The workflow injects it into the hosted MCP workload environment through MCP Runtime's deploy API. Mem0's API key stays on the VM and is never sent to the hosted MCP workload.
 
-## VM Compose
+## Docker Compose self-hosting
 
-The [self-hosted Compose example](/hosting#minimal-single-user-compose-installation) uses plain PostgreSQL for Cully records. The [full-stack command](/hosting#one-command-full-stack) starts a separate pgvector database for Mem0. A separately operated Mem0 service must be reachable from the data service's network.
+The supported [Docker self-hosted stack](/hosting#one-command-full-stack) uses plain PostgreSQL for Cully records and a separate pgvector database for Mem0. `./setup.sh` generates the passwords and service tokens in `~/.cully/config.json` and exports them to Compose. PostgreSQL uses password authentication; its credentials are independent of MCP OAuth. The optional Caddy and MCP Auth services are selected by `--oauth existing|mcp-auth`.
 
 The release-triggered [personal stack](/personal-deployment) uses [`deploy/personal-data.env.example`](https://github.com/mcp-runtime/cully/blob/main/deploy/personal-data.env.example) and creates project-scoped volumes: plain PostgreSQL for Cully and pgvector/PostgreSQL for Mem0. Keep its database password, data API token, Mem0 API key and JWT secret on the VM. Mem0's local embedding model needs no provider key. The `workspace_workspace` network must already exist for the private Caddy data route.
 

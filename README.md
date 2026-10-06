@@ -24,7 +24,7 @@ From this checkout, with Go 1.26 or newer:
 
 ```sh
 go build -o ./build/cully ./cmd/cully
-./build/cully install
+./build/cully setup
 ./build/cully status
 ./build/cully mcp add --agent codex
 ```

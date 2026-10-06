@@ -16,7 +16,7 @@ var version = "dev"
 const help = `Cully — your companion for better work and everyday life.
 
 Usage:
-  cully install [claude|codex|cursor|all] [--mcp-url URL] [--oauth]
+  cully setup [claude|codex|cursor|all] [--mcp-url URL] [--oauth]
   cully uninstall [claude|codex|cursor|all] Remove managed agent setup
   cully status [directory]                Show session and agent status
   cully suggestions                       Review suggested improvements
@@ -43,8 +43,8 @@ func run(args []string) error {
 	switch args[0] {
 	case "help", "--help", "-h":
 		fmt.Print(help)
-	case "install":
-		return runInstall(args[1:])
+	case "setup":
+		return runSetup(args[1:])
 	case "uninstall":
 		return cully.Uninstall(args[1:]...)
 	case "status":
@@ -92,19 +92,19 @@ func run(args []string) error {
 	return nil
 }
 
-func runInstall(args []string) error {
+func runSetup(args []string) error {
 	target := ""
 	if len(args) > 0 && !strings.HasPrefix(args[0], "-") {
 		target, args = args[0], args[1:]
 	}
-	fs := flag.NewFlagSet("install", flag.ContinueOnError)
+	fs := flag.NewFlagSet("setup", flag.ContinueOnError)
 	endpoint := fs.String("mcp-url", "", "register this MCP URL while installing the agent integration")
 	oauth := fs.Bool("oauth", false, "server uses OAuth; print sign-in instructions")
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
 	if len(fs.Args()) > 1 || (target != "" && len(fs.Args()) != 0) {
-		return fmt.Errorf("usage: cully install [claude|codex|cursor|all] [--mcp-url URL] [--oauth]")
+		return fmt.Errorf("usage: cully setup [claude|codex|cursor|all] [--mcp-url URL] [--oauth]")
 	}
 	if target == "" && len(fs.Args()) == 1 {
 		target = fs.Args()[0]

@@ -1,4 +1,4 @@
-# Single-user, no-OAuth deployment. The MCP port is bound to loopback only.
+# Complete Docker deployment. OAuth services are optional profiles.
 services:
   db:
     image: postgres:17
@@ -34,10 +34,12 @@ services:
     environment:
       CULLY_DATABASE_URL: ${CULLY_DATABASE_URL:?set CULLY_DATABASE_URL}
       CULLY_DATA_API_TOKEN: ${CULLY_DATA_API_TOKEN:?set CULLY_DATA_API_TOKEN}
-      CULLY_MEM0_URL: ${CULLY_MEM0_URL:-}
-      CULLY_MEM0_API_KEY: ${CULLY_MEM0_API_KEY:-}
+      CULLY_MEM0_URL: http://mem0:8000
+      CULLY_MEM0_API_KEY: ${CULLY_MEM0_API_KEY:?set CULLY_MEM0_API_KEY}
     depends_on:
       db:
+        condition: service_healthy
+      mem0:
         condition: service_healthy
     expose: ["8083"]
     healthcheck:
@@ -55,16 +57,109 @@ services:
       CULLY_HOST: 0.0.0.0
       CULLY_DATA_API_URL: http://data-api:8083
       CULLY_DATA_API_TOKEN: ${CULLY_DATA_API_TOKEN:?set CULLY_DATA_API_TOKEN}
-      CULLY_MCP_AUTH_MODE: none
+      CULLY_MCP_AUTH_MODE: ${CULLY_MCP_AUTH_MODE:-none}
       CULLY_MCP_OWNER: ${CULLY_MCP_OWNER:-}
+      CULLY_AUTH_ISSUER: ${CULLY_AUTH_ISSUER:-}
+      CULLY_AUTH_RESOURCE: ${CULLY_AUTH_RESOURCE:-}
+      CULLY_JWKS_URL: ${CULLY_JWKS_URL:-}
     depends_on:
       data-api:
         condition: service_healthy
     ports:
       - 127.0.0.1:${CULLY_MCP_PORT:-8080}:8080
     networks: [private, edge]
+  mem0-db:
+    image: pgvector/pgvector:pg17
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: postgres
+      POSTGRES_USER: mem0
+      POSTGRES_PASSWORD: ${CULLY_MEM0_DB_PASSWORD:?set CULLY_MEM0_DB_PASSWORD}
+    volumes:
+      - mem0-data:/var/lib/postgresql/data
+      - ./mem0-init-db.sql:/docker-entrypoint-initdb.d/10-mem0-app.sql:ro
+    healthcheck:
+      test: [CMD-SHELL, 'pg_isready -U "$$POSTGRES_USER" -d postgres']
+      interval: 10s
+      timeout: 3s
+      retries: 10
+    networks: [private]
+  mem0:
+    build:
+      context: ../..
+      dockerfile: Dockerfile.mem0
+    restart: unless-stopped
+    command: [sh, -c, 'alembic upgrade head && uvicorn main:app --host 0.0.0.0 --port 8000']
+    environment:
+      POSTGRES_HOST: mem0-db
+      POSTGRES_PORT: "5432"
+      POSTGRES_DB: postgres
+      POSTGRES_USER: mem0
+      POSTGRES_PASSWORD: ${CULLY_MEM0_DB_PASSWORD:?set CULLY_MEM0_DB_PASSWORD}
+      POSTGRES_COLLECTION_NAME: cully_memories
+      APP_DB_NAME: mem0_app
+      HISTORY_DB_PATH: /app/history/history.db
+      ADMIN_API_KEY: ${CULLY_MEM0_API_KEY:?set CULLY_MEM0_API_KEY}
+      JWT_SECRET: ${CULLY_MEM0_JWT_SECRET:?set CULLY_MEM0_JWT_SECRET}
+      AUTH_DISABLED: "false"
+      MEM0_TELEMETRY: "false"
+    volumes: [mem0-history:/app/history]
+    depends_on:
+      mem0-db:
+        condition: service_healthy
+    healthcheck:
+      test: [CMD, python, -c, "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/openapi.json')"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+    networks: [private, edge]
+  caddy:
+    profiles: [oauth]
+    image: caddy:2
+    restart: unless-stopped
+    environment:
+      CULLY_MCP_HOST: ${CULLY_MCP_HOST:-}
+      CULLY_AUTH_HOST: ${CULLY_AUTH_HOST:-}
+    volumes:
+      - ./${CULLY_CADDYFILE:-Caddyfile.existing-auth}:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    ports: ["80:80", "443:443"]
+    networks: [edge]
+  mcp-auth:
+    profiles: [mcp-auth]
+    image: princekrroshan01/mcp-auth-server:0.3.0
+    restart: unless-stopped
+    environment:
+      MCP_AUTH_ISSUER: ${CULLY_AUTH_ISSUER:-}
+      MCP_AUTH_RESOURCES: ${CULLY_AUTH_RESOURCE:-}
+      MCP_AUTH_CONNECTORS_FILE: /etc/mcp-auth/connectors.json
+      MCP_AUTH_CONNECTOR: keycloak
+      MCP_AUTH_PRIVATE_KEY_FILE: /run/secrets/signing_key
+      MCP_AUTH_STORE: sqlite
+      MCP_AUTH_DATABASE_URL: /var/lib/mcp-auth/state.db
+      MCP_AUTH_ALLOWED_SCOPES: tools:read,tools:write
+      MCP_AUTH_REGISTRATION_ENABLED: "true"
+      MCP_AUTH_REQUIRE_HTTPS: "true"
+      MCP_AUTH_TRUST_PROXY_TLS: "true"
+      KEYCLOAK_CLIENT_SECRET: ${KEYCLOAK_CLIENT_SECRET:-}
+    secrets: [signing_key]
+    volumes:
+      - ./connectors.keycloak.json:/etc/mcp-auth/connectors.json:ro
+      - auth-state:/var/lib/mcp-auth
+    expose: ["8080"]
+    networks: [edge]
 volumes:
   db-data:
+  mem0-data:
+  mem0-history:
+  caddy-data:
+  caddy-config:
+  auth-state:
+secrets:
+  signing_key:
+    file: ./.secrets/signing-key.pem
 networks:
   private:
     internal: true

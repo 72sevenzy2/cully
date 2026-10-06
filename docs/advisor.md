@@ -7,7 +7,7 @@ workflow improvements. Shared memory uses Cully MCP, PostgreSQL and Mem0.
 
 ```sh
 go build -o ./build/cully ./cmd/cully
-./build/cully install
+./build/cully setup
 ./build/cully status
 ./build/cully mcp add --agent codex
 ```
@@ -25,14 +25,14 @@ connections and OAuth sign-in.
 
 The installer starts the advisor daemon. Claude supplies rich live hook payloads;
 Codex and Cursor use their available native surfaces. Starting the daemon does
-not create live hooks in clients that do not expose them. Re-run `cully install`
+not create live hooks in clients that do not expose them. Re-run `cully setup`
 to restart a stopped advisor. Inspect its state using `cully status`.
 
 ## Commands
 
 | Command | Purpose |
 | --- | --- |
-| `cully install [agent]` | Configure local integrations and start the advisor |
+| `cully setup [agent]` | Configure local integrations and start the advisor |
 | `cully uninstall [agent]` | Remove managed local integration settings |
 | `cully status [directory]` | Session warnings, agent setup and advisor state |
 | `cully suggestions` | Review numbered improvements and informational notes |

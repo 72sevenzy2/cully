@@ -26,7 +26,7 @@ func TestRemovedCommands(t *testing.T) {
 	}
 }
 
-func TestInstallMCPOptionsFailBeforeChangingAgentSetup(t *testing.T) {
+func TestSetupMCPOptionsFailBeforeChangingAgentSetup(t *testing.T) {
 	dir := t.TempDir()
 	t.Setenv("CODEX_HOME", dir)
 	for _, args := range [][]string{
@@ -34,8 +34,8 @@ func TestInstallMCPOptionsFailBeforeChangingAgentSetup(t *testing.T) {
 		{"codex", "--mcp-url", "not-a-url"},
 		{"--mcp-url", "not-a-url", "codex"},
 	} {
-		if err := runInstall(args); err == nil {
-			t.Fatalf("accepted invalid install options: %v", args)
+		if err := runSetup(args); err == nil {
+			t.Fatalf("accepted invalid setup options: %v", args)
 		}
 		if _, err := os.Stat(filepath.Join(dir, "config.toml")); !os.IsNotExist(err) {
 			t.Fatalf("modified agent config for invalid options: %v", err)

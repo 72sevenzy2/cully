@@ -5,14 +5,14 @@ description: Set up Cully's local advisor and optional shared memory in Claude C
 
 # Connect an agent
 
-Cully has two setup commands. `cully install` adds the local advisor integration. `cully mcp add` adds one remote shared-memory connection. You can use the local advisor on its own.
+Cully has two setup commands. `cully setup` adds the local advisor integration. `cully mcp add` adds one remote shared-memory connection. You can use the local advisor on its own.
 
-You can do both setup steps together with `cully install codex --mcp-url URL`, or pass `--agent codex --mcp-url URL` to the [release installer](/installation#release-installer). Add `--oauth` only if that endpoint uses OAuth. The Cully skill then guides session checks and calls the configured `cully_*` memory tools when useful.
+You can do both setup steps together with `cully setup codex --mcp-url URL`, or pass `--agent codex --mcp-url URL` to the [release installer](/installation#release-installer). Add `--oauth` only if that endpoint uses OAuth. The Cully skill then guides session checks and calls the configured `cully_*` memory tools when useful.
 
 ## Claude Code
 
 ```sh
-cully install claude
+cully setup claude
 cully mcp add --agent claude --url https://your-server.example/mcp
 ```
 
@@ -21,7 +21,7 @@ Restart Claude Code. The local integration includes a status line, session hooks
 ## Codex
 
 ```sh
-cully install codex
+cully setup codex
 cully mcp add --agent codex --url https://your-server.example/mcp
 ```
 
@@ -30,7 +30,7 @@ Restart Codex. The local integration uses native status fields, a `/prompts:cull
 ## Cursor
 
 ```sh
-cully install cursor
+cully setup cursor
 cully mcp add --agent cursor --url https://your-server.example/mcp
 ```
 
@@ -38,6 +38,6 @@ Restart Cursor. If the MCP server enables OAuth, add `--oauth` to `cully mcp add
 
 ## What setup changes
 
-`cully install` configures the selected local agent and starts the advisor daemon. `cully mcp add` registers one user-level MCP connection. It does not deploy a server, sign you in automatically, or replace a Cully entry that points at another URL. Use `cully status` to inspect local integration state.
+`cully setup` configures the selected local agent and starts the advisor daemon. `cully mcp add` registers one user-level MCP connection. It does not deploy a server, sign you in automatically, or replace a Cully entry that points at another URL. Use `cully status` to inspect local integration state.
 
 For operator requirements, see [self-hosting](/hosting) and [OAuth deployment](/oauth). For all client configuration details, see the [client reference](https://github.com/mcp-runtime/cully/blob/main/clients/README.md).

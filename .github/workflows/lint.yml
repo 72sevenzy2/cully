@@ -24,14 +24,25 @@ jobs:
       - name: Shell syntax
         run: |
           bash -n install.sh
-          for script in deploy/bootstrap-personal-data.sh deploy/bootstrap-website.sh deploy/self-hosted/start.sh; do
+          for script in deploy/bootstrap-personal-data.sh deploy/bootstrap-website.sh deploy/self-hosted/setup.sh; do
             sh -n "$script"
           done
       - name: Self-hosted Compose configurations
+        env:
+          CULLY_DB_NAME: cully
+          CULLY_DB_USER: cully
+          CULLY_DB_PASSWORD: ci-db-password
+          CULLY_DATABASE_URL: postgres://cully:ci-db-password@db:5432/cully
+          CULLY_DATA_API_TOKEN: ci-data-token
+          CULLY_MCP_OWNER: ci-owner
+          CULLY_MEM0_DB_PASSWORD: ci-mem0-db-password
+          CULLY_MEM0_API_KEY: ci-mem0-api-key
+          CULLY_MEM0_JWT_SECRET: ci-jwt-secret
         run: |
           cd deploy/self-hosted
-          CULLY_MEM0_API_KEY=ci-test-key docker compose --env-file .env.example -f compose.yaml -f compose.mem0.yaml config --quiet
-          CULLY_MEM0_API_KEY=ci-test-key docker compose --env-file .env.example -f compose.yaml -f compose.mem0.yaml -f compose.oauth.yaml -f compose.mcp-auth.yaml config --quiet
+          docker compose --env-file .env.example -f compose.yaml config --quiet
+          CULLY_MCP_AUTH_MODE=oauth CULLY_MCP_OWNER='' docker compose --env-file .env.example -f compose.yaml --profile oauth config --quiet
+          CULLY_MCP_AUTH_MODE=oauth CULLY_MCP_OWNER='' docker compose --env-file .env.example -f compose.yaml --profile oauth --profile mcp-auth config --quiet
       - name: Personal Compose configuration
         run: |
           cd deploy

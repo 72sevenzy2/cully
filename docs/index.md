@@ -16,7 +16,7 @@ Cully helps you work with coding agents across projects and devices. The local C
 
 ## Two parts that work together
 
-**Local advisor.** `cully install` configures supported integrations on your machine. `cully status` shows session state, and `cully suggestions` offers changes you can preview before applying. It works without a server. See the [local advisor guide](/advisor).
+**Local advisor.** `cully setup` configures supported integrations on your machine. `cully status` shows session state, and `cully suggestions` offers changes you can preview before applying. It works without a server. See the [local advisor guide](/advisor).
 
 **Shared memory.** `cully mcp add` registers a remote MCP connection for one agent. Cully tools can save and search your own personal or project records. PostgreSQL holds the source records; optional self-hosted Mem0 handles semantic indexing and recall. A single-user server needs no login by default; operators can enable OAuth for per-user access.
 
