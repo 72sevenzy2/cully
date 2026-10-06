@@ -253,8 +253,26 @@ func Uninstall(targets ...string) error {
 		default:
 			return fmt.Errorf("unknown uninstall target %q (use claude, codex, cursor, or all)", target)
 		}
+		if err := removeManagedMemorySkill(target); err != nil {
+			return err
+		}
 	}
 	return nil
+}
+
+func removeManagedMemorySkill(target string) error {
+	var configDir string
+	switch target {
+	case "claude":
+		configDir = ConfigDir()
+	case "codex":
+		configDir = CodexConfigDir()
+	case "cursor":
+		configDir = CursorConfigDir()
+	default:
+		return fmt.Errorf("unknown skill target %q", target)
+	}
+	return removeCullySkillIfUnchanged(filepath.Join(configDir, "skills", "cully", "SKILL.md"))
 }
 
 // uninstallClaude removes cully's entries from settings.json and deletes
@@ -351,6 +369,26 @@ func uninstallCursor(cwd string) error {
 	}
 	fmt.Printf("\033[32mUninstalled.\033[0m Removed Cursor cully command; shared skill remains at %s\n", sharedSkillPath(cwd, "cully"))
 	return nil
+}
+
+// RemoveSharedSkillIfUnchanged removes the project skill after all local agent
+// integrations are removed. Modified project instructions remain user-owned.
+func RemoveSharedSkillIfUnchanged(cwd string) error {
+	return removeCullySkillIfUnchanged(sharedSkillPath(cwd, "cully"))
+}
+
+func removeCullySkillIfUnchanged(path string) error {
+	content, err := os.ReadFile(path)
+	if os.IsNotExist(err) {
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+	if strings.TrimSpace(string(content)) != strings.TrimSpace(cullyskill.Content) {
+		return nil
+	}
+	return os.Remove(path)
 }
 
 func loadSettings(path string) (map[string]any, error) {

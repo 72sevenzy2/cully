@@ -78,3 +78,7 @@ You can also use Cully inside your agent:
 | Cursor | Run the project `/cully suggestions` command or ask Cursor to check suggestions. |
 
 If Cully lists a numbered improvement, use its number with `cully apply 1 --dry-run` to inspect the proposed change. Review it before applying. `cully status` also shows whether the advisor daemon is running; if startup failed, run `cully agent setup codex` with your agent name to retry. See the [advisor commands](/advisor#commands) for the rest.
+
+To stop and disconnect the local stack later, run `cully uninstall`. It keeps
+your notes by default. The [self-hosting guide](/hosting#uninstall-the-laptop-stack)
+explains the explicit data deletion option.

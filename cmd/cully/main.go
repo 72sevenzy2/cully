@@ -18,7 +18,8 @@ const help = `Cully — your companion for better work and everyday life.
 Usage:
   cully agent setup [claude|codex|cursor|all] [--mcp-url URL] [--oauth]
   cully setup [--agent claude|codex|cursor] [--oauth] [--prepare]
-  cully uninstall [claude|codex|cursor|all] Remove managed agent setup
+  cully uninstall [--purge-data]           Stop local stack and remove managed agent setup
+  cully uninstall [claude|codex|cursor|all] Remove one or all agent integrations
   cully status [directory]                Show session and agent status
   cully suggestions                       Review suggested improvements
   cully apply <n> [--dry-run] [--yes] [--cwd DIR]
@@ -52,7 +53,7 @@ func run(args []string) error {
 		}
 		return runAgentSetup(args[2:])
 	case "uninstall":
-		return cully.Uninstall(args[1:]...)
+		return runUninstall(args[1:])
 	case "status":
 		if len(args) > 2 {
 			return fmt.Errorf("usage: cully status [directory]")
