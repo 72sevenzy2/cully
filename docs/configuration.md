@@ -34,6 +34,8 @@ Keep the data API token identical on both sides. The MCP workload does not recei
 
 The root Compose workspace network is external and must already exist. The [fresh self-hosted Compose example](/hosting#minimal-single-user-compose-installation) creates its own network and volume. The [full-stack command](/hosting#one-command-full-stack) also starts a private Mem0 service and its persistent database. A separately operated Mem0 service must be reachable from the data service's network.
 
+The release-triggered [personal stack](/personal-deployment) uses [`deploy/personal-data.env.example`](https://github.com/mcp-runtime/cully/blob/main/deploy/personal-data.env.example) and creates fresh, project-scoped PostgreSQL and Mem0 volumes. Its `CULLY_DATABASE_URL` points at the new `db` service; it does not use `CULLY_DB_VOLUME` or the old database network. Keep its database password, data API token, Mem0 API key, JWT secret and embedding-provider key on the VM. The `workspace_workspace` network must already exist for the private Caddy data route.
+
 ## Local CLI
 
 The [local advisor guide](advisor.md#controls) lists local `CULLY_*` controls for display and advisor behavior. Agent-owned directories still honor `CLAUDE_CONFIG_DIR`, `CODEX_HOME` and `CURSOR_CONFIG_DIR`.

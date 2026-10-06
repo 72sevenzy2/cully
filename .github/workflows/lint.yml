@@ -1,0 +1,36 @@
+name: Lint
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+      - name: Go formatting
+        run: test -z "$(gofmt -l cmd internal migrations skills tests)"
+      - name: Go vet
+        run: go vet ./...
+      - name: Shell syntax
+        run: |
+          bash -n install.sh
+          for script in deploy/bootstrap-personal-data.sh deploy/bootstrap-website.sh deploy/self-hosted/start.sh; do
+            sh -n "$script"
+          done
+      - name: Self-hosted Compose configurations
+        run: |
+          cd deploy/self-hosted
+          CULLY_MEM0_API_KEY=ci-test-key docker compose --env-file .env.example -f compose.yaml -f compose.mem0.yaml config --quiet
+          CULLY_MEM0_API_KEY=ci-test-key docker compose --env-file .env.example -f compose.yaml -f compose.mem0.yaml -f compose.oauth.yaml -f compose.mcp-auth.yaml config --quiet
+      - name: Personal Compose configuration
+        run: |
+          cd deploy
+          CULLY_DATA_TAG=v0.0.0 docker compose --env-file personal-data.env.example -f compose.personal-data.yaml config --quiet

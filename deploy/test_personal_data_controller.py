@@ -17,7 +17,7 @@ class PersonalDataDeploymentTests(unittest.TestCase):
     def test_independent_release_and_rollback(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
-            (root / '.env').write_text('CULLY_DATA_NETWORK=test\n')
+            (root / '.env').write_text('CULLY_DB_NAME=cully\n')
             calls = []
             def runner(args, **kwargs):
                 calls.append((args, kwargs))
@@ -32,24 +32,26 @@ class PersonalDataDeploymentTests(unittest.TestCase):
                              {'current': 'v1.0.1', 'previous': 'v1.0.0'})
             self.assertNotIn('test-token', str([args for args, _ in calls]))
             self.assertTrue(any('cully-personal-data' in args for args, _ in calls))
+            self.assertTrue(any('ghcr.io/mcp-runtime/cully-mem0:v1.0.0' in args for args, _ in calls))
+            self.assertTrue(any('migrate' in args for args, _ in calls))
             execute({'action': 'rollback', 'tag': 'v1.0.1'}, root, runner)
             self.assertEqual(json.loads((root / 'state.json').read_text())['current'], 'v1.0.0')
 
     def test_unhealthy_release_restores_previous(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
-            (root / '.env').write_text('CULLY_DATA_NETWORK=test\n')
+            (root / '.env').write_text('CULLY_DB_NAME=cully\n')
             (root / 'state.json').write_text(json.dumps({'current': 'v1.0.0', 'previous': None}))
             activated = []
             def runner(args, **kwargs):
                 if 'compose' in args:
                     tag = kwargs['env']['CULLY_DATA_TAG']
                     activated.append(tag)
-                    if tag == 'v1.0.1':
+                    if tag == 'v1.0.1' and 'data-api' in args:
                         raise subprocess.CalledProcessError(1, args)
             with self.assertRaises(subprocess.CalledProcessError):
                 execute(dict(action='deploy', tag='v1.0.1', token='test', registry_user='tester'), root, runner)
-            self.assertEqual(activated, ['v1.0.1', 'v1.0.0'])
+            self.assertEqual(activated, ['v1.0.1', 'v1.0.1', 'v1.0.1', 'v1.0.0', 'v1.0.0', 'v1.0.0'])
             self.assertEqual(json.loads((root / 'state.json').read_text())['current'], 'v1.0.0')
 
 

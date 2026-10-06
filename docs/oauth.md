@@ -60,7 +60,7 @@ Register the public URL with `cully mcp add --agent codex --url https://mcp.exam
 
 ## MCP Runtime metadata
 
-The repository's `.mcp/servers.yaml` is the personal **public OAuth deployment**, with `auth.mode: oauth`, `CULLY_MCP_AUTH_MODE=oauth`, an explicit JWKS URL and no fixed owner. Its ingress, audience and issuer must match. For a private single-user deployment, use separate metadata with `auth.mode: none`, `CULLY_MCP_AUTH_MODE=none`, a fixed owner from a secret and private ingress or network policy. Relevant server-entry fields:
+The active [`.mcp/servers.yaml`](https://github.com/mcp-runtime/cully/blob/main/.mcp/servers.yaml) is the personal **public OAuth deployment**, with `auth.mode: oauth`, `CULLY_MCP_AUTH_MODE=oauth`, an explicit issuer, resource and JWKS URL, and no fixed owner. Its ingress, audience and issuer must match. An [isolated no-OAuth metadata example](https://github.com/mcp-runtime/cully/blob/main/.mcp/examples/no-oauth/servers.yaml) shows the same image with `auth.mode: none`, a fixed owner from a secret, a private ingress host and the private data API token. Copy and adapt that file only for a private single-user deployment; MCP Runtime network policy must keep the hostname inaccessible to untrusted callers. Relevant server-entry fields:
 
 ```yaml
 ingressHost: private-mcp.example.internal

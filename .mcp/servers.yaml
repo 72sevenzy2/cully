@@ -12,10 +12,16 @@ servers:
       envVars:
         - name: CULLY_DATA_API_URL
           value: https://workspace.mcpruntime.org/cully-data
+        - name: CULLY_HOST
+          value: 0.0.0.0
         - name: CULLY_PORT
           value: "8080"
         - name: CULLY_MCP_AUTH_MODE
           value: oauth
+        - name: CULLY_AUTH_ISSUER
+          value: https://auth.mcpruntime.org/mcp-auth
+        - name: CULLY_AUTH_RESOURCE
+          value: https://mcp.mcpruntime.org/cully/mcp
         - name: CULLY_JWKS_URL
           value: https://auth.mcpruntime.org/.well-known/jwks.json
       secretEnvVars:

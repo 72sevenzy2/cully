@@ -1,0 +1,78 @@
+# Example for a private, single-owner MCP Runtime ingress only.
+# Keep this file outside the active .mcp metadata directory until configured.
+version: v1
+servers:
+  - name: cully
+    description: Private single-owner Cully MCP
+    image: registry.mcpruntime.org/org/cully-mcp/cully
+    imageTag: replace-with-release-tag
+    route: /cully/mcp
+    publicPathPrefix: cully
+    ingressHost: private-mcp.example.internal
+    port: 8080
+    replicas: 1
+    envVars:
+      - name: CULLY_HOST
+        value: 0.0.0.0
+      - name: CULLY_PORT
+        value: "8080"
+      - name: CULLY_MCP_AUTH_MODE
+        value: none
+      - name: CULLY_DATA_API_URL
+        value: http://data-api:8083
+    secretEnvVars:
+      - name: CULLY_MCP_OWNER
+        secretKeyRef:
+          name: cully-single-owner
+          key: CULLY_MCP_OWNER
+      - name: CULLY_DATA_API_TOKEN
+        secretKeyRef:
+          name: cully-data-api-token
+          key: CULLY_DATA_API_TOKEN
+    namespace: mcp-servers
+    tools:
+      - name: cully_log
+        description: Save a source record
+        requiredTrust: low
+        sideEffect: write
+      - name: cully_search
+        description: Search source records
+        requiredTrust: low
+        sideEffect: read
+      - name: cully_recall
+        description: Semantic recall through Mem0
+        requiredTrust: low
+        sideEffect: read
+      - name: cully_recent
+        description: List recent source records
+        requiredTrust: low
+        sideEffect: read
+      - name: cully_get
+        description: Get a source record
+        requiredTrust: low
+        sideEffect: read
+      - name: cully_update
+        description: Update a source record
+        requiredTrust: medium
+        sideEffect: write
+      - name: cully_delete
+        description: Delete a source record
+        requiredTrust: high
+        sideEffect: destructive
+      - name: cully_projects
+        description: List projects
+        requiredTrust: low
+        sideEffect: read
+    auth:
+      mode: none
+    policy:
+      mode: observe
+      defaultDecision: allow
+      enforceOn: call_tool
+      policyVersion: v1
+    session:
+      store: memory
+      maxLifetime: 24h
+      idleTimeout: 1h
+    gateway:
+      enabled: false

@@ -1,7 +1,81 @@
+# Fresh, isolated personal stack. Existing VM database volumes are never mounted.
 services:
+  db:
+    image: pgvector/pgvector:pg17
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${CULLY_DB_NAME:?set CULLY_DB_NAME}
+      POSTGRES_USER: ${CULLY_DB_USER:?set CULLY_DB_USER}
+      POSTGRES_PASSWORD: ${CULLY_DB_PASSWORD:?set CULLY_DB_PASSWORD}
+    volumes: [cully-db:/var/lib/postgresql/data]
+    healthcheck:
+      test: [CMD-SHELL, 'pg_isready -U "$$POSTGRES_USER" -d "$$POSTGRES_DB"']
+      interval: 10s
+      timeout: 3s
+      retries: 10
+    networks: [private]
+  mem0-db:
+    image: pgvector/pgvector:pg17
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: postgres
+      POSTGRES_USER: mem0
+      POSTGRES_PASSWORD: ${CULLY_MEM0_DB_PASSWORD:?set CULLY_MEM0_DB_PASSWORD}
+    volumes:
+      - mem0-db:/var/lib/postgresql/data
+      - ./mem0-init-db.sql:/docker-entrypoint-initdb.d/10-mem0-app.sql:ro
+    healthcheck:
+      test: [CMD-SHELL, 'pg_isready -U "$$POSTGRES_USER" -d postgres']
+      interval: 10s
+      timeout: 3s
+      retries: 10
+    networks: [private]
+  mem0:
+    image: ghcr.io/mcp-runtime/cully-mem0:${CULLY_DATA_TAG:?set release tag}
+    restart: unless-stopped
+    command: [sh, -c, 'alembic upgrade head && uvicorn main:app --host 0.0.0.0 --port 8000']
+    environment:
+      POSTGRES_HOST: mem0-db
+      POSTGRES_PORT: "5432"
+      POSTGRES_DB: postgres
+      POSTGRES_USER: mem0
+      POSTGRES_PASSWORD: ${CULLY_MEM0_DB_PASSWORD:?set CULLY_MEM0_DB_PASSWORD}
+      POSTGRES_COLLECTION_NAME: cully_memories
+      APP_DB_NAME: mem0_app
+      HISTORY_DB_PATH: /app/history/history.db
+      OPENAI_API_KEY: ${CULLY_MEM0_OPENAI_API_KEY:?set embedding provider key}
+      ADMIN_API_KEY: ${CULLY_MEM0_API_KEY:?set CULLY_MEM0_API_KEY}
+      JWT_SECRET: ${CULLY_MEM0_JWT_SECRET:?set CULLY_MEM0_JWT_SECRET}
+      AUTH_DISABLED: "false"
+      MEM0_TELEMETRY: "false"
+    volumes: [mem0-history:/app/history]
+    depends_on:
+      mem0-db:
+        condition: service_healthy
+    healthcheck:
+      test: [CMD, python, -c, "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/openapi.json')"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+    networks: [private, egress]
+  migrate:
+    profiles: [ops]
+    image: ghcr.io/mcp-runtime/cully-data:${CULLY_DATA_TAG:?set release tag}
+    command: [migrate]
+    environment:
+      CULLY_DATABASE_URL: ${CULLY_DATABASE_URL:?set CULLY_DATABASE_URL}
+    depends_on:
+      db:
+        condition: service_healthy
+    networks: [private]
   data-api:
     image: ghcr.io/mcp-runtime/cully-data:${CULLY_DATA_TAG:?set release tag}
-    env_file: .env
+    environment:
+      CULLY_DATABASE_URL: ${CULLY_DATABASE_URL:?set CULLY_DATABASE_URL}
+      CULLY_DATA_API_TOKEN: ${CULLY_DATA_API_TOKEN:?set CULLY_DATA_API_TOKEN}
+      CULLY_MEM0_URL: http://mem0:8000
+      CULLY_MEM0_API_KEY: ${CULLY_MEM0_API_KEY:?set CULLY_MEM0_API_KEY}
     restart: unless-stopped
     read_only: true
     tmpfs: [/tmp]
@@ -10,15 +84,24 @@ services:
     mem_limit: 512m
     expose: ["8083"]
     healthcheck:
-      test: ["CMD", "/cully-data", "health"]
+      test: [CMD, /cully-data, health]
       interval: 20s
       timeout: 5s
       retries: 5
-    networks: [data, workspace]
+    depends_on:
+      db:
+        condition: service_healthy
+      mem0:
+        condition: service_healthy
+    networks: [private, workspace]
 networks:
-  data:
-    external: true
-    name: ${CULLY_DATA_NETWORK:?set existing database network}
+  private:
+    internal: true
+  egress:
   workspace:
     external: true
     name: workspace_workspace
+volumes:
+  cully-db:
+  mem0-db:
+  mem0-history:

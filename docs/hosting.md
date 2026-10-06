@@ -56,7 +56,7 @@ The same MCP binary supports OAuth. The [OAuth guide](/oauth) has commands for a
 
 ## Existing personal deployment
 
-The root `compose.yaml` and [personal deployment guide](/personal-deployment) target an existing VM database volume and network. They are separate from the fresh installation above. The personal `.mcp/servers.yaml` stays explicitly in OAuth mode for its public ingress; its JWKS URL and audience must match the authorization server. Do not reuse its public route in no-OAuth mode.
+The [personal deployment guide](/personal-deployment) describes a release-triggered stack on the existing VM with fresh, isolated PostgreSQL and Mem0 volumes. It leaves any prior database volume alone until records are deliberately migrated. The personal `.mcp/servers.yaml` stays explicitly in OAuth mode for its public ingress; its issuer, JWKS URL and audience must match the authorization server. Do not reuse its public route in no-OAuth mode.
 
 Only the MCP URL belongs in agent configuration. The private API token, database credentials and Mem0 key stay with the operator. [Connect an agent](/agents) explains client setup.
 

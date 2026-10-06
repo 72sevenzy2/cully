@@ -1,0 +1,41 @@
+name: E2E Test
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  e2e-test:
+    runs-on: ubuntu-latest
+    env:
+      CULLY_DB_NAME: cully
+      CULLY_DB_USER: cully
+      CULLY_DB_PASSWORD: ci-only-password
+      CULLY_DATABASE_URL: postgres://cully:ci-only-password@db:5432/cully
+      CULLY_DATA_API_TOKEN: ci-only-token
+      CULLY_MCP_OWNER: ci-owner
+      CULLY_E2E_MCP_URL: http://127.0.0.1:8080/mcp
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+      - name: Build service binaries
+        run: go build ./...
+      - name: Start disposable container stack
+        run: |
+          cd deploy/self-hosted
+          docker compose --env-file .env.example up -d --wait db
+          docker compose --env-file .env.example --profile ops run --rm migrate
+          docker compose --env-file .env.example up -d --build --wait data-api mcp
+          curl --fail --retry 12 --retry-delay 2 --retry-all-errors http://127.0.0.1:8080/healthz
+      - name: MCP to data API to PostgreSQL lifecycle
+        run: go test ./tests/e2e -count=1 -v
+      - name: Stop disposable stack
+        if: always()
+        run: |
+          cd deploy/self-hosted
+          docker compose --env-file .env.example down -v --remove-orphans

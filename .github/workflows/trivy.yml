@@ -1,0 +1,44 @@
+name: Trivy
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+  security-events: write
+jobs:
+  container-scan:
+    name: container-scan (${{ matrix.image }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - image: mcp
+            dockerfile: Dockerfile
+          - image: data
+            dockerfile: Dockerfile.data-api
+          - image: website
+            dockerfile: Dockerfile.website
+          - image: docs
+            dockerfile: Dockerfile.docs
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build container
+        run: docker build -f "${{ matrix.dockerfile }}" -t "cully-${{ matrix.image }}:scan" .
+      - name: Scan container
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: cully-${{ matrix.image }}:scan
+          format: sarif
+          output: trivy-results.sarif
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          exit-code: '0'
+      - name: Publish findings
+        if: always() && hashFiles('trivy-results.sarif') != '' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
+        uses: github/codeql-action/upload-sarif@v4
+        with:
+          sarif_file: trivy-results.sarif
+          category: container-${{ matrix.image }}

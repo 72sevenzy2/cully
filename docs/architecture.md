@@ -46,7 +46,7 @@ Projection uses `infer=false`: Mem0 embeds authored summaries without adding a f
 
 The product website and technical docs have separate images, Compose services, path-filtered CI workflows and rollback state. A change under `site/` deploys `cully-web`; a change under `docs/` deploys `cully-docs`. Caddy routes their domains to separate containers on the existing workspace network. See [website hosting](website.md).
 
-The personal MCP and data services follow the release pipeline. A successful GoReleaser job publishes a tagged data image, then the gated [personal deployment workflow](personal-deployment.md) updates the VM data service before the MCP Runtime workload. PostgreSQL and Mem0 are operated separately; the release controller cannot create or replace them.
+The personal services follow the release pipeline. A successful GoReleaser job publishes tagged data and Mem0 images. The gated [personal deployment workflow](personal-deployment.md) starts isolated PostgreSQL, Mem0 and data API services on the VM, runs the schema migration, then updates the MCP Runtime workload. Existing VM database volumes are not mounted by this new stack.
 
 ## Repository map
 

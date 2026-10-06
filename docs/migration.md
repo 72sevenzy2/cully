@@ -2,6 +2,8 @@
 
 Repository consolidation does not deploy Cully. The current VM and OAuth clients continue using their running configuration until this runbook is executed. The [personal deployment release workflow](personal-deployment.md) stays gated until this cutover is complete.
 
+This runbook covers preserving records from the existing VM database. The new personal release Compose project starts with separate named volumes; enabling its gate does not attach or import the old database automatically. Complete an export/restore and verify owner records before routing clients to that new stack.
+
 ## Inventory and backup
 
 Record the existing VM Compose project name, PostgreSQL database/user, actual Docker volume name, Caddy routing and current MCP Runtime manifest. Record image digests and configuration for rollback. Back up PostgreSQL and verify restoration to a separate disposable database. Preserve existing owner subjects; changing the identity provider's subject mapping would disconnect users from their records.

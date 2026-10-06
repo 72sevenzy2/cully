@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Restricted SSH controller for release-tagged personal Cully data images."""
+"""Restricted SSH controller for release-tagged personal Cully services."""
 import json
 import os
 from pathlib import Path
@@ -38,9 +38,13 @@ def compose(root, tag, runner, docker_config=None):
     env = dict(os.environ, CULLY_DATA_TAG=tag)
     if docker_config is not None:
         env['DOCKER_CONFIG'] = docker_config
-    runner(['docker', 'compose', '--project-name', 'cully-personal-data',
-            '--project-directory', str(root), '--file', str(root / 'compose.yaml'),
-            'up', '-d', '--wait', '--wait-timeout', '120'],
+    base = ['docker', 'compose', '--project-name', 'cully-personal-data',
+            '--project-directory', str(root), '--file', str(root / 'compose.yaml')]
+    runner(base + ['up', '-d', '--wait', '--wait-timeout', '120', 'db', 'mem0-db'],
+           cwd=root, env=env, check=True)
+    runner(base + ['--profile', 'ops', 'run', '--rm', 'migrate'],
+           cwd=root, env=env, check=True)
+    runner(base + ['up', '-d', '--wait', '--wait-timeout', '180', 'mem0', 'data-api'],
            cwd=root, env=env, check=True)
 
 
@@ -79,6 +83,7 @@ def execute(request, root=ROOT, runner=subprocess.run):
                 request['registry_user'], '--password-stdin'],
                input=request['token'], text=True, check=True, capture_output=True)
         runner(['docker', '--config', directory, 'pull', 'ghcr.io/mcp-runtime/cully-data:' + tag], check=True)
+        runner(['docker', '--config', directory, 'pull', 'ghcr.io/mcp-runtime/cully-mem0:' + tag], check=True)
         try:
             compose(root, tag, runner, directory)
         except subprocess.CalledProcessError:

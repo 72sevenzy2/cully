@@ -9,6 +9,7 @@ install -d -m 700 /opt/cully-personal-data
 test -f /opt/cully-personal-data/.env || { echo 'Configure /opt/cully-personal-data/.env before bootstrap.' >&2; exit 1; }
 chmod 600 /opt/cully-personal-data/.env
 install -m 644 "$script_dir/compose.personal-data.yaml" /opt/cully-personal-data/compose.yaml
+install -m 644 "$script_dir/self-hosted/mem0-init-db.sql" /opt/cully-personal-data/mem0-init-db.sql
 install -d -m 755 /usr/local/libexec
 install -m 755 "$script_dir/personal_data_controller.py" /usr/local/libexec/cully-personal-data-deploy
 install -d -m 700 /root/.ssh

@@ -20,12 +20,13 @@ concurrency:
 env:
   RELEASE_TAG: ${{ inputs.tag }}
   DATA_IMAGE: ghcr.io/mcp-runtime/cully-data:${{ inputs.tag }}
+  MEM0_IMAGE: ghcr.io/mcp-runtime/cully-mem0:${{ inputs.tag }}
   MCP_RUNTIME_VERSION: v0.5.2
   MCP_RUNTIME_SHA256: 3b26aadb20690acf778a036f657d41c6ea86305c4e621527fd7f06628c137ca9
   SERVER_NAME: cully
   IMAGE_REGISTRY: registry.mcpruntime.org/org/cully-mcp
 jobs:
-  data-image:
+  service-images:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -36,17 +37,29 @@ jobs:
           python3 -c 'import os,re; assert re.fullmatch(r"v[0-9]+\.[0-9]+\.[0-9]+(?:[-.][A-Za-z0-9.-]+)?", os.environ["RELEASE_TAG"])'
           python3 -m unittest discover -s deploy -p 'test_personal_data_controller.py' -v
           sh -n deploy/bootstrap-personal-data.sh
-      - name: Build data service image
-        run: docker build -f Dockerfile.data-api -t "$DATA_IMAGE" .
+      - name: Build data and pinned Mem0 images
+        run: |
+          docker build -f Dockerfile.data-api -t "$DATA_IMAGE" .
+          docker build -t "$MEM0_IMAGE" 'https://github.com/mem0ai/mem0.git#c93420c49a6b14c3d446bdb156d96811908fd90a:server'
+      - name: Scan pinned Mem0 image
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: ${{ env.MEM0_IMAGE }}
+          format: table
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          exit-code: '0'
       - uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      - name: Publish release data image
-        run: docker push "$DATA_IMAGE"
+      - name: Publish release service images
+        run: |
+          docker push "$DATA_IMAGE"
+          docker push "$MEM0_IMAGE"
   deploy:
-    needs: data-image
+    needs: service-images
     if: vars.CULLY_PERSONAL_DEPLOY_ENABLED == 'true'
     runs-on: ubuntu-latest
     environment: personal-cully
@@ -88,7 +101,7 @@ jobs:
           image="$(yq ".servers[] | select(.name == \"${SERVER_NAME}\") | .image + \":\" + .imageTag" .mcp/servers.yaml)"
           echo "IMAGE=$image" >> "$GITHUB_ENV"
           mcp-runtime server push --image "$image"
-      - name: Deploy personal data service
+      - name: Deploy personal databases, Mem0 and data service
         id: data
         env:
           GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -97,7 +110,7 @@ jobs:
             ssh -i "$HOME/.ssh/cully-personal" -p "$DEPLOY_PORT" -o BatchMode=yes -o StrictHostKeyChecking=yes -o ConnectTimeout=15 "$DEPLOY_USER@$DEPLOY_HOST" deploy
       - name: Deploy personal MCP service
         run: mcp-runtime server deploy "$SERVER_NAME" --metadata-dir .mcp --update
-      - name: Roll back data service if MCP deployment fails
+      - name: Roll back personal services if MCP deployment fails
         if: failure() && steps.data.outcome == 'success'
         run: |
           python3 -c 'import json,os; print(json.dumps({"action":"rollback","tag":os.environ["RELEASE_TAG"]}))' |
