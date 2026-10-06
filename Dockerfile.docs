@@ -1,0 +1,17 @@
+FROM node:24-alpine AS build
+WORKDIR /src
+COPY package.json package-lock.json ./
+RUN npm ci
+COPY docs ./docs
+RUN npm run docs:build
+ARG REVISION=local
+RUN printf '{"revision":"%s"}\n' "$REVISION" > dist/docs/_deployment.json
+
+FROM nginx:stable-alpine
+COPY deploy/nginx.docs.conf /etc/nginx/nginx.conf
+COPY --from=build /src/dist/docs /srv/docs
+USER nginx
+EXPOSE 8080
+HEALTHCHECK --interval=10s --timeout=3s --start-period=10s --retries=3 \
+  CMD wget -q -O /dev/null --header='Host: docs.cully.net' http://127.0.0.1:8080/quickstart
+ENTRYPOINT ["nginx", "-g", "daemon off;"]

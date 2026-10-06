@@ -1,0 +1,24 @@
+services:
+  data-api:
+    image: ghcr.io/mcp-runtime/cully-data:${CULLY_DATA_TAG:?set release tag}
+    env_file: .env
+    restart: unless-stopped
+    read_only: true
+    tmpfs: [/tmp]
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    mem_limit: 512m
+    expose: ["8083"]
+    healthcheck:
+      test: ["CMD", "/cully-data", "health"]
+      interval: 20s
+      timeout: 5s
+      retries: 5
+    networks: [data, workspace]
+networks:
+  data:
+    external: true
+    name: ${CULLY_DATA_NETWORK:?set existing database network}
+  workspace:
+    external: true
+    name: workspace_workspace

@@ -1,6 +1,6 @@
 # Website and documentation hosting
 
-Cully's website is **https://cully.net** and its docs are **https://docs.cully.net**. Both are built into one Docker image. Once the VM is bootstrapped and deployment enabled, changes to website/docs inputs on `main` publish both sites automatically.
+Cully's website is **https://cully.net** and its docs are **https://docs.cully.net**. They have separate CI, images, containers, deployment workflows and rollback histories. Changes under `site/` deploy the website; changes under `docs/` deploy the docs.
 
 ## Build
 
@@ -11,15 +11,15 @@ npm ci
 npm run site:build
 ```
 
-The build produces `dist/site` for the product website and `dist/docs` for the docs. To preview the docs locally, run `npm run site:preview`. You can serve `dist/site` with any static file server. Do not serve the repository root: it includes source files and deployment notes.
+The combined build produces `dist/site` and `dist/docs`. Run `npm run website:build` or `npm run docs:build` to build one site. To preview the docs locally, run `npm run site:preview`. You can serve `dist/site` with any static file server. Do not serve the repository root: it includes source files and deployment notes.
 
 The docs source is Markdown in `docs/`. `docs/.vitepress/config.mts` defines the public navigation. Every Markdown guide under `docs/` is built, including architecture, migration, and website hosting. Product and documentation links assume the two production domains. Local previews can follow the corresponding links in the sidebar.
 
 ## Publish on the existing VM
 
-`Dockerfile.website` builds both sites and serves them with an unprivileged Nginx container. `deploy/compose.website.yaml` starts only `cully-web` on the existing `workspace_workspace` network. No public container port is required: the VM's existing Docker Caddy container routes both domains to `cully-web:8080`. Nginx resolves clean docs URLs such as `/quickstart` to their generated HTML files. Buddy, workspace and Keycloak keep their existing routes.
+`Dockerfile.website` packages only the website as `ghcr.io/mcp-runtime/cully-web:<commit>`. `Dockerfile.docs` packages only the docs as `ghcr.io/mcp-runtime/cully-docs:<commit>`. Their Compose files run `cully-web` and `cully-docs` separately on the existing `workspace_workspace` network. The VM's Docker Caddy routes `cully.net` to `cully-web:8080` and `docs.cully.net` to `cully-docs:8080`. Nginx resolves clean docs URLs such as `/quickstart` to generated HTML. No public container ports are required.
 
-The website workflow builds and smoke-tests the image, validates Caddy/Compose, and publishes `ghcr.io/mcp-runtime/cully-web:<commit>`. Deployment uses a dedicated restricted SSH key; its forced command can only run the website controller. The Actions job's temporary registry token pulls the image without leaving a registry credential on the VM. The controller waits for container health and restores the previous image if startup fails. Public HTTPS checks verify the docs revision marker and a deep docs link. The apex revision is also checked whenever its A records point only to the VM, so stale registrar parking records do not undo a healthy deployment.
+`website-deploy.yml` runs for website inputs; `docs-deploy.yml` runs for docs and package inputs. Each workflow builds and smoke-tests its own image, publishes it to GHCR, deploys only its own Compose project, and verifies its own public revision marker. Pull requests run the build checks without publishing. The shared restricted SSH controller keeps independent state and restores the previous image if startup or public verification fails. Its temporary registry token is not retained on the VM. The apex website check runs when its A records point only to the VM.
 
 ### GitHub configuration
 
@@ -31,16 +31,18 @@ The website workflow builds and smoke-tests the image, validates Caddy/Compose, 
 | `CULLY_WEB_SSH_USER` | Variable | `root`, restricted to the deployment controller |
 | `CULLY_WEB_SSH_PORT` | Variable | `22` |
 | `CULLY_WEB_DEPLOY_ENABLED` | Variable | Set `true` after bootstrap and routing are ready |
+| `CULLY_SITE_DEPLOY_V2_ENABLED` | Variable | Set `true` after the two-site controller is installed |
+| `CULLY_DOCS_ROUTE_V2_ENABLED` | Variable | Set `true` after Caddy points docs to `cully-docs` so public verification runs |
 
-The `website-production` environment records deployments. `GITHUB_TOKEN` is provided by Actions for GHCR publishing/pulling; no personal registry token is required. PR builds validate sites without deploying. Push deployment and manual dispatch use the dedicated website workflow.
+The `website-production` environment records both site deployments, while separate concurrency groups let either site deploy independently. `GITHUB_TOKEN` is provided by Actions for GHCR publishing/pulling; no personal registry token is required.
 
 ### One-time VM bootstrap
 
-Copy `deploy/` and the dedicated public key to a private temporary directory on the VM. Run `sh deploy/bootstrap-website.sh /path/to/deployment-key.pub` as root. This installs the website Compose file, controller and forced SSH command; it does not change memory services.
+Copy `deploy/` and the dedicated public key to a private temporary directory on the VM. Run `sh deploy/bootstrap-website.sh /path/to/deployment-key.pub` as root. This installs both site Compose files, the controller and forced SSH command; it does not change memory services. The website keeps its existing `/opt/cully-web/state.json`; docs use `/opt/cully-web/docs-state.json`.
 
-Add the [Caddy fragment](https://github.com/mcp-runtime/cully/blob/main/deploy/Caddyfile.website.fragment) to `/opt/workspace/Caddyfile`, preserving existing routes. Validate with `docker exec workspace-caddy caddy validate --config /etc/caddy/Caddyfile`, then reload with `docker exec workspace-caddy caddy reload --config /etc/caddy/Caddyfile`. Caddy runs inside Docker and obtains/renews Let's Encrypt certificates automatically. Its existing persistent `/data` mount retains certificates across restarts. A separate Certbot container is unnecessary.
+After installing the new controller, set `CULLY_WEB_DEPLOY_ENABLED=true` and `CULLY_SITE_DEPLOY_V2_ENABLED=true`, leaving `CULLY_DOCS_ROUTE_V2_ENABLED` unset. Dispatch `docs-deploy.yml`: it starts and health-checks `cully-docs` while the public docs still use the old combined container. Then change the [Caddy fragment](https://github.com/mcp-runtime/cully/blob/main/deploy/Caddyfile.website.fragment) in `/opt/workspace/Caddyfile` so `docs.cully.net` points to `cully-docs:8080`. Preserve existing routes. Validate with `docker exec workspace-caddy caddy validate --config /etc/caddy/Caddyfile`, then reload with `docker exec workspace-caddy caddy reload --config /etc/caddy/Caddyfile`. Set `CULLY_DOCS_ROUTE_V2_ENABLED=true` and dispatch the docs workflow again to verify the public route. Finally dispatch `website-deploy.yml` to replace the combined website container with its website-only image.
 
-Set `CULLY_WEB_DEPLOY_ENABLED=true` and dispatch `website-deploy.yml` for the first deployment. Future changes under `site/`, `docs/`, deployment files, the website Dockerfile or package inputs deploy automatically from `main`. The currently active/previous revisions are recorded at `/opt/cully-web/state.json`.
+Future changes to either site deploy only that site from `main`. The new workflow actions are rejected by the old controller, so a missed bootstrap cannot replace the combined image with a single-site image.
 
 Point the apex and `docs` DNS records at the public web host, allow HTTPS certificate issuance, then verify both domains and a deep docs link. On the currently planned VM (`103.181.176.61`), `workspace.mcpruntime.org` resolved to that address on 2026-10-06. Recheck the address before changing DNS.
 

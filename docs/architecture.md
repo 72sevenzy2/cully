@@ -42,6 +42,12 @@ PostgreSQL is authoritative. When Mem0 is enabled, source edits and projection j
 
 Projection uses `infer=false`: Mem0 embeds authored summaries without adding a fact-extraction model call. Its upstream runtime remains a separate dependency; Cully's own binaries are Go.
 
+## Delivery boundaries
+
+The product website and technical docs have separate images, Compose services, path-filtered CI workflows and rollback state. A change under `site/` deploys `cully-web`; a change under `docs/` deploys `cully-docs`. Caddy routes their domains to separate containers on the existing workspace network. See [website hosting](website.md).
+
+The personal MCP and data services follow the release pipeline. A successful GoReleaser job publishes a tagged data image, then the gated [personal deployment workflow](personal-deployment.md) updates the VM data service before the MCP Runtime workload. PostgreSQL and Mem0 are operated separately; the release controller cannot create or replace them.
+
 ## Repository map
 
 ```text
@@ -56,7 +62,7 @@ internal/app/        server lifecycle and composition
 internal/config/     typed configuration
 migrations/          explicit, versioned SQL
 skills/cully/        combined session and memory guidance
-deploy/              future VM and Runtime routing
+deploy/              site and personal-service deployment files
 docs/                guides and roadmap
 ```
 

@@ -1,21 +1,15 @@
 FROM node:24-alpine AS build
 WORKDIR /src
-COPY package.json package-lock.json ./
-RUN npm ci
-COPY docs ./docs
 COPY site ./site
-RUN npm run site:build
+RUN node site/build.mjs
 ARG REVISION=local
-RUN printf '{"revision":"%s"}\n' "$REVISION" > dist/site/_deployment.json \
- && cp dist/site/_deployment.json dist/docs/_deployment.json
+RUN printf '{"revision":"%s"}\n' "$REVISION" > dist/site/_deployment.json
 
 FROM nginx:stable-alpine
 COPY deploy/nginx.website.conf /etc/nginx/nginx.conf
 COPY --from=build /src/dist/site /srv/site
-COPY --from=build /src/dist/docs /srv/docs
 USER nginx
 EXPOSE 8080
 HEALTHCHECK --interval=10s --timeout=3s --start-period=10s --retries=3 \
-  CMD wget -q -O /dev/null --header='Host: cully.net' http://127.0.0.1:8080/ \
-   && wget -q -O /dev/null --header='Host: docs.cully.net' http://127.0.0.1:8080/quickstart
+  CMD wget -q -O /dev/null --header='Host: cully.net' http://127.0.0.1:8080/
 ENTRYPOINT ["nginx", "-g", "daemon off;"]

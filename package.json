@@ -3,7 +3,9 @@
   "private": true,
   "scripts": {
     "site:dev": "vitepress dev docs",
-    "site:build": "vitepress build docs && node site/build.mjs",
+    "site:build": "npm run docs:build && npm run website:build",
+    "docs:build": "vitepress build docs",
+    "website:build": "node site/build.mjs",
     "site:preview": "vitepress preview docs"
   },
   "devDependencies": {

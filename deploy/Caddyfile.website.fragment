@@ -1,5 +1,5 @@
 # Add these routes to the existing Docker Caddy configuration.
-# Caddy and cully-web must share the workspace_workspace Docker network.
+# Caddy, cully-web and cully-docs must share the workspace_workspace Docker network.
 # Preserve the existing workspace, Keycloak and memory service routes.
 
 cully.net {
@@ -15,5 +15,5 @@ docs.cully.net {
         issuer acme https://acme-v02.api.letsencrypt.org/directory
     }
     encode zstd gzip
-    reverse_proxy cully-web:8080
+    reverse_proxy cully-docs:8080
 }

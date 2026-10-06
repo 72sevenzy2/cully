@@ -20,6 +20,6 @@ Database coverage includes every memory operation, owner isolation, text/vector/
 
 CI provisions `pgvector/pgvector:pg17`, runs the Go checks and builds both server containers. Mem0 tests use its documented REST contract; the actual self-hosted VM instance is verified during deployment.
 
-Build server images with `docker build -t cully-mcp .` and `docker build -f Dockerfile.data-api -t cully-data .`. GoReleaser builds independent CLI, MCP and data archives from a Cully release tag. The deployment workflow requires a manual dispatch.
+Build server images with `docker build -t cully-mcp .` and `docker build -f Dockerfile.data-api -t cully-data .`. GoReleaser builds independent CLI, MCP and data archives from a Cully release tag. After release, the [personal deployment workflow](personal-deployment.md) publishes the data image and deploys your personal Cully service only when its cutover gate is enabled.
 
 Keep domain validation in `internal/memory`, SQL in `internal/store/postgres`, protocol handlers in `internal/transport`, and initialization in `internal/app`. Follow the [architecture](architecture.md) and [roadmap](roadmap.md) when extending session capture or synchronization.

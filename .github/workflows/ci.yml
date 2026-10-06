@@ -2,7 +2,51 @@ name: CI
 on:
   push:
     branches: [main]
+    paths:
+      - 'cmd/**'
+      - 'internal/**'
+      - 'migrations/**'
+      - 'skills/**'
+      - 'go.mod'
+      - 'go.sum'
+      - 'install.sh'
+      - 'Dockerfile'
+      - 'Dockerfile.data-api'
+      - 'compose.yaml'
+      - '.env.example'
+      - '.mcp/**'
+      - 'deploy/personal_data_controller.py'
+      - 'deploy/test_personal_data_controller.py'
+      - 'deploy/compose.personal-data.yaml'
+      - 'deploy/bootstrap-personal-data.sh'
+      - '.dockerignore'
+      - '.github/workflows/ci.yml'
+      - '.github/workflows/release.yml'
+      - '.github/workflows/personal-deploy.yml'
+      - '.github/workflows/deploy.yml'
   pull_request:
+    paths:
+      - 'cmd/**'
+      - 'internal/**'
+      - 'migrations/**'
+      - 'skills/**'
+      - 'go.mod'
+      - 'go.sum'
+      - 'install.sh'
+      - 'Dockerfile'
+      - 'Dockerfile.data-api'
+      - 'compose.yaml'
+      - '.env.example'
+      - '.mcp/**'
+      - 'deploy/personal_data_controller.py'
+      - 'deploy/test_personal_data_controller.py'
+      - 'deploy/compose.personal-data.yaml'
+      - 'deploy/bootstrap-personal-data.sh'
+      - '.dockerignore'
+      - '.github/workflows/ci.yml'
+      - '.github/workflows/release.yml'
+      - '.github/workflows/personal-deploy.yml'
+      - '.github/workflows/deploy.yml'
 permissions:
   contents: read
 jobs:
@@ -49,23 +93,7 @@ jobs:
       - uses: actions/checkout@v4
       - run: docker build -t cully-mcp:test .
       - run: docker build -f Dockerfile.data-api -t cully-data:test .
-  website:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 24
-          cache: npm
-      - run: npm ci
-      - run: npm run site:build
-      - name: Test website deployment controller
-        run: python3 -m unittest discover -s deploy -p 'test_website*.py' -v
-      - name: Validate website Docker configuration
+      - name: Personal deployment controller
         run: |
-          sh -n deploy/bootstrap-website.sh
-          CULLY_WEB_REVISION="$GITHUB_SHA" docker compose -f deploy/compose.website.yaml config --quiet
-      - uses: actions/upload-artifact@v4
-        with:
-          name: cully-static-sites
-          path: dist/
+          python3 -m unittest discover -s deploy -p 'test_personal_data_controller.py' -v
+          sh -n deploy/bootstrap-personal-data.sh

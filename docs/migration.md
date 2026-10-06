@@ -1,6 +1,6 @@
 # Future Buddy VM to Cully cutover
 
-Repository consolidation does not deploy Cully. The current VM and OAuth clients continue using their running configuration until this runbook is executed. Deploy workflows require a manual dispatch.
+Repository consolidation does not deploy Cully. The current VM and OAuth clients continue using their running configuration until this runbook is executed. The [personal deployment release workflow](personal-deployment.md) stays gated until this cutover is complete.
 
 ## Inventory and backup
 

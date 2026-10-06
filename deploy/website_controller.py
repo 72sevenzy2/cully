@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Restricted SSH controller: deploy only the Cully website Compose project."""
+"""Restricted SSH controller for the independent Cully website and docs projects."""
 import json
 import os
 from pathlib import Path
@@ -10,14 +10,31 @@ import tempfile
 
 ROOT = Path('/opt/cully-web')
 REVISION = re.compile(r'[0-9a-f]{40}')
+SITES = {
+    'website': {
+        'state': 'state.json',  # Preserve the existing website deployment history.
+        'compose': 'compose.yaml',
+        'project': 'cully-web',
+        'revision_var': 'CULLY_WEB_REVISION',
+        'image': 'ghcr.io/mcp-runtime/cully-web:',
+    },
+    'docs': {
+        'state': 'docs-state.json',
+        'compose': 'compose.docs.yaml',
+        'project': 'cully-docs',
+        'revision_var': 'CULLY_DOCS_REVISION',
+        'image': 'ghcr.io/mcp-runtime/cully-docs:',
+    },
+}
 
 
 def validate_request(request):
-    if not isinstance(request, dict) or request.get('action') not in ('deploy', 'rollback'):
+    if not isinstance(request, dict) or request.get('action') not in (
+            'deploy-website', 'rollback-website', 'deploy-docs', 'rollback-docs'):
         raise ValueError('unsupported deployment action')
     if not isinstance(request.get('revision'), str) or not REVISION.fullmatch(request['revision']):
         raise ValueError('invalid deployment revision')
-    if request['action'] == 'deploy':
+    if request['action'].startswith('deploy-'):
         token = request.get('token')
         user = request.get('registry_user')
         if not isinstance(token, str) or not 1 <= len(token) <= 8192 or '\n' in token:
@@ -26,38 +43,50 @@ def validate_request(request):
             raise ValueError('invalid registry user')
 
 
-def write_state(root, state):
-    with tempfile.NamedTemporaryFile(mode='w', dir=root, delete=False) as f:
+def write_state(state_file, state):
+    with tempfile.NamedTemporaryFile(mode='w', dir=state_file.parent, delete=False) as f:
         json.dump(state, f)
         temporary = Path(f.name)
-    os.replace(temporary, root / 'state.json')
+    os.replace(temporary, state_file)
 
 
-def compose(root, revision, runner, docker_config=None):
-    env = dict(os.environ, CULLY_WEB_REVISION=revision)
+def compose(root, site, revision, runner, docker_config=None):
+    config = SITES[site]
+    env = dict(os.environ, **{config['revision_var']: revision})
     if docker_config is not None:
         env['DOCKER_CONFIG'] = docker_config
-    runner(['docker', 'compose', '--project-name', 'cully-web', '--file',
-            str(root / 'compose.yaml'), 'up', '-d', '--wait', '--wait-timeout', '120'],
+    runner(['docker', 'compose', '--project-name', config['project'], '--file',
+            str(root / config['compose']), 'up', '-d', '--wait', '--wait-timeout', '120'],
            env=env, check=True)
+
+
+def stop(root, site, revision, runner):
+    config = SITES[site]
+    env = dict(os.environ, **{config['revision_var']: revision})
+    runner(['docker', 'compose', '--project-name', config['project'], '--file',
+            str(root / config['compose']), 'down'], env=env, check=True)
 
 
 def execute(request, root=ROOT, runner=subprocess.run):
     validate_request(request)
-    state_file = root / 'state.json'
+    action, site = request['action'].split('-', 1)
+    config = SITES[site]
+    state_file = root / config['state']
     state = json.loads(state_file.read_text()) if state_file.exists() else {}
     for revision in state.values():
         if revision is not None and (not isinstance(revision, str) or not REVISION.fullmatch(revision)):
             raise ValueError('invalid saved deployment state')
     current = state.get('current')
-    if request['action'] == 'rollback':
+    if action == 'rollback':
         if current != request['revision']:
             raise ValueError('refusing to roll back a different deployment')
         previous = state.get('previous')
         if not previous:
-            raise ValueError('no previous website release available')
-        compose(root, previous, runner)
-        write_state(root, {'current': previous, 'previous': current})
+            stop(root, site, current, runner)
+            write_state(state_file, {'current': None, 'previous': current})
+            return None
+        compose(root, site, previous, runner)
+        write_state(state_file, {'current': previous, 'previous': current})
         return previous
 
     revision = request['revision']
@@ -67,16 +96,18 @@ def execute(request, root=ROOT, runner=subprocess.run):
         runner(['docker', '--config', directory, 'login', 'ghcr.io', '--username',
                 request['registry_user'], '--password-stdin'],
                input=request['token'], text=True, check=True, capture_output=True)
-        image = 'ghcr.io/mcp-runtime/cully-web:' + revision
+        image = config['image'] + revision
         runner(['docker', '--config', directory, 'pull', image], check=True)
         try:
-            compose(root, revision, runner, directory)
+            compose(root, site, revision, runner, directory)
         except subprocess.CalledProcessError:
             if current:
-                compose(root, current, runner)
+                compose(root, site, current, runner)
+            else:
+                stop(root, site, revision, runner)
             raise
     previous = state.get('previous') if revision == current else current
-    write_state(root, {'current': revision, 'previous': previous})
+    write_state(state_file, {'current': revision, 'previous': previous})
     return revision
 
 
@@ -87,7 +118,7 @@ def main():
     if len(raw) > 16384:
         raise ValueError('deployment request too large')
     revision = execute(json.loads(raw))
-    print('Website revision active:', revision)
+    print('Deployment revision active:', revision)
 
 
 if __name__ == '__main__':

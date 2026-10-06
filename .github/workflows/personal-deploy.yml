@@ -1,0 +1,107 @@
+name: Personal Cully deployment
+on:
+  workflow_call:
+    inputs:
+      tag:
+        required: true
+        type: string
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Published Cully release tag
+        required: true
+        type: string
+permissions:
+  contents: read
+  packages: write
+concurrency:
+  group: cully-personal-production
+  cancel-in-progress: false
+env:
+  RELEASE_TAG: ${{ inputs.tag }}
+  DATA_IMAGE: ghcr.io/mcp-runtime/cully-data:${{ inputs.tag }}
+  MCP_RUNTIME_VERSION: v0.5.2
+  MCP_RUNTIME_SHA256: 3b26aadb20690acf778a036f657d41c6ea86305c4e621527fd7f06628c137ca9
+  SERVER_NAME: cully
+  IMAGE_REGISTRY: registry.mcpruntime.org/org/cully-mcp
+jobs:
+  data-image:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag }}
+      - name: Validate release tag and deployment controller
+        run: |
+          python3 -c 'import os,re; assert re.fullmatch(r"v[0-9]+\.[0-9]+\.[0-9]+(?:[-.][A-Za-z0-9.-]+)?", os.environ["RELEASE_TAG"])'
+          python3 -m unittest discover -s deploy -p 'test_personal_data_controller.py' -v
+          sh -n deploy/bootstrap-personal-data.sh
+      - name: Build data service image
+        run: docker build -f Dockerfile.data-api -t "$DATA_IMAGE" .
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Publish release data image
+        run: docker push "$DATA_IMAGE"
+  deploy:
+    needs: data-image
+    if: vars.CULLY_PERSONAL_DEPLOY_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    environment: personal-cully
+    permissions:
+      contents: read
+      packages: read
+    env:
+      MCP_PLATFORM_API_TOKEN: ${{ secrets.MCP_PLATFORM_API_TOKEN }}
+      DEPLOY_HOST: ${{ vars.CULLY_PERSONAL_HOST }}
+      DEPLOY_USER: ${{ vars.CULLY_PERSONAL_SSH_USER }}
+      DEPLOY_PORT: ${{ vars.CULLY_PERSONAL_SSH_PORT }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag }}
+      - name: Check deployment credentials
+        env:
+          DEPLOY_KEY: ${{ secrets.CULLY_PERSONAL_SSH_KEY }}
+          DEPLOY_KNOWN_HOSTS: ${{ secrets.CULLY_PERSONAL_KNOWN_HOSTS }}
+        run: |
+          test -n "$MCP_PLATFORM_API_TOKEN"
+          test -n "$DEPLOY_HOST" && test -n "$DEPLOY_USER" && test -n "$DEPLOY_PORT"
+          test -n "$DEPLOY_KEY" && test -n "$DEPLOY_KNOWN_HOSTS"
+          install -d -m 700 "$HOME/.ssh"
+          umask 077
+          printf '%s\n' "$DEPLOY_KEY" > "$HOME/.ssh/cully-personal"
+          printf '%s\n' "$DEPLOY_KNOWN_HOSTS" > "$HOME/.ssh/known_hosts"
+      - name: Install pinned MCP Runtime CLI
+        run: |
+          curl -fsSL -o mcp-runtime "https://github.com/mcp-runtime/mcp-runtime/releases/download/${MCP_RUNTIME_VERSION}/mcp-runtime-linux-amd64"
+          echo "${MCP_RUNTIME_SHA256}  mcp-runtime" | sha256sum -c -
+          sudo install -m 0755 mcp-runtime /usr/local/bin/mcp-runtime
+          mcp-runtime --version
+      - name: Build and publish MCP service image
+        run: |
+          mcp-runtime auth status
+          mcp-runtime server validate --metadata-dir .mcp
+          mcp-runtime server build image "$SERVER_NAME" --registry "$IMAGE_REGISTRY" --tag "$RELEASE_TAG" --platform linux/amd64 --metadata-dir .mcp
+          image="$(yq ".servers[] | select(.name == \"${SERVER_NAME}\") | .image + \":\" + .imageTag" .mcp/servers.yaml)"
+          echo "IMAGE=$image" >> "$GITHUB_ENV"
+          mcp-runtime server push --image "$image"
+      - name: Deploy personal data service
+        id: data
+        env:
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          python3 -c 'import json,os; print(json.dumps({"action":"deploy","tag":os.environ["RELEASE_TAG"],"token":os.environ["GHCR_TOKEN"],"registry_user":os.environ["GITHUB_ACTOR"]}))' |
+            ssh -i "$HOME/.ssh/cully-personal" -p "$DEPLOY_PORT" -o BatchMode=yes -o StrictHostKeyChecking=yes -o ConnectTimeout=15 "$DEPLOY_USER@$DEPLOY_HOST" deploy
+      - name: Deploy personal MCP service
+        run: mcp-runtime server deploy "$SERVER_NAME" --metadata-dir .mcp --update
+      - name: Roll back data service if MCP deployment fails
+        if: failure() && steps.data.outcome == 'success'
+        run: |
+          python3 -c 'import json,os; print(json.dumps({"action":"rollback","tag":os.environ["RELEASE_TAG"]}))' |
+            ssh -i "$HOME/.ssh/cully-personal" -p "$DEPLOY_PORT" -o BatchMode=yes -o StrictHostKeyChecking=yes -o ConnectTimeout=15 "$DEPLOY_USER@$DEPLOY_HOST" deploy
+      - name: Remove temporary credentials
+        if: always()
+        run: rm -f "$HOME/.ssh/cully-personal"
