@@ -37,6 +37,6 @@ Run `cully agent setup cursor --mcp-url URL`, then restart Cursor. Cully install
 
 Use `cully mcp add --agent codex --url URL` to add only the MCP connection. Add `--oauth` when the server requires sign-in. If you installed Cully before continuity hooks were available, rerun `cully agent setup codex` (with your agent name) to refresh the skill and hooks. Setup preserves unrelated agent configuration and does not replace a Cully connection that points at another URL. Run `cully status` to inspect the local integration.
 
-Running `cully agent setup AGENT` without an MCP URL installs local guidance but does not start the memory services. Running `cully setup AGENT` starts the standard memory stack and connects that agent. Neither command signs you into an OAuth server automatically. For server requirements, see [self-hosting](/hosting) and [team deployment](/team-deployment).
+Running `cully agent setup AGENT` without an MCP URL installs local guidance but does not start the memory services. Running `cully setup --agent AGENT` starts the standard memory stack and connects that agent. Neither command signs you into an OAuth server automatically. For server requirements, see [self-hosting](/hosting) and [team deployment](/team-deployment).
 
 For detailed client configuration, see the [client reference](https://github.com/mcp-runtime/cully/blob/main/clients/README.md).

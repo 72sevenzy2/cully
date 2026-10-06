@@ -17,7 +17,7 @@ const help = `Cully — your companion for better work and everyday life.
 
 Usage:
   cully agent setup [claude|codex|cursor|all] [--mcp-url URL] [--oauth]
-  cully setup [claude|codex|cursor] [--oauth] [--prepare]
+  cully setup [--agent claude|codex|cursor] [--oauth] [--prepare]
   cully uninstall [claude|codex|cursor|all] Remove managed agent setup
   cully status [directory]                Show session and agent status
   cully suggestions                       Review suggested improvements
@@ -102,26 +102,54 @@ func run(args []string) error {
 }
 
 func runSetup(args []string) error {
-	target := ""
-	if len(args) > 0 && !strings.HasPrefix(args[0], "-") {
-		target, args = args[0], args[1:]
-	}
-	fs := flag.NewFlagSet("setup", flag.ContinueOnError)
-	oauth := fs.Bool("oauth", false, "server uses OAuth; print sign-in instructions")
-	prepare := fs.Bool("prepare", false, "download the self-hosted stack and create editable configuration without starting services")
-	if err := fs.Parse(args); err != nil {
+	target, oauth, prepare, err := parseSetup(args)
+	if err != nil {
 		return err
 	}
-	if len(fs.Args()) > 1 || (target != "" && len(fs.Args()) != 0) {
-		return fmt.Errorf("usage: cully setup [claude|codex|cursor] [--oauth] [--prepare]")
+	return runSelfHost(target, oauth, prepare)
+}
+
+func parseSetup(args []string) (target string, oauth, prepare bool, err error) {
+	legacyTarget := ""
+	if len(args) > 0 && !strings.HasPrefix(args[0], "-") {
+		legacyTarget, args = args[0], args[1:]
 	}
-	if target == "" && len(fs.Args()) == 1 {
+	fs := flag.NewFlagSet("setup", flag.ContinueOnError)
+	selected := fs.String("agent", "", "coding agent to connect: claude, codex, or cursor")
+	fs.BoolVar(&oauth, "oauth", false, "server uses OAuth; print sign-in instructions")
+	fs.BoolVar(&prepare, "prepare", false, "download the self-hosted stack and create editable configuration without starting services")
+	if err = fs.Parse(args); err != nil {
+		return "", false, false, err
+	}
+	usage := fmt.Errorf("usage: cully setup [--agent claude|codex|cursor] [--oauth] [--prepare]")
+	if len(fs.Args()) > 1 || (legacyTarget != "" && len(fs.Args()) != 0) {
+		return "", false, false, usage
+	}
+	if legacyTarget != "" {
+		target = legacyTarget
+	}
+	if len(fs.Args()) == 1 {
 		target = fs.Args()[0]
 	}
-	if target == "all" {
-		return fmt.Errorf("server setup accepts one agent at a time")
+	agentFlagSet := false
+	fs.Visit(func(option *flag.Flag) {
+		if option.Name == "agent" {
+			agentFlagSet = true
+		}
+	})
+	if agentFlagSet {
+		if *selected == "" || target != "" {
+			return "", false, false, usage
+		}
+		target = *selected
 	}
-	return runSelfHost(target, *oauth, *prepare)
+	if target == "all" {
+		return "", false, false, fmt.Errorf("server setup accepts one agent at a time")
+	}
+	if target != "" && target != "claude" && target != "codex" && target != "cursor" {
+		return "", false, false, fmt.Errorf("choose --agent claude, codex, or cursor")
+	}
+	return target, oauth, prepare, nil
 }
 
 func runAgentSetup(args []string) error {

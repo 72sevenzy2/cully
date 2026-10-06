@@ -43,6 +43,34 @@ func TestSetupMCPOptionsFailBeforeChangingAgentSetup(t *testing.T) {
 	}
 }
 
+func TestSetupAgentFlagAndLegacyName(t *testing.T) {
+	for _, test := range []struct {
+		args    []string
+		target  string
+		oauth   bool
+		prepare bool
+	}{
+		{args: []string{"--agent", "codex"}, target: "codex"},
+		{args: []string{"--agent=claude", "--oauth"}, target: "claude", oauth: true},
+		{args: []string{"--agent", "cursor", "--prepare"}, target: "cursor", prepare: true},
+		{args: []string{"codex", "--oauth"}, target: "codex", oauth: true},
+		{args: []string{"--prepare"}, prepare: true},
+	} {
+		target, oauth, prepare, err := parseSetup(test.args)
+		if err != nil || target != test.target || oauth != test.oauth || prepare != test.prepare {
+			t.Fatalf("parseSetup(%v) = %q, %v, %v, %v", test.args, target, oauth, prepare, err)
+		}
+	}
+	for _, args := range [][]string{
+		{"--agent"}, {"--agent", ""}, {"--agent", "all"}, {"--agent", "other"},
+		{"codex", "--agent", "claude"}, {"--agent", "codex", "cursor"},
+	} {
+		if _, _, _, err := parseSetup(args); err == nil {
+			t.Fatalf("accepted invalid setup args: %v", args)
+		}
+	}
+}
+
 func TestMCPAddRequiresDeploymentURL(t *testing.T) {
 	if err := run([]string{"mcp", "add", "--agent", "codex"}); err == nil {
 		t.Fatal("mcp add accepted a missing deployment URL")
