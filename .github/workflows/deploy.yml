@@ -1,28 +1,26 @@
 name: Deploy
 
-# Publishes Buddy to the MCP Runtime public preview (platform.mcpruntime.org)
+# Publishes Cully to the MCP Runtime public preview (platform.mcpruntime.org)
 # using the documented server-author flow: build image -> push -> deploy.
-# Buddy lives in the shared catalog namespace (mcp-servers, from .mcp
+# Cully lives in the shared catalog namespace (mcp-servers, from .mcp
 # metadata) with no publish scope; the platform runs in tenant mode, so
 # --scope org/public would be rejected. The token must belong to an admin.
 on:
-  release:
-    types: [published]
   workflow_dispatch:
 
 permissions:
   contents: read
 
 concurrency:
-  group: deploy-buddy
+  group: deploy-cully
   cancel-in-progress: false
 
 env:
   MCP_RUNTIME_VERSION: v0.5.2
   MCP_RUNTIME_SHA256: 3b26aadb20690acf778a036f657d41c6ea86305c4e621527fd7f06628c137ca9
   MCP_PLATFORM_API_URL: https://platform.mcpruntime.org
-  SERVER_NAME: buddy
-  IMAGE_REGISTRY: registry.mcpruntime.org/org/buddy-mcp
+  SERVER_NAME: cully
+  IMAGE_REGISTRY: registry.mcpruntime.org/org/cully-mcp
 
 jobs:
   deploy:

@@ -1,12 +1,11 @@
-FROM python:3.13-slim
+FROM golang:1.25-bookworm AS build
+WORKDIR /src
+COPY go.mod go.sum ./
+RUN go mod download
+COPY . .
+RUN CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /cully-data ./cmd/cully-data
 
-ENV PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONUNBUFFERED=1
-WORKDIR /app
-COPY requirements.txt ./
-RUN pip install --no-cache-dir -r requirements.txt \
-    && useradd --uid 65532 --create-home buddy
-COPY buddy_mcp ./buddy_mcp
-USER 65532:65532
+FROM gcr.io/distroless/static-debian12:nonroot
+COPY --from=build /cully-data /cully-data
 EXPOSE 8083
-CMD ["uvicorn", "buddy_mcp.data_api:app", "--host", "0.0.0.0", "--port", "8083", "--no-access-log"]
+ENTRYPOINT ["/cully-data"]
