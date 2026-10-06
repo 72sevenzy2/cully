@@ -2,11 +2,11 @@
 
 Cully targets the self-hosted Mem0 REST server, not Mem0's hosted API. Its Go adapter calls `GET /memories`, `POST /memories`, `POST /search` and `DELETE /memories/{id}` with `X-API-Key` authentication. Endpoint details follow [the upstream server](https://github.com/mem0ai/mem0/blob/c93420c49a6b14c3d446bdb156d96811908fd90a/server/main.py).
 
-For an existing memory VM, deploy Mem0 separately or connect Cully to an existing self-hosted instance. The fresh [self-hosted full stack](/hosting#one-command-full-stack) and gated [personal release stack](/personal-deployment) each start a pinned Mem0 REST server with a persistent vector database and history volume. Keep the REST endpoint private to the service network. If an existing Mem0 installation only exposes MCP tools, it needs a REST endpoint implementing this contract before Cully can use it.
+The [self-hosted full stack](/hosting#one-command-full-stack) and gated [personal release stack](/personal-deployment) each start a pinned Mem0 REST server with a persistent vector database and history volume. Keep the REST endpoint private to the service network. A separately operated Mem0 instance must expose the REST contract below.
 
 Set `CULLY_MEM0_URL` and `CULLY_MEM0_API_KEY` on `cully-data`. Both are required to enable indexing. These values are never needed in the public MCP workload or coding-agent configuration. The base URL must omit a trailing endpoint path such as `/search`; a reverse-proxy base prefix is supported.
 
-The existing-VM root Compose file deliberately does not replace an existing Mem0 deployment. The fresh-install [`deploy/self-hosted/compose.mem0.yaml`](https://github.com/mcp-runtime/cully/blob/main/deploy/self-hosted/compose.mem0.yaml) builds the pinned upstream Mem0 server, provisions its own persistent PostgreSQL database and history volume, and keeps its REST endpoint private. `./start.sh` brings it up with Cully's other services. Mem0 maintains its own Python runtime inside its container; the Cully CLI, MCP server and data API have no Python runtime dependency.
+[`deploy/self-hosted/compose.mem0.yaml`](https://github.com/mcp-runtime/cully/blob/main/deploy/self-hosted/compose.mem0.yaml) builds the pinned upstream Mem0 server, provisions its own persistent PostgreSQL database and history volume, and keeps its REST endpoint private. `./start.sh` brings it up with Cully's other services. Mem0 maintains its own Python runtime inside its container; the Cully CLI, MCP server and data API have no Python runtime dependency.
 
 The full-stack example uses OpenAI embeddings by default, so authored summaries leave the host for that provider. `infer=false` skips Mem0 fact extraction. Operators can configure a different embedder in their Mem0 build/configuration; a separate Mem0 instance can still be used through `CULLY_MEM0_URL` and `CULLY_MEM0_API_KEY`.
 
@@ -14,7 +14,7 @@ Each source entry gets an owner-scoped Mem0 projection. The Mem0 user ID is a SH
 
 V1 uses `infer=false`: compact, already authored summaries are embedded directly. Automatic fact extraction can be added later with explicit model configuration and a stronger source-to-fact deletion contract. Do not assume the current projection worker consolidates or extracts facts.
 
-After the source-table migration and Mem0 configuration, queue existing records:
+After configuring Mem0 for an existing Cully database, queue source records:
 
 ```sh
 docker compose run --rm data-api reindex

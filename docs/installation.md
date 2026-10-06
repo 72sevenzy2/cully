@@ -61,6 +61,6 @@ In OAuth mode, read tools require `tools:read`; logging, editing and deletion re
 
 The combined skill is also available at `skills/cully/SKILL.md`. Local controls work without a remote connection; shared memory requires the deployed MCP server. Agents do not need the private data API token or Mem0 API key.
 
-## Existing installations
+## Existing agent integrations
 
-The product uses the new `cully` command, `cully_*` tools and `CULLY_*` configuration. No old aliases are provided. At cutover, remove recognized old integrations with their original uninstallers, then install Cully and reconnect the new MCP server. Preserve user-owned agent configuration. Follow [the VM migration guide](migration.md) before changing running services.
+Use the `cully` command, `cully_*` tools and `CULLY_*` configuration. Remove older managed agent integrations with their original uninstallers, then install Cully and reconnect its MCP server. Preserve user-owned agent configuration. Follow the [VM cutover guide](migration.md) before changing hosted services.

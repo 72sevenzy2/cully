@@ -5,7 +5,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"math"
 	"net/url"
 	"regexp"
 	"strings"
@@ -50,30 +49,28 @@ func (e *Entry) NormalizeTimes() {
 }
 
 type LogInput struct {
-	Summary    string    `json:"summary"`
-	Assistant  string    `json:"assistant"`
-	Section    string    `json:"section"`
-	ProjectURL *string   `json:"project_url,omitempty"`
-	Category   *string   `json:"category,omitempty"`
-	EntryType  string    `json:"entry_type,omitempty"`
-	Approach   *string   `json:"approach,omitempty"`
-	Outcome    *string   `json:"outcome,omitempty"`
-	Issue      *string   `json:"issue,omitempty"`
-	Learning   *string   `json:"learning,omitempty"`
-	NextSteps  *string   `json:"next_steps,omitempty"`
-	Tags       []string  `json:"tags,omitempty"`
-	Embedding  []float64 `json:"embedding,omitempty"`
-	OccurredAt string    `json:"occurred_at,omitempty"`
+	Summary    string   `json:"summary"`
+	Assistant  string   `json:"assistant"`
+	Section    string   `json:"section"`
+	ProjectURL *string  `json:"project_url,omitempty"`
+	Category   *string  `json:"category,omitempty"`
+	EntryType  string   `json:"entry_type,omitempty"`
+	Approach   *string  `json:"approach,omitempty"`
+	Outcome    *string  `json:"outcome,omitempty"`
+	Issue      *string  `json:"issue,omitempty"`
+	Learning   *string  `json:"learning,omitempty"`
+	NextSteps  *string  `json:"next_steps,omitempty"`
+	Tags       []string `json:"tags,omitempty"`
+	OccurredAt string   `json:"occurred_at,omitempty"`
 }
 type SearchInput struct {
-	Query          string    `json:"query,omitempty"`
-	ProjectURL     *string   `json:"project_url,omitempty"`
-	EntryType      *string   `json:"entry_type,omitempty"`
-	Section        *string   `json:"section,omitempty"`
-	Category       *string   `json:"category,omitempty"`
-	Since          string    `json:"since,omitempty"`
-	Limit          int       `json:"limit,omitempty"`
-	QueryEmbedding []float64 `json:"query_embedding,omitempty"`
+	Query      string  `json:"query,omitempty"`
+	ProjectURL *string `json:"project_url,omitempty"`
+	EntryType  *string `json:"entry_type,omitempty"`
+	Section    *string `json:"section,omitempty"`
+	Category   *string `json:"category,omitempty"`
+	Since      string  `json:"since,omitempty"`
+	Limit      int     `json:"limit,omitempty"`
 }
 type RecentInput struct {
 	ProjectURL *string `json:"project_url,omitempty"`
@@ -86,17 +83,16 @@ type IDInput struct {
 	EntryID string `json:"entry_id"`
 }
 type UpdateInput struct {
-	EntryID   string     `json:"entry_id"`
-	Summary   *string    `json:"summary,omitempty"`
-	Approach  *string    `json:"approach,omitempty"`
-	Outcome   *string    `json:"outcome,omitempty"`
-	Issue     *string    `json:"issue,omitempty"`
-	Learning  *string    `json:"learning,omitempty"`
-	NextSteps *string    `json:"next_steps,omitempty"`
-	Section   *string    `json:"section,omitempty"`
-	Category  *string    `json:"category,omitempty"`
-	Tags      *[]string  `json:"tags,omitempty"`
-	Embedding *[]float64 `json:"embedding,omitempty"`
+	EntryID   string    `json:"entry_id"`
+	Summary   *string   `json:"summary,omitempty"`
+	Approach  *string   `json:"approach,omitempty"`
+	Outcome   *string   `json:"outcome,omitempty"`
+	Issue     *string   `json:"issue,omitempty"`
+	Learning  *string   `json:"learning,omitempty"`
+	NextSteps *string   `json:"next_steps,omitempty"`
+	Section   *string   `json:"section,omitempty"`
+	Category  *string   `json:"category,omitempty"`
+	Tags      *[]string `json:"tags,omitempty"`
 }
 type ProjectsInput struct {
 	Limit   int     `json:"limit,omitempty"`
@@ -210,20 +206,6 @@ func entryType(v *string) error {
 	}
 	return nil
 }
-func embedding(v []float64) error {
-	if v == nil {
-		return nil
-	}
-	if len(v) != 1536 {
-		return fmt.Errorf("%w: embedding must contain 1536 values", ErrInvalid)
-	}
-	for _, f := range v {
-		if math.IsNaN(f) || math.IsInf(f, 0) {
-			return fmt.Errorf("%w: embedding must be finite", ErrInvalid)
-		}
-	}
-	return nil
-}
 func tags(v *[]string) error {
 	if len(*v) > 20 {
 		return fmt.Errorf("%w: at most 20 tags", ErrInvalid)
@@ -302,7 +284,7 @@ func (r *Request) Validate() error {
 		if !assistantRE.MatchString(v.Assistant) {
 			return fmt.Errorf("%w: invalid assistant", ErrInvalid)
 		}
-		checks = append(checks, text(&v.Summary, true), section(&v.Section), category(v.Category), entryType(&v.EntryType), project(v.ProjectURL), embedding(v.Embedding), stamp(v.OccurredAt), tags(&v.Tags))
+		checks = append(checks, text(&v.Summary, true), section(&v.Section), category(v.Category), entryType(&v.EntryType), project(v.ProjectURL), stamp(v.OccurredAt), tags(&v.Tags))
 		for _, p := range []*string{v.Approach, v.Outcome, v.Issue, v.Learning, v.NextSteps} {
 			checks = append(checks, text(p, false))
 		}
@@ -312,9 +294,9 @@ func (r *Request) Validate() error {
 			break
 		}
 		limit(&v.Limit, 50)
-		checks = append(checks, text(&v.Query, false), section(v.Section), category(v.Category), entryType(v.EntryType), project(v.ProjectURL), embedding(v.QueryEmbedding), stamp(v.Since))
-		if v.Query == "" && len(v.QueryEmbedding) == 0 {
-			return fmt.Errorf("%w: provide query or query_embedding", ErrInvalid)
+		checks = append(checks, text(&v.Query, false), section(v.Section), category(v.Category), entryType(v.EntryType), project(v.ProjectURL), stamp(v.Since))
+		if v.Query == "" {
+			return fmt.Errorf("%w: provide query text", ErrInvalid)
 		}
 		if r.Operation == "recall" && v.Query == "" {
 			return fmt.Errorf("%w: recall requires query text", ErrInvalid)
@@ -337,7 +319,7 @@ func (r *Request) Validate() error {
 			break
 		}
 		checks = append(checks, id(v.EntryID), section(v.Section), category(v.Category), text(v.Summary, true))
-		changed := v.Summary != nil || v.Section != nil || v.Category != nil || v.Tags != nil || v.Embedding != nil
+		changed := v.Summary != nil || v.Section != nil || v.Category != nil || v.Tags != nil
 		for _, p := range []*string{v.Approach, v.Outcome, v.Issue, v.Learning, v.NextSteps} {
 			checks = append(checks, text(p, false))
 			changed = changed || p != nil
@@ -347,9 +329,6 @@ func (r *Request) Validate() error {
 		}
 		if v.Tags != nil {
 			checks = append(checks, tags(v.Tags))
-		}
-		if v.Embedding != nil {
-			checks = append(checks, embedding(*v.Embedding))
 		}
 	case "projects":
 		if r.Projects == nil {

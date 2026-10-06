@@ -52,7 +52,7 @@ func Handler(service memory.Service, cfg AuthConfig, path, version string) http.
 		return ti.UserID, nil
 	}
 	add(server, service, identity, "cully_log", "Save a personal or company memory record.", true, func(v memory.LogInput) memory.Request { return memory.Request{Operation: "log", Log: &v} })
-	add(server, service, identity, "cully_search", "Search source records using full-text search and optional vectors.", false, func(v memory.SearchInput) memory.Request { return memory.Request{Operation: "search", Search: &v} })
+	add(server, service, identity, "cully_search", "Search authoritative source records using PostgreSQL full-text search.", false, func(v memory.SearchInput) memory.Request { return memory.Request{Operation: "search", Search: &v} })
 	add(server, service, identity, "cully_recall", "Recall live source records through self-hosted Mem0 semantic memory. Requires configured Mem0 indexing.", false, func(v memory.SearchInput) memory.Request { return memory.Request{Operation: "recall", Search: &v} })
 	add(server, service, identity, "cully_recent", "List recent memory records by section or project.", false, func(v memory.RecentInput) memory.Request { return memory.Request{Operation: "recent", Recent: &v} })
 	add(server, service, identity, "cully_get", "Get one owned memory record.", false, func(v memory.IDInput) memory.Request { return memory.Request{Operation: "get", ID: &v} })

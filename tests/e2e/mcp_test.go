@@ -33,8 +33,12 @@ func TestContainerStack(t *testing.T) {
 	call := func(name string, input any) memory.Result {
 		t.Helper()
 		response, err := session.CallTool(ctx, &sdk.CallToolParams{Name: name, Arguments: input})
-		if err != nil || response.IsError {
-			t.Fatalf("%s: %v, %+v", name, err, response)
+		if err != nil {
+			t.Fatalf("%s: %v", name, err)
+		}
+		if response.IsError {
+			data, _ := json.Marshal(response)
+			t.Fatalf("%s returned a tool error: %s", name, data)
 		}
 		data, err := json.Marshal(response.StructuredContent)
 		if err != nil {
@@ -46,7 +50,7 @@ func TestContainerStack(t *testing.T) {
 		}
 		return result
 	}
-	logged := call("cully_log", memory.LogInput{Summary: "Disposable container end-to-end check", Assistant: "ci", Section: "company"}).Entry
+	logged := call("cully_log", memory.LogInput{Summary: "Disposable container end-to-end check", Assistant: "other", Section: "company"}).Entry
 	if logged == nil || logged.ID == "" {
 		t.Fatal("MCP write did not reach PostgreSQL")
 	}

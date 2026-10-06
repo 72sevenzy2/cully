@@ -9,14 +9,14 @@ go build ./...
 go test ./... -race -count=1
 ```
 
-Unit and transport tests run without a database. PostgreSQL tests require `CULLY_TEST_DATABASE_URL` pointing to a disposable pgvector database. They create and remove generated schemas; use a separate test database, never production.
+Unit and transport tests run without a database. PostgreSQL tests require `CULLY_TEST_DATABASE_URL` pointing to a disposable plain PostgreSQL database. They create and remove generated schemas; use a separate test database, never production.
 
 ```sh
 CULLY_TEST_DATABASE_URL=postgresql://test:test@localhost:5432/cully_test \
   go test ./internal/store/postgres -race -count=1 -v
 ```
 
-Database coverage includes every memory operation, owner isolation, text/vector/hybrid search, personal records, source-table/index migration, Mem0 retries/deletion and authenticated MCP-to-data-API-to-PostgreSQL E2E.
+Database coverage includes every memory operation, owner isolation, full-text search, personal records, fresh schema creation, Mem0 retries/deletion and authenticated MCP-to-data-API-to-PostgreSQL E2E.
 
 Separate workflows provide independent checks and badge targets:
 

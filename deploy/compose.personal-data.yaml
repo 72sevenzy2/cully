@@ -1,7 +1,7 @@
 # Fresh, isolated personal stack. Existing VM database volumes are never mounted.
 services:
   db:
-    image: pgvector/pgvector:pg17
+    image: postgres:17
     restart: unless-stopped
     environment:
       POSTGRES_DB: ${CULLY_DB_NAME:?set CULLY_DB_NAME}

@@ -48,7 +48,7 @@ Point the apex and `docs` DNS records at the public web host, allow HTTPS certif
 
 Keep only `103.181.176.61` in the apex A records; remove the parking addresses `3.33.130.190` and `15.197.148.33`. Verify A/AAAA records and reachability on ports 80/443 before certificate issuance. The VM identifies itself as `devbox-2`; the local `devbox2` and `cully-vm` aliases use its configured SSH key.
 
-The website domains do not change the MCP resource URL. The planned hosted MCP endpoint is `https://mcp.mcpruntime.org/cully/mcp`; its service cutover has separate requirements in the [VM migration guide](migration.md).
+The website domains do not change the MCP resource URL. The planned hosted MCP endpoint is `https://mcp.mcpruntime.org/cully/mcp`; its service cutover has separate requirements in the [VM cutover guide](migration.md).
 
 ## Release installer copy
 

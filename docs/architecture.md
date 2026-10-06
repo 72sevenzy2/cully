@@ -8,7 +8,7 @@ flowchart LR
   L --> S[Local diagnostics and suggestions]
   A -->|Private no-OAuth or OAuth| M[Cully MCP]
   M -->|Private authenticated HTTPS| D[Cully data API]
-  D --> P[(PostgreSQL + pgvector)]
+  D --> P[(PostgreSQL source records)]
   P --> Q[Durable projection jobs]
   Q --> F[Self-hosted Mem0]
   D -->|Semantic recall| F
@@ -32,11 +32,11 @@ In OAuth mode, the verified subject becomes the owner. In no-OAuth mode, `CULLY_
 
 `cmd/cully-data` hosts the private API, runs the Mem0 worker, and provides explicit `migrate`, `reindex` and `health` commands. `internal/memory` owns types and input validation. `internal/store/postgres` implements owner-scoped SQL using a bounded pgx pool.
 
-Full-text search uses PostgreSQL's generated search vector. Optional 1536-dimensional query vectors retrieve nearest candidates with pgvector. Hybrid search combines bounded text and vector candidate lists through reciprocal-rank fusion.
+PostgreSQL stores authoritative records, owner-scoped indexes and a generated full-text search column. `cully_search` runs text queries there. Cully does not store or query embeddings in its source database; semantic recall is delegated to Mem0 through `cully_recall`.
 
 ## Semantic memory
 
-PostgreSQL is authoritative. When Mem0 is enabled, source edits and projection jobs commit in the same transaction. Self-hosted Mem0 does the semantic indexing and candidate recall work. A worker reconciles one owner's source entry into Mem0 and retries outages with backoff. Deletes remove the corresponding projection.
+PostgreSQL is authoritative. When Mem0 is enabled, source edits and projection jobs commit in the same transaction. Self-hosted Mem0 uses its own pgvector-backed database for semantic indexing and candidate recall. A worker reconciles one owner's source entry into Mem0 and retries outages with backoff. Deletes remove the corresponding projection.
 
 `cully_recall` uses Mem0 to find candidates, then loads live records from PostgreSQL. It rejects another owner's records, deleted entries and projections with outdated source timestamps. It returns source records, not unverified raw Mem0 results.
 
@@ -66,4 +66,4 @@ deploy/              site and personal-service deployment files
 docs/                guides and roadmap
 ```
 
-The intended cutover uses the VM currently running Buddy for PostgreSQL, the Cully data API and self-hosted Mem0. The public MCP service can continue in MCP Runtime. See [the VM runbook](migration.md) for preserving the existing volume and switching clients.
+The personal VM cutover provisions fresh Cully databases and services. The public MCP service can continue in MCP Runtime. See the [VM runbook](migration.md) for provisioning and switching clients.

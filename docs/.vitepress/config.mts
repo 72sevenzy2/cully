@@ -66,7 +66,7 @@ export default withMermaid(defineConfig({
           { text: 'Configuration', link: '/configuration' },
           { text: 'Personal deployment', link: '/personal-deployment' },
           { text: 'Architecture', link: '/architecture' },
-          { text: 'VM migration', link: '/migration' },
+          { text: 'VM cutover', link: '/migration' },
           { text: 'Website and docs hosting', link: '/website' }
         ]
       },

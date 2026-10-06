@@ -12,12 +12,12 @@ remembered when the user asks.
 | Agent setup and session status | Local CLI with supported Claude/Codex/Cursor surfaces |
 | Suggestions and applying improvements | Local advisor, numbered suggestions and reviewed apply plans |
 | Personal and project records | Shared typed memory service with authenticated owner scoping |
-| Search | PostgreSQL full-text, optional pgvector and reciprocal-rank hybrid fusion |
+| Search | PostgreSQL full-text for source records; Mem0 for semantic recall |
 | Semantic recall | Self-hosted Mem0 with source-record hydration and stale/deleted filtering |
 | Updates and deletion | Source transaction plus durable Mem0 projection jobs and retry |
 | Hosted/self-hosted agent connection | One `cully mcp add` invocation per agent and configurable URL |
 | Service runtime | Go MCP and private Go data API, bounded database pool and HTTP deadlines |
-| VM migration | Explicit transactional migration preserving existing record IDs and owner subjects |
+| Database setup | Explicit transactional schema creation on a fresh PostgreSQL database |
 
 The redundant transcript scanner and local JSONL memory feature were removed.
 Status combines session and integration views. Internal hooks/workers are hidden
@@ -26,7 +26,7 @@ asynchronously by self-hosted Mem0. No old product aliases are maintained.
 
 ## Deployment
 
-Complete the [existing VM migration](migration.md), provision the separately
+Complete the [personal VM cutover](migration.md), provision the separately
 hosted Mem0 runtime, register the Cully OAuth resource and verify client sign-in.
 The purchased website/docs domains do not change the MCP audience. Publish the
 website at cully.net and documentation at docs.cully.net after configuring their
@@ -38,8 +38,8 @@ routes. [Hosting](hosting.md) separates client setup from operator configuration
    and installation packages, retaining one shared memory domain.
 2. Make advisor jobs immutable, coalesce repeated jobs by session, and use bounded
    concurrent workers after measuring throughput and cross-project isolation.
-3. Measure Go service latency, PostgreSQL plans and allocation rates. Preserve
-   index-friendly nearest-neighbor retrieval and calibrated rank fusion.
+3. Measure Go service latency, PostgreSQL full-text plans and allocation rates.
+   Tune Mem0 recall separately, while keeping source-record hydration and owner checks.
 4. Add explicit, authenticated capture of selected work summaries if needed.
    Define consent, project identity, idempotency, ownership and deletion semantics
    before adding any background upload. Do not reinstate blanket transcript scans.

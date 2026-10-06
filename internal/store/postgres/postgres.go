@@ -1,4 +1,4 @@
-// Package postgres implements owner-scoped persistence with PostgreSQL and pgvector.
+// Package postgres implements owner-scoped source records with PostgreSQL.
 package postgres
 
 import (
@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"strconv"
 	"strings"
 	"time"
 
@@ -23,18 +22,8 @@ type Store struct {
 	Mem0        *mem0.Client
 }
 
-const record = "to_jsonb(e) - 'owner_subject' - 'embedding' - 'search_vector'"
+const record = "to_jsonb(e) - 'owner_subject' - 'search_vector'"
 
-func Vector(v []float64) any {
-	if v == nil {
-		return nil
-	}
-	s := make([]string, len(v))
-	for i, f := range v {
-		s[i] = strconv.FormatFloat(f, 'g', 9, 64)
-	}
-	return "[" + strings.Join(s, ",") + "]"
-}
 func decode(data []byte) (*memory.Entry, error) {
 	var e memory.Entry
 	if err := json.Unmarshal(data, &e); err != nil {
@@ -93,7 +82,7 @@ func (s *Store) execute(ctx context.Context, tx pgx.Tx, owner string, r memory.R
 		if v.OccurredAt != "" {
 			when, _ = time.Parse(time.RFC3339, v.OccurredAt)
 		}
-		e, err := one(ctx, tx, `INSERT INTO cully_entries AS e (id,owner_subject,section,project_url,category,entry_type,summary,approach,outcome,issue,learning,next_steps,assistant,tags,embedding,occurred_at) VALUES ($1::uuid,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15::vector,$16) RETURNING `+record, uuid.NewString(), owner, v.Section, v.ProjectURL, v.Category, v.EntryType, v.Summary, v.Approach, v.Outcome, v.Issue, v.Learning, v.NextSteps, v.Assistant, v.Tags, Vector(v.Embedding), when)
+		e, err := one(ctx, tx, `INSERT INTO cully_entries AS e (id,owner_subject,section,project_url,category,entry_type,summary,approach,outcome,issue,learning,next_steps,assistant,tags,occurred_at) VALUES ($1::uuid,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15) RETURNING `+record, uuid.NewString(), owner, v.Section, v.ProjectURL, v.Category, v.EntryType, v.Summary, v.Approach, v.Outcome, v.Issue, v.Learning, v.NextSteps, v.Assistant, v.Tags, when)
 		out.Entry = e
 		return out, err
 	case "get":
@@ -128,9 +117,6 @@ func (s *Store) execute(ctx context.Context, tx pgx.Tx, owner string, r memory.R
 		if v.Tags != nil {
 			add("tags", *v.Tags, "")
 		}
-		if v.Embedding != nil {
-			add("embedding", Vector(*v.Embedding), "::vector")
-		}
 		assignments = append(assignments, "updated_at=now()")
 		e, err := one(ctx, tx, "UPDATE cully_entries e SET "+strings.Join(assignments, ",")+" WHERE owner_subject=$1 AND id=$2::uuid RETURNING "+record, args...)
 		out.Entry = e
@@ -143,9 +129,9 @@ func (s *Store) execute(ctx context.Context, tx pgx.Tx, owner string, r memory.R
 	case "search":
 		v := r.Search
 		where, args := filters(owner, v.ProjectURL, v.Section, v.Category, v.EntryType, v.Since)
-		args = append(args, v.Query, Vector(v.QueryEmbedding), v.Limit*4, v.Limit)
-		q, vec, candidates, count := len(args)-3, len(args)-2, len(args)-1, len(args)
-		sql := fmt.Sprintf(`WITH text_hits AS (SELECT id, row_number() OVER(ORDER BY ts_rank_cd(search_vector,websearch_to_tsquery('english',$%d)) DESC,id) AS rank FROM cully_entries WHERE %s AND $%d <> '' AND search_vector @@ websearch_to_tsquery('english',$%d) ORDER BY ts_rank_cd(search_vector,websearch_to_tsquery('english',$%d)) DESC,id LIMIT $%d), vector_candidates AS (SELECT id,embedding <=> $%d::vector AS distance FROM cully_entries WHERE %s AND $%d::vector IS NOT NULL AND embedding IS NOT NULL ORDER BY embedding <=> $%d::vector LIMIT $%d), vector_hits AS (SELECT id,row_number() OVER(ORDER BY distance,id) AS rank FROM vector_candidates), fused AS (SELECT id,sum(1.0/(60+rank)) AS score FROM (SELECT * FROM text_hits UNION ALL SELECT * FROM vector_hits) h GROUP BY id) SELECT %s FROM fused f JOIN cully_entries e ON e.id=f.id WHERE e.owner_subject=$1 ORDER BY f.score DESC,e.occurred_at DESC,e.id LIMIT $%d`, q, where, q, q, q, candidates, vec, where, vec, vec, candidates, record, count)
+		args = append(args, v.Query, v.Limit)
+		q, count := len(args)-1, len(args)
+		sql := fmt.Sprintf(`SELECT %s FROM cully_entries e WHERE %s AND search_vector @@ websearch_to_tsquery('english',$%d) ORDER BY ts_rank_cd(search_vector,websearch_to_tsquery('english',$%d)) DESC,e.occurred_at DESC,e.id LIMIT $%d`, record, where, q, q, count)
 		return rows(ctx, tx, sql, args...)
 	case "projects":
 		v := r.Projects

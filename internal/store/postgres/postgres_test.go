@@ -116,7 +116,7 @@ func testStore(t *testing.T) *Store {
 	t.Helper()
 	dsn := os.Getenv("CULLY_TEST_DATABASE_URL")
 	if dsn == "" {
-		t.Skip("CULLY_TEST_DATABASE_URL not set; CI uses a disposable pgvector database")
+		t.Skip("CULLY_TEST_DATABASE_URL not set; CI uses a disposable PostgreSQL database")
 	}
 	ctx := context.Background()
 	admin, err := pgxpool.New(ctx, dsn)
@@ -126,9 +126,6 @@ func testStore(t *testing.T) *Store {
 	t.Cleanup(admin.Close)
 	schema := "cully_test_" + uuid.NewString()
 	name := `"` + schema + `"`
-	if _, err = admin.Exec(ctx, "CREATE EXTENSION IF NOT EXISTS vector"); err != nil {
-		t.Fatal(err)
-	}
 	if _, err = admin.Exec(ctx, "CREATE SCHEMA "+name); err != nil {
 		t.Fatal(err)
 	}
@@ -160,9 +157,7 @@ func execute(t *testing.T, s *Store, owner string, r memory.Request) memory.Resu
 func TestDatabaseMemoryLifecycle(t *testing.T) {
 	s := testStore(t)
 	project := "git@github.com:MCP-Runtime/Cully.git"
-	vector := make([]float64, 1536)
-	vector[0] = 1
-	input := memory.LogInput{Summary: "OAuth audience validation", Assistant: "Codex", Section: "company", ProjectURL: &project, Embedding: vector, OccurredAt: "2026-10-06T15:00:00+05:30", Tags: []string{"Auth"}}
+	input := memory.LogInput{Summary: "OAuth audience validation", Assistant: "Codex", Section: "company", ProjectURL: &project, OccurredAt: "2026-10-06T15:00:00+05:30", Tags: []string{"Auth"}}
 	logged := execute(t, s, "owner-a", memory.Request{Operation: "log", Log: &input}).Entry
 	if logged == nil || logged.ID == "" || logged.OccurredAt.Format(time.RFC3339) != "2026-10-06T15:00:00+05:30" {
 		t.Fatalf("bad entry %+v", logged)
@@ -181,7 +176,7 @@ func TestDatabaseMemoryLifecycle(t *testing.T) {
 	if execute(t, s, "owner-b", memory.Request{Operation: "update", Update: &memory.UpdateInput{EntryID: logged.ID, Summary: &summary}}).Entry != nil {
 		t.Fatal("cross-owner update")
 	}
-	for _, search := range []memory.SearchInput{{Query: "OAuth"}, {QueryEmbedding: vector}, {Query: "OAuth", QueryEmbedding: vector}} {
+	for _, search := range []memory.SearchInput{{Query: "OAuth"}, {Query: "audience"}} {
 		r := execute(t, s, "owner-a", memory.Request{Operation: "search", Search: &search})
 		if len(r.Entries) != 1 {
 			t.Fatalf("search failed %+v", r)
@@ -212,28 +207,16 @@ func TestDatabaseMemoryLifecycle(t *testing.T) {
 	if len(projects.Projects) != 1 || projects.Projects[0].EntryCount != 1 {
 		t.Fatal("project summary failed")
 	}
-	// Simulate the pre-cutover table name, rerun the migration, and verify IDs
-	// and data survive. Tests use a generated schema in a disposable database.
-	if _, err := s.Pool.Exec(context.Background(), "ALTER TABLE cully_entries RENAME TO buddy_entries; DELETE FROM cully_schema_versions"); err != nil {
-		t.Fatal(err)
-	}
-	for _, suffix := range []string{"search_idx", "project_time_idx", "type_idx", "section_time_idx", "owner_project_time_idx", "embedding_idx"} {
-		if _, err := s.Pool.Exec(context.Background(), "ALTER INDEX cully_entries_"+suffix+" RENAME TO buddy_entries_"+suffix); err != nil {
-			t.Fatal(err)
-		}
-	}
-	if _, err := s.Pool.Exec(context.Background(), "ALTER TABLE buddy_entries RENAME CONSTRAINT cully_entries_section_check TO buddy_entries_section_check"); err != nil {
-		t.Fatal(err)
-	}
+	// Reapplying the fresh schema must preserve authoritative records.
 	if err := migrations.Apply(context.Background(), s.Pool); err != nil {
 		t.Fatal(err)
 	}
-	var vectorIndexes int
-	if err := s.Pool.QueryRow(context.Background(), "SELECT count(*) FROM pg_indexes WHERE schemaname=current_schema() AND tablename='cully_entries' AND indexdef LIKE '%USING hnsw%'").Scan(&vectorIndexes); err != nil || vectorIndexes != 1 {
-		t.Fatalf("duplicate vector indexes: %d %v", vectorIndexes, err)
+	var obsoleteColumns int
+	if err := s.Pool.QueryRow(context.Background(), "SELECT count(*) FROM information_schema.columns WHERE table_schema=current_schema() AND table_name='cully_entries' AND column_name='embedding'").Scan(&obsoleteColumns); err != nil || obsoleteColumns != 0 {
+		t.Fatalf("obsolete embedding column remains: %d %v", obsoleteColumns, err)
 	}
 	if execute(t, s, "owner-a", memory.Request{Operation: "get", ID: &id}).Entry.ID != logged.ID {
-		t.Fatal("migration lost memory")
+		t.Fatal("schema reapply lost memory")
 	}
 	if !execute(t, s, "owner-a", memory.Request{Operation: "delete", ID: &id}).Deleted {
 		t.Fatal("delete failed")
