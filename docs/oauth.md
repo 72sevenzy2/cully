@@ -7,6 +7,8 @@ description: Set up OAuth when several people use a Cully server over HTTPS.
 
 OAuth is optional for a company team deployment. You do not need it for `cully setup codex` on your laptop. When an ops team deploys one Cully server for several people over HTTPS, OAuth lets each person sign in and access their own records. [MCP Auth](https://github.com/mcp-runtime/mcp-auth) can connect Cully to the company's OIDC or OAuth 2.0 identity provider.
 
+MCP Auth is an authorization broker, not the company's user directory. The identity provider handles user sign-in; MCP Auth issues a token for Cully's exact public MCP URL; Cully verifies that token and uses its subject as the record owner. Read tools require `tools:read` and writes require `tools:write`. The [team deployment diagram](/team-deployment) shows the service flow.
+
 For the provided Docker Compose stack, prepare two public hostnames pointing to your machine: one for Cully MCP and one for MCP Auth. Ports 80 and 443 must be reachable so Caddy can serve HTTPS. You also need an identity provider where you can register a client, plus the [Cully CLI](/installation), Docker Compose and Python 3.
 
 ## Self-hosted Docker with MCP Auth
@@ -58,4 +60,6 @@ curl -fsS https://mcp.example.com/.well-known/oauth-protected-resource/mcp
 
 Run `cully agent setup codex --mcp-url https://mcp.example.com/mcp --oauth`, restart Codex and run `codex mcp login cully`. See [connect an agent](/agents) for Claude Code and Cursor.
 
-Cully checks token signature, issuer, exact MCP resource URL, expiration, user and tool scopes. Read tools require `tools:read`; writes require `tools:write`. The data API and Mem0 use separate private service credentials. For another container platform or authorization server, see [team deployment](/team-deployment) and the [configuration reference](/configuration#manual-mcp-service-settings).
+Cully checks the RS256 token signature, issuer, exact MCP resource URL, expiration, subject and tool scopes. The data API and Mem0 use separate private service credentials. For another container platform or authorization server, see [team deployment](/team-deployment) and the [configuration reference](/configuration#manual-mcp-service-settings).
+
+Keep the signing key and MCP Auth state across upgrades so existing registrations and sessions remain usable. Setup checks the OAuth values, connector JSON and signing key before starting the stack. For a manual deployment, configure issuer, audience and JWKS URL explicitly on Cully MCP; OAuth does not apply to the private data API or Mem0 links.

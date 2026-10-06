@@ -7,11 +7,39 @@ description: Run one Cully stack for multiple people with private, per-user memo
 
 This guide is for the company ops team running Cully for several people. For your own laptop, use the [quickstart](/quickstart). In a team deployment, everyone connects to the same public MCP endpoint, signs in through the company's identity provider, and accesses only their own records. The `personal` and `company` sections organize one person's records; they do not make records visible to coworkers.
 
+```mermaid
+flowchart LR
+  Agent[Coding agent] -->|OAuth sign-in| Auth[MCP Auth or compatible server]
+  Auth -->|OIDC or OAuth 2.0| IdP[Company identity provider]
+  Agent -->|MCP tools and bearer token| MCP[Cully MCP]
+  MCP -->|Private service token| Data[Cully data API]
+  Data --> PG[(PostgreSQL source notes)]
+  Data --> Mem0[Self-hosted Mem0]
+```
+
 ## Choose how to run the stack
 
 The [Docker Compose setup](/oauth#self-hosted-docker-with-mcp-auth) starts Cully, PostgreSQL, Mem0, MCP Auth and Caddy on one machine. It is the shortest deployment path.
 
 For Kubernetes or another container platform, Cully release tags publish matching `ghcr.io/mcp-runtime/cully-mcp`, `ghcr.io/mcp-runtime/cully-data` and `ghcr.io/mcp-runtime/cully-mem0` images. Use the [Compose file](https://github.com/mcp-runtime/cully/blob/main/deploy/self-hosted/compose.yaml) as the service and volume reference. Run the data image's `migrate` command before serving traffic. Give Mem0 its pgvector-enabled PostgreSQL database and persistent history volume. Keep both databases, Mem0 REST and the data API on private networks; expose only MCP through HTTPS.
+
+| Service | Essential settings |
+| --- | --- |
+| Cully MCP | `CULLY_DATA_API_URL`, private `CULLY_DATA_API_TOKEN`, `CULLY_MCP_AUTH_MODE=oauth`, exact `CULLY_AUTH_ISSUER`, `CULLY_AUTH_RESOURCE` and `CULLY_JWKS_URL`. |
+| Data API | `CULLY_DATABASE_URL`, the same `CULLY_DATA_API_TOKEN`, `CULLY_MEM0_URL` and `CULLY_MEM0_API_KEY`. |
+| Mem0 | Its pgvector/PostgreSQL settings, `ADMIN_API_KEY` matching the data API's Mem0 key, `JWT_SECRET` and persistent history volume. |
+
+The [configuration reference](/configuration) has the full variable list and credential boundaries. Agents receive only the public MCP URL and their own OAuth sign-in; service secrets stay with the deployment.
+
+### Quick path with Docker Compose
+
+After installing the Cully CLI, run `cully setup --prepare` to create editable files. Set the public MCP and authorization hostnames and the upstream identity-provider client secret in `~/.cully/self-hosted/config/.env`. Add the provider's `connectors.json` and a persistent signing key as shown in the [OAuth setup](/oauth#self-hosted-docker-with-mcp-auth). Then start the stack:
+
+```sh
+cully setup --oauth
+```
+
+This starts PostgreSQL, Mem0, the data API, Cully MCP, MCP Auth and Caddy. Each person then connects their agent to the public MCP URL; the [agent guide](/agents) gives the client commands.
 
 ### Example: run Cully with MCP Runtime
 
@@ -26,6 +54,17 @@ The [MCP Runtime deployment workflow](https://github.com/mcp-runtime/cully/blob/
 Keep MCP Runtime's OAuth gateway **off for this Cully route** in the current integration. Its gateway [strips the client bearer token before forwarding](https://github.com/mcp-runtime/mcp-runtime/blob/main/docs/api.md#security-and-auth), while Cully currently validates that token to identify each memory owner. Use Cully's OAuth mode at the service boundary until an explicit, verified identity handoff is implemented. This example uses MCP Runtime's workload management; it does not claim its grant and session policy for Cully.
 
 After deployment, check that the Cully Deployment's updated and ready replicas match its desired replicas and that its pod runs the new image tag. The CLI can report Ready while an older pod serves traffic during a failed rollout ([Runtime issue #636](https://github.com/mcp-runtime/mcp-runtime/issues/636)).
+
+<div class="related-product">
+  <p class="related-product__eyebrow">Another product from the Cully maintainer</p>
+  <h3>MCP Runtime</h3>
+  <p>An open source Kubernetes platform for deploying and operating MCP servers. In the example above, it manages Cully's MCP workload and service while Cully keeps its owner-scoped memory and token validation.</p>
+  <div class="related-product__links">
+    <a href="https://mcpruntime.org">Explore MCP Runtime ↗</a>
+    <a href="https://docs.mcpruntime.org/publish-mcp-server/">Read the publishing guide ↗</a>
+  </div>
+  <p class="related-product__contact">If your team needs a platform for MCP servers, <a href="mailto:princekrroshan01@gmail.com?subject=MCP%20Runtime%20for%20our%20team">contact the maintainer</a>.</p>
+</div>
 
 ## Connect sign-in
 

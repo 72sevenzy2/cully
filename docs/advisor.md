@@ -24,6 +24,14 @@ cully suggestions
 
 `cully status` shows whether the daemon is running. If setup printed `Advisor unavailable`, run `cully agent setup codex` to retry with your agent name. Claude Code provides live hook signals and a Cully status line. Codex and Cursor use their own supported status displays, commands and skills, so the advice may differ between agents.
 
+| Agent | Installed local integration |
+| --- | --- |
+| Claude Code | Live Cully status line, session and stop hooks, `/cully` command and skill. |
+| Codex | Native status fields, session and stop hooks, `/prompts:cully`, managed `AGENTS.md` pointer and skill. |
+| Cursor | Session and response hooks, project `/cully` command and skill. |
+
+Claude Code supplies the richest live signals to the background advisor. It can identify high context pressure, repeated tool faults or searches, cost and rate pressure, and a missing verifier, then suggest a native control or a useful MCP integration. Codex and Cursor still get continuity prompts and Cully commands, but advisor suggestions depend on the session data those clients expose. The [session optimization guide](/session-optimization) explains the difference.
+
 ## Preview a suggestion
 
 If Cully lists a numbered improvement, preview it with the number shown:
@@ -38,14 +46,18 @@ Review the preview. To apply it, run `cully apply 1` and confirm the proposed ch
 
 | Command | What it does |
 | --- | --- |
-| `cully status` | Shows session warnings and integration state. |
+| `cully status [directory]` | Shows session warnings and integration state for the current or specified directory. |
 | `cully suggestions` | Lists improvements and informational notes. |
 | `cully apply <n> --dry-run` | Previews a numbered improvement. |
 | `cully apply <n>` | Applies one after confirmation. |
 | `cully agent setup AGENT` | Installs or refreshes the local integration. |
 | `cully uninstall AGENT` | Removes Cully-managed local integration settings. |
+| `cully mcp add --agent AGENT --url URL` | Adds Cully MCP to an existing agent setup; include `--oauth` when the server uses sign-in. |
+| `cully version` | Prints the CLI version. |
 
 Cully's [memory tools](/memory) keep useful context across sessions. The installed Cully hooks ask the connected agent to retrieve and save concise work notes. The local advisor can still show session guidance if the memory server is temporarily unavailable.
+
+Applying a suggestion can update a project instruction or skill, register an MCP integration, or run an accepted install command. Review the dry run first; Cully keeps unrelated MCP connections and user-owned settings. Hook, worker and daemon entry points are internal commands installed by Cully, not steps you need to run yourself.
 
 The [session optimization guide](/session-optimization) shows how bounded memory previews, native agent controls and advisor suggestions work together without loading an old transcript into a new task.
 

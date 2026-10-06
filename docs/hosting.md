@@ -22,6 +22,21 @@ Cully's memory service runs on your laptop for the default single-user setup. Yo
 
 The command downloads the matching Cully release's Docker files, starts PostgreSQL, Mem0, the private data API and the MCP server, and creates the database schema. No repository checkout is needed. It generates service credentials and a stable single-user owner in `~/.cully/config.json`; keep that file private and back it up with your Docker volumes. Editable stack settings live in `~/.cully/self-hosted/config/.env`. You do not need to edit either file for the default laptop setup.
 
+### What starts on your laptop
+
+| Service | Job | Reachability |
+| --- | --- | --- |
+| Cully MCP | Gives connected agents the memory tools. | Published on loopback by default. |
+| Cully data API | Validates and stores memory requests from MCP. | Private Compose network. |
+| PostgreSQL | Holds authoritative notes and indexing jobs. | Private Compose network. |
+| Mem0 and its pgvector database | Indexes notes for semantic recall. | Private Compose network. |
+
+The downloaded [Compose file](https://github.com/mcp-runtime/cully/blob/main/deploy/self-hosted/compose.yaml) also defines optional Caddy and MCP Auth services for the [team sign-in path](/oauth). Setup runs the data service's schema migration before the API serves memory requests.
+
+### Keep the generated state together
+
+On first setup, Cully generates PostgreSQL passwords, the MCP-to-data token, the data-to-Mem0 key, a Mem0 signing secret and the stable single-user owner. Later runs reuse them rather than changing a password behind an existing database volume. Back up `~/.cully/config.json` with the Docker volumes; changing one without the other can break access to existing notes. Setup passes credentials to Compose without printing them. The database and Mem0 credentials stay with the private services, not in agent configuration.
+
 The default MCP URL is printed by setup and binds to `127.0.0.1`. Only programs on that machine can reach it through that address. Anyone who can reach a no-OAuth endpoint can use its memory tools, so keep this mode on loopback or a trusted private network.
 
 ## Connect another agent on the same machine
