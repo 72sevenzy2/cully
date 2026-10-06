@@ -70,3 +70,15 @@ go test ./tests/e2e -run '^TestContainerStack$' -count=1 -v
 cd "$HOME"
 "$cli" setup --prepare
 test -f "$HOME/.cully/self-hosted/config/.env"
+
+# Finish the same customer journey with the supported uninstall command.
+"$cli" uninstall --purge-data
+test ! -e "$cli"
+test ! -e "$CULLY_CONFIG_PATH"
+test ! -e "$HOME/.cully/self-hosted"
+test ! -e "$CODEX_HOME/skills/cully/SKILL.md"
+if [[ -f "$CODEX_HOME/config.toml" ]]; then
+  ! grep -Fq '[mcp_servers.cully]' "$CODEX_HOME/config.toml"
+fi
+test -z "$(docker ps -q --filter label=com.docker.compose.project=self-hosted)"
+test -z "$(docker volume ls -q --filter label=com.docker.compose.project=self-hosted)"
