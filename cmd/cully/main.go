@@ -201,6 +201,8 @@ func runInternal(args []string) error {
 			return fmt.Errorf("internal worker requires signals, session and directory")
 		}
 		cully.RunWorker(args[1], args[2], args[3])
+	case "self-hosted-credentials":
+		return runSelfHostCredentials(args[1:])
 	default:
 		return fmt.Errorf("unknown internal action %q", args[0])
 	}

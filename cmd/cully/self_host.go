@@ -56,6 +56,11 @@ func runSelfHost(agent string, oauth, prepare bool) error {
 	}
 	command := exec.Command("sh", args...)
 	command.Dir = setupDir
+	executable, err := os.Executable()
+	if err != nil {
+		return err
+	}
+	command.Env = append(os.Environ(), "CULLY_CLI_BINARY="+executable)
 	command.Stdin = os.Stdin
 	command.Stdout = os.Stdout
 	command.Stderr = os.Stderr

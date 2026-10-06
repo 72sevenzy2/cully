@@ -21,5 +21,3 @@ jobs:
         run: go test ./... -race -count=1
       - name: Deployment controller unit tests
         run: python3 -m unittest discover -s deploy -p 'test_*.py' -v
-      - name: Self-hosted credential tests
-        run: python3 -m unittest discover -s deploy/self-hosted -p 'test_*.py' -v

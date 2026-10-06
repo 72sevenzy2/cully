@@ -9,7 +9,7 @@ Cully's memory service runs on your laptop for the default single-user setup. Yo
 
 ## One-command full stack
 
-1. Install and start Docker with the Compose plugin. Install Python 3 and the [Cully CLI](/installation) if you have not already.
+1. Install and start Docker with the Compose plugin. Install the [Cully CLI](/installation) if you have not already.
 2. Run setup for your agent:
 
    ```sh

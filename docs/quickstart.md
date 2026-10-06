@@ -5,7 +5,7 @@ description: Install Cully, try a task handoff, and use Mem0 recall and advisor 
 
 # Quickstart
 
-Set up Cully on your laptop with Docker Compose, Python 3 and Claude Code, Codex or Cursor. Then try one task and pick it up in a new session.
+Set up Cully on your laptop with Docker Compose and Claude Code, Codex or Cursor. Then try one task and pick it up in a new session.
 
 ## 1. Install Cully
 

@@ -22,39 +22,39 @@ case "$mode" in
   none|mcp-auth) ;;
   *) echo 'Choose --oauth mcp-auth.' >&2; exit 2 ;;
 esac
-command -v python3 >/dev/null 2>&1 || { echo 'Python 3 is required for local credential setup.' >&2; exit 1; }
 command -v docker >/dev/null 2>&1 || { echo 'Docker Compose is required for self-hosting.' >&2; exit 1; }
 docker compose version >/dev/null 2>&1 || { echo 'Docker Compose is required for self-hosting.' >&2; exit 1; }
-python3 ./credentials.py ensure
+cli=${CULLY_CLI_BINARY:-cully}
+if ! command -v "$cli" >/dev/null 2>&1; then
+  if [ -x "${CLAUDE_CONFIG_DIR:-$HOME/.claude}/bin/cully" ]; then
+    cli="${CLAUDE_CONFIG_DIR:-$HOME/.claude}/bin/cully"
+  elif [ -x "${CODEX_HOME:-$HOME/.codex}/bin/cully" ]; then
+    cli="${CODEX_HOME:-$HOME/.codex}/bin/cully"
+  elif [ -x "${CURSOR_CONFIG_DIR:-$HOME/.cursor}/bin/cully" ]; then
+    cli="${CURSOR_CONFIG_DIR:-$HOME/.cursor}/bin/cully"
+  elif [ -x ../../build/cully ]; then
+    cli=../../build/cully
+  else
+    echo 'Install the Cully CLI first, then rerun setup.' >&2
+    exit 1
+  fi
+fi
+"$cli" _internal self-hosted-credentials ensure
 if [ ! -f .env ]; then
   cp .env.example .env
   chmod 600 .env
 fi
-exports=$(python3 ./credentials.py export)
+exports=$("$cli" _internal self-hosted-credentials export)
 eval "$exports"
 if [ "$mode" = mcp-auth ]; then
   [ -f connectors.json ] || { echo 'Create connectors.json for your identity provider first.' >&2; exit 2; }
   [ -f .secrets/signing-key.pem ] || { echo 'Create .secrets/signing-key.pem first.' >&2; exit 2; }
 fi
 if [ "$mode" != none ]; then
-  oauth_exports=$(python3 ./credentials.py oauth-env "$mode")
+  oauth_exports=$("$cli" _internal self-hosted-credentials oauth-env "$mode")
   eval "$oauth_exports"
   endpoint=$CULLY_AUTH_RESOURCE
 fi
-if [ -n "$agent" ]; then
-  cli=cully
-  if ! command -v "$cli" >/dev/null 2>&1; then
-    if [ -x "${CLAUDE_CONFIG_DIR:-$HOME/.claude}/bin/cully" ]; then
-      cli="${CLAUDE_CONFIG_DIR:-$HOME/.claude}/bin/cully"
-    elif [ -x ../../build/cully ]; then
-      cli=../../build/cully
-    else
-      echo 'Install the Cully CLI first, then rerun this command with the agent name.' >&2
-      exit 1
-    fi
-  fi
-fi
-
 compose() {
   case "$mode" in
     none) CULLY_MCP_AUTH_MODE=none docker compose --env-file .env -f compose.yaml "$@" ;;

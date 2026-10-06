@@ -9,7 +9,7 @@ OAuth is optional for a company team deployment. You do not need it for `cully s
 
 MCP Auth is an authorization broker, not the company's user directory. The identity provider handles user sign-in; MCP Auth issues a token for Cully's exact public MCP URL; Cully verifies that token and uses its subject as the record owner. Read tools require `tools:read` and writes require `tools:write`. The [team deployment diagram](/team-deployment) shows the service flow.
 
-For the provided Docker Compose stack, prepare two public hostnames pointing to your machine: one for Cully MCP and one for MCP Auth. Ports 80 and 443 must be reachable so Caddy can serve HTTPS. You also need an identity provider where you can register a client, plus the [Cully CLI](/installation), Docker Compose and Python 3.
+For the provided Docker Compose stack, prepare two public hostnames pointing to your machine: one for Cully MCP and one for MCP Auth. Ports 80 and 443 must be reachable so Caddy can serve HTTPS. You also need an identity provider where you can register a client, plus the [Cully CLI](/installation) and Docker Compose.
 
 ## Self-hosted Docker with MCP Auth
 

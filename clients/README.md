@@ -8,7 +8,7 @@ curl -fsSL https://cully.net/install.sh | sh -s -- --agent codex
 
 Use `claude` or `cursor` instead of `codex` as needed. This installs the local advisor and Cully skill. It does not require an MCP server.
 
-To run your own private MCP service and connect the agent, install Docker Compose and Python 3, then run:
+To run your own private MCP service and connect the agent, install Docker Compose, then run:
 
 ```sh
 cully setup codex
