@@ -1,14 +1,32 @@
 import { defineConfig } from 'vitepress'
+import { withMermaid } from 'vitepress-plugin-mermaid'
 
-export default defineConfig({
+export default withMermaid(defineConfig({
   title: 'Cully',
   description: 'Guides and reference for Cully, your companion for better work with AI agents.',
   lang: 'en-US',
+  appearance: false,
   cleanUrls: true,
   outDir: '../dist/docs',
+  mermaid: {
+    theme: 'base',
+    securityLevel: 'strict',
+    themeVariables: {
+      background: '#fffefa',
+      primaryColor: '#e4efe2',
+      primaryTextColor: '#183b2d',
+      primaryBorderColor: '#7eaf88',
+      secondaryColor: '#f3e6d2',
+      secondaryTextColor: '#183b2d',
+      tertiaryColor: '#f7f5ef',
+      tertiaryTextColor: '#183b2d',
+      lineColor: '#527b5d',
+      fontFamily: 'DM Sans, Arial, sans-serif'
+    }
+  },
   head: [
     ['link', { rel: 'icon', href: '/favicon.svg', type: 'image/svg+xml' }],
-    ['meta', { name: 'theme-color', content: '#f8f7f3' }],
+    ['meta', { name: 'theme-color', content: '#f7f5ef' }],
     ['meta', { property: 'og:type', content: 'website' }],
     ['meta', { property: 'og:site_name', content: 'Cully Docs' }]
   ],
@@ -70,4 +88,4 @@ export default defineConfig({
       copyright: 'Cully'
     }
   }
-})
+}))
