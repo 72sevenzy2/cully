@@ -31,6 +31,8 @@ Replace `codex` with `claude` or `cursor` if that is the agent you installed. Th
 
 When `Cully MCP is configured at ...` appears, restart your agent. In Codex, review and trust the installed Cully hooks in `/hooks` when asked. You do not need a repository checkout or OAuth for this laptop setup.
 
+Setup prints each stage, including image pulls and builds, database startup, migrations and agent connection. It confirms that private credentials are ready without showing their values. Mem0's local embedding model is downloaded into its Docker image on the first build.
+
 ## How Cully keeps sessions focused
 
 | Need | What Cully does | Details |

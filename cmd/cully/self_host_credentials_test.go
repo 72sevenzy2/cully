@@ -194,6 +194,11 @@ func TestSelfHostSetupScriptNeedsNoHostPython(t *testing.T) {
 	if !strings.Contains(string(output), "Cully MCP is configured at http://127.0.0.1:8080/mcp") {
 		t.Fatalf("setup did not finish: %s", output)
 	}
+	for _, stage := range []string{"Generating or reusing private database passwords", "starting PostgreSQL databases", "Applying the Cully database schema", "local embedding model", "Local Cully services are ready"} {
+		if !strings.Contains(string(output), stage) {
+			t.Fatalf("setup did not report %q: %s", stage, output)
+		}
+	}
 	if err := os.WriteFile(filepath.Join(setupDir, ".env"), []byte("CULLY_MCP_HOST=mcp.acme.test\nCULLY_AUTH_HOST=auth.acme.test\nMCP_AUTH_UPSTREAM_CLIENT_SECRET=private-value\n"), 0o600); err != nil {
 		t.Fatal(err)
 	}
@@ -214,5 +219,8 @@ func TestSelfHostSetupScriptNeedsNoHostPython(t *testing.T) {
 	}
 	if !strings.Contains(string(output), "Cully MCP is configured at https://mcp.acme.test/mcp") {
 		t.Fatalf("OAuth setup did not finish: %s", output)
+	}
+	if !strings.Contains(string(output), "Validating OAuth hostnames and identity-provider connector") || strings.Contains(string(output), "private-value") {
+		t.Fatalf("OAuth setup progress or secret handling is wrong: %s", output)
 	}
 }

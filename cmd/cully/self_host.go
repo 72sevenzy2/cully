@@ -37,6 +37,7 @@ func runSelfHost(agent string, oauth, prepare bool) error {
 	if err != nil {
 		return err
 	}
+	fmt.Printf("Using Cully Docker stack %s\n", ref)
 	setupDir := filepath.Join(releaseDir, "deploy", "self-hosted")
 	configDir := filepath.Join(base, "config")
 	if err := linkStackConfig(setupDir, configDir); err != nil {
