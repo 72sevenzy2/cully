@@ -51,14 +51,26 @@ h1, h2, h3 { font-family: var(--display); }
 h1 { font-size: clamp(52px, 5.6vw, 80px); line-height: 1.09; letter-spacing: -.075em; margin: 26px 0 28px; max-width: 650px; }
 h1 em, h2 em { font-family: var(--serif); font-weight: 400; letter-spacing: -.07em; }
 h1 em { color: #54926b; }
-.hero-lead { max-width: 510px; font-size: 18px; line-height: 1.75; color: #516257; margin-bottom: 34px; }
+.hero-lead { max-width: 510px; font-size: 18px; line-height: 1.75; color: #516257; margin-bottom: 22px; }
+.hero-try { max-width: 540px; padding: 17px; margin-bottom: 24px; border: 1px solid #d5dfd2; border-radius: 13px; background: #fffefa; box-shadow: 0 12px 28px rgba(36, 73, 43, .06); }
+.hero-try-heading { display: flex; justify-content: space-between; align-items: baseline; gap: 16px; margin-bottom: 10px; }
+.hero-try-heading strong { color: var(--forest); font-size: 13px; }
+.hero-try-heading span { color: #7e8e7f; font-size: 11px; }
+.hero-command { position: relative; display: flex; align-items: center; min-height: 48px; padding: 11px 62px 11px 13px; border-radius: 8px; background: var(--forest-deep); }
+.hero-command code { display: block; overflow-x: auto; white-space: nowrap; color: #e5f1df; font: 12px/1.5 'SFMono-Regular', Consolas, monospace; }
+.hero-command .copy-button { right: 9px; top: 50%; transform: translateY(-50%); }
+.hero-try p { margin: 11px 0 0; color: #718174; font-size: 11px; line-height: 1.5; }
+.hero-try p a { color: var(--forest); font-weight: 800; }
+.hero-try p a:hover { text-decoration: underline; }
+.copy-button { position: absolute; border: 1px solid #5f8267; background: #285743; color: #e4f1df; border-radius: 6px; padding: 4px 10px; font-size: 10px; }
+.copy-button:hover { background: #376b51; }
 .hero-actions { display: flex; align-items: center; gap: 27px; }
 .button { display: inline-flex; justify-content: center; align-items: center; gap: 28px; font-size: 14px; font-weight: 800; border-radius: 10px; transition: transform .2s ease, box-shadow .2s ease; }
 .button:hover { transform: translateY(-2px); }
 .button-primary { background: var(--forest); color: white; padding: 16px 20px; box-shadow: 0 12px 20px rgba(24, 76, 56, .12); }
 .button-primary:hover { box-shadow: 0 16px 24px rgba(24, 76, 56, .2); }
 .button-text { gap: 12px; color: var(--forest); }
-.hero-footnote { display: flex; align-items: center; gap: 8px; margin-top: 45px; font-size: 12px; font-weight: 700; color: #7a897d; }
+.hero-footnote { display: flex; align-items: center; gap: 8px; margin-top: 36px; font-size: 12px; font-weight: 700; color: #7a897d; }
 .pulse-dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: #6eaf80; box-shadow: 0 0 0 4px #e0eddc; }
 
 .hero-art { height: 630px; position: relative; display: flex; align-items: center; justify-content: center; margin-right: -72px; isolation: isolate; }
@@ -111,7 +123,7 @@ h1 em { color: #54926b; }
 
 .product-section, .architecture-section { padding-top: 112px; padding-bottom: 122px; }
 .section-intro { display: flex; justify-content: space-between; align-items: end; gap: 60px; margin-bottom: 50px; }
-.section-intro h2, .workflow-heading h2, .install-copy h2 { font-size: clamp(38px, 4.1vw, 57px); line-height: 1.14; letter-spacing: -.07em; margin: 20px 0 0; }
+.section-intro h2, .workflow-heading h2 { font-size: clamp(38px, 4.1vw, 57px); line-height: 1.14; letter-spacing: -.07em; margin: 20px 0 0; }
 .section-intro h2 em, .workflow-heading h2 em { color: #568b63; }
 .section-intro > p { color: #66786b; max-width: 365px; font-size: 15px; line-height: 1.8; margin: 0 0 5px; }
 .feature-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
@@ -168,25 +180,6 @@ h1 em { color: #54926b; }
 .architecture-note { margin: 30px 0 0; color: #718174; font-size: 12px; text-align: center; }
 .architecture-note a { color: var(--forest); font-weight: 800; }
 
-.install-section { background: var(--forest-deep); color: #f4f5e9; }
-.install-inner { padding-top: 100px; padding-bottom: 110px; display: grid; grid-template-columns: 40% 1fr; gap: 9%; align-items: center; }
-.kicker-light { color: #9ac6a1; }
-.install-copy h2 { margin: 18px 0 22px; }
-.install-copy h2 em { color: #c4dfa9; }
-.install-copy p { color: #b7d1bc; max-width: 390px; line-height: 1.8; font-size: 15px; }
-.install-copy > a { display: inline-block; margin-top: 14px; font-size: 13px; font-weight: 800; color: #e9f4df; }
-.install-copy > a span { margin-left: 15px; }
-.install-panel { background: #143e31; border: 1px solid #3f6950; border-radius: 15px; padding: 24px; box-shadow: 0 22px 40px rgba(0, 0, 0, .1); }
-.install-command { position: relative; }
-.code-caption { color: #91b69a; font-size: 11px; margin-bottom: 16px; }
-.install-panel pre { min-height: 75px; overflow-x: auto; margin: 0; padding-right: 56px; color: #dce9d8; font: 12px/1.75 'SFMono-Regular', Consolas, monospace; }
-.copy-button { position: absolute; right: 0; top: 0; border: 1px solid #5f8267; background: #285743; color: #e4f1df; border-radius: 6px; padding: 4px 10px; font-size: 10px; }
-.copy-button:hover { background: #376b51; }
-.install-hint { color: #c8dfcc; font-size: 12px; line-height: 1.6; margin: 10px 0 0; }
-.install-hint code { color: #e3f2dc; }
-.install-panel-footer { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 10px; border-top: 1px solid #365d4a; margin-top: 21px; padding-top: 18px; color: #8fb09a; font-size: 10px; }
-.install-panel-footer a { color: #cfe5cc; font-weight: 800; }
-
 .site-footer { display: grid; grid-template-columns: 1fr 1fr; gap: 35px; padding-top: 66px; padding-bottom: 28px; }
 .site-footer p { color: #7b8b7e; font-size: 13px; margin-top: 17px; }
 .footer-links { display: flex; gap: 94px; justify-content: flex-end; }
@@ -229,7 +222,7 @@ h1 em { color: #54926b; }
   .feature-grid { grid-template-columns: 1fr; }
   .feature-card { min-height: 360px; }
   .feature-visual { max-width: 390px; width: 100%; align-self: center; }
-  .workflow-inner, .install-inner { grid-template-columns: 1fr; gap: 42px; padding-block: 78px; }
+  .workflow-inner { grid-template-columns: 1fr; gap: 42px; padding-block: 78px; }
   .architecture-flow { grid-template-columns: 1fr; gap: 12px; margin-top: 42px; }
   .flow-arrow { transform: rotate(90deg); line-height: 1; }
   .flow-node { min-height: 0; }
@@ -249,9 +242,7 @@ h1 em { color: #54926b; }
   .mock-body { padding: 20px; }
   .floating-note { bottom: 20px; left: 3%; }
   .agent-strip-inner > div { font-size: 12px; }
-  .section-intro h2, .workflow-heading h2, .install-copy h2 { font-size: 39px; }
-  .install-panel { padding: 18px; }
-  .install-panel pre { font-size: 10px; }
+  .section-intro h2, .workflow-heading h2 { font-size: 39px; }
   .footer-bottom { flex-direction: column; gap: 7px; }
 }
 @media (prefers-reduced-motion: reduce) {
