@@ -4,6 +4,7 @@
 
 - Accept GitHub source archives with global PAX headers so the published CLI can download and start its matching self-hosted stack.
 - Clarify that `cully setup` prepares configuration and starts the full local stack; `--prepare` stops before starting services for team configuration.
+- Add `cully uninstall` for local Docker and agent cleanup, with explicit `--purge-data` for memory deletion.
 - Combine local agent guidance and shared memory as Cully.
 - Rename the local command, agent integrations, MCP tools and configuration to Cully.
 - Port the MCP and private memory data services from Python to Go.

@@ -11,6 +11,47 @@ import (
 
 const testMCPURL = "https://mcp.example.test/mcp"
 
+func TestRemoveLocalMCPPreservesOtherAgentSettings(t *testing.T) {
+	const localURL = "http://127.0.0.1:18080/mcp"
+	jsonPath := filepath.Join(t.TempDir(), "mcp.json")
+	if err := os.WriteFile(jsonPath, []byte(`{"theme":"dark","mcpServers":{"other":{"command":"other"}}}`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := addJSONMCP(jsonPath, localURL, true); err != nil {
+		t.Fatal(err)
+	}
+	if err := removeJSONMCPIfMatching(jsonPath, []string{"http://127.0.0.1:8080/mcp"}); err != nil {
+		t.Fatal(err)
+	}
+	before, err := os.ReadFile(jsonPath)
+	if err != nil || !strings.Contains(string(before), `"cully"`) {
+		t.Fatalf("unrelated endpoint removed: %s, %v", before, err)
+	}
+	if err := removeJSONMCPIfMatching(jsonPath, []string{localURL}); err != nil {
+		t.Fatal(err)
+	}
+	after, err := os.ReadFile(jsonPath)
+	if err != nil || strings.Contains(string(after), `"cully"`) || !strings.Contains(string(after), `"theme": "dark"`) || !strings.Contains(string(after), `"other"`) {
+		t.Fatalf("JSON settings changed: %s, %v", after, err)
+	}
+
+	tomlPath := filepath.Join(t.TempDir(), "config.toml")
+	const original = "# user settings\nmodel = \"test\"\n\n[mcp_servers.other]\ncommand = \"other\"\n"
+	if err := os.WriteFile(tomlPath, []byte(original), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := addTOMLMCP(tomlPath, localURL); err != nil {
+		t.Fatal(err)
+	}
+	if err := removeTOMLMCPIfMatching(tomlPath, []string{localURL}); err != nil {
+		t.Fatal(err)
+	}
+	after, err = os.ReadFile(tomlPath)
+	if err != nil || strings.Contains(string(after), "[mcp_servers.cully]") || !strings.Contains(string(after), "[mcp_servers.other]") || !strings.Contains(string(after), "# user settings") {
+		t.Fatalf("TOML settings changed: %s, %v", after, err)
+	}
+}
+
 func TestMCPJSONPreservesOtherConfig(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "mcp.json")
 	original := `{"theme":"dark","mcpServers":{"other":{"command":"other"}}}`

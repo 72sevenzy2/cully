@@ -39,6 +39,23 @@ On first setup, Cully generates PostgreSQL passwords, the MCP-to-data token, the
 
 The default MCP URL is printed by setup and binds to `127.0.0.1`. Only programs on that machine can reach it through that address. Anyone who can reach a no-OAuth endpoint can use its memory tools, so keep this mode on loopback or a trusted private network.
 
+## Uninstall the laptop stack
+
+Run `cully uninstall` from the project where you connected your agent. It stops
+the local Docker Compose services, stops the advisor, and removes Cully-managed
+agent hooks, skills and matching local MCP connections. It removes the CLI
+binary when run from a standard installer location. Your PostgreSQL and Mem0
+volumes, private credentials and downloaded stack remain so you can set Cully
+up again without losing notes.
+
+Run `cully uninstall --purge-data` only when you also want to delete the local
+memory volumes and self-hosted configuration. This permanently removes locally
+stored notes. Both commands leave unrelated agent settings and other Docker
+projects alone. If you installed a custom CLI binary or added a PATH line
+manually, remove those yourself. `cully uninstall codex` removes only Codex's
+managed integration and leaves the local services running; use `claude`,
+`cursor` or `all` for other integration-only removals.
+
 ## Connect another agent on the same machine
 
 Use the MCP URL printed by setup:

@@ -51,7 +51,9 @@ Review the preview. To apply it, run `cully apply 1` and confirm the proposed ch
 | `cully apply <n> --dry-run` | Previews a numbered improvement. |
 | `cully apply <n>` | Applies one after confirmation. |
 | `cully agent setup AGENT` | Installs or refreshes the local integration. |
-| `cully uninstall AGENT` | Removes Cully-managed local integration settings. |
+| `cully uninstall AGENT` | Removes one agent's Cully-managed integration settings. |
+| `cully uninstall` | Stops the local stack and removes managed agent integrations; keeps memory data. |
+| `cully uninstall --purge-data` | Also deletes local memory volumes and self-hosted configuration. |
 | `cully mcp add --agent AGENT --url URL` | Adds Cully MCP to an existing agent setup; include `--oauth` when the server uses sign-in. |
 | `cully version` | Prints the CLI version. |
 

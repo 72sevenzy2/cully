@@ -75,6 +75,109 @@ func AddMCP(w io.Writer, agent, endpoint string, oauth bool) error {
 	return nil
 }
 
+// RemoveMCPIfMatching removes a Cully connection only when its URL matches an
+// endpoint created by the local self-hosted setup. Other MCP settings remain.
+func RemoveMCPIfMatching(agent string, endpoints []string) error {
+	if len(endpoints) == 0 {
+		return nil
+	}
+	switch agent {
+	case "claude":
+		path, err := claudeMCPConfigPath()
+		if err != nil {
+			return err
+		}
+		return removeJSONMCPIfMatching(path, endpoints)
+	case "cursor":
+		return removeJSONMCPIfMatching(filepath.Join(CursorConfigDir(), "mcp.json"), endpoints)
+	case "codex":
+		return removeTOMLMCPIfMatching(codexConfigPath(), endpoints)
+	default:
+		return fmt.Errorf("unknown MCP agent %q", agent)
+	}
+}
+
+func matchingMCPEndpoint(value any, endpoints []string) bool {
+	url, ok := value.(string)
+	if !ok {
+		return false
+	}
+	for _, endpoint := range endpoints {
+		if url == endpoint {
+			return true
+		}
+	}
+	return false
+}
+
+func removeJSONMCPIfMatching(path string, endpoints []string) error {
+	if _, err := os.Stat(path); os.IsNotExist(err) {
+		return nil
+	} else if err != nil {
+		return err
+	}
+	config, err := loadSettings(path)
+	if err != nil {
+		return err
+	}
+	servers, ok := config["mcpServers"].(map[string]any)
+	if !ok {
+		return nil
+	}
+	entry, ok := servers["cully"].(map[string]any)
+	if !ok || !matchingMCPEndpoint(entry["url"], endpoints) {
+		return nil
+	}
+	if len(entry) > 2 || len(entry) == 2 && entry["type"] != "http" && entry["type"] != "streamable-http" {
+		return nil
+	}
+	delete(servers, "cully")
+	if len(servers) == 0 {
+		delete(config, "mcpServers")
+	}
+	data, err := json.MarshalIndent(config, "", "  ")
+	if err != nil {
+		return err
+	}
+	return writeMCPConfig(path, append(data, '\n'))
+}
+
+func removeTOMLMCPIfMatching(path string, endpoints []string) error {
+	data, err := os.ReadFile(path)
+	if os.IsNotExist(err) {
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+	var config map[string]any
+	if err := toml.Unmarshal(data, &config); err != nil {
+		return fmt.Errorf("invalid config: %w", err)
+	}
+	servers, ok := config["mcp_servers"].(map[string]any)
+	if !ok {
+		return nil
+	}
+	entry, ok := servers["cully"].(map[string]any)
+	if !ok || len(entry) != 1 || !matchingMCPEndpoint(entry["url"], endpoints) {
+		return nil
+	}
+	text := string(data)
+	start, end, ok := tomlTableBounds(text, "mcp_servers.cully")
+	if !ok {
+		return nil
+	}
+	header := strings.LastIndex(text[:start], "[mcp_servers.cully]")
+	if header < 0 {
+		return nil
+	}
+	updated := strings.TrimRight(text[:header], "\n") + "\n" + text[end:]
+	if err := toml.Unmarshal([]byte(updated), &config); err != nil {
+		return fmt.Errorf("cannot safely remove Cully MCP table: %w", err)
+	}
+	return writeMCPConfig(path, []byte(updated))
+}
+
 func validateMCPURL(endpoint string) error {
 	u, err := url.Parse(endpoint)
 	if err != nil || u.Hostname() == "" || (u.Scheme != "https" && u.Scheme != "http") || u.User != nil || u.Fragment != "" || u.RawQuery != "" {

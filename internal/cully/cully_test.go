@@ -64,6 +64,42 @@ func TestInstallCombinedMemorySkill(t *testing.T) {
 	}
 }
 
+func TestUninstallRemovesOnlyUnchangedManagedSkills(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv("CODEX_HOME", dir)
+	path := filepath.Join(dir, "skills", "cully", "SKILL.md")
+	if err := installMemorySkill("codex"); err != nil {
+		t.Fatal(err)
+	}
+	if err := removeManagedMemorySkill("codex"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Stat(path); !os.IsNotExist(err) {
+		t.Fatalf("unchanged managed skill remains: %v", err)
+	}
+	if err := installMemorySkill("codex"); err != nil {
+		t.Fatal(err)
+	}
+	file, err := os.OpenFile(path, os.O_APPEND|os.O_WRONLY, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := file.WriteString("\n# My notes\n"); err != nil {
+		file.Close()
+		t.Fatal(err)
+	}
+	if err := file.Close(); err != nil {
+		t.Fatal(err)
+	}
+	if err := removeManagedMemorySkill("codex"); err != nil {
+		t.Fatal(err)
+	}
+	content, err := os.ReadFile(path)
+	if err != nil || !strings.Contains(string(content), "# My notes") {
+		t.Fatalf("modified skill was removed or changed: %v", err)
+	}
+}
+
 func TestGauge(t *testing.T) {
 	if got := gauge(0); got != strings.Repeat("░", 10) {
 		t.Errorf("gauge(0)=%q", got)
