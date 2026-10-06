@@ -69,7 +69,7 @@ services:
       db:
         condition: service_healthy
     networks: [private]
-  data-api:
+  cully-data-api:
     image: ghcr.io/mcp-runtime/cully-data:${CULLY_DATA_TAG:?set release tag}
     environment:
       CULLY_DATABASE_URL: ${CULLY_DATABASE_URL:?set CULLY_DATABASE_URL}

@@ -44,7 +44,7 @@ def compose(root, tag, runner, docker_config=None):
            cwd=root, env=env, check=True)
     runner(base + ['--profile', 'ops', 'run', '--rm', 'migrate'],
            cwd=root, env=env, check=True)
-    runner(base + ['up', '-d', '--wait', '--wait-timeout', '180', 'mem0', 'data-api'],
+    runner(base + ['up', '-d', '--wait', '--wait-timeout', '180', 'mem0', 'cully-data-api'],
            cwd=root, env=env, check=True)
 
 

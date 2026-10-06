@@ -17,16 +17,24 @@ touch /root/.ssh/authorized_keys
 chmod 600 /root/.ssh/authorized_keys
 python3 - "$1" <<'PY'
 from pathlib import Path
+import os
 import re
 import sys
+import tempfile
 key = Path(sys.argv[1]).read_text().strip()
 if not re.fullmatch(r'ssh-ed25519 [A-Za-z0-9+/=]+(?: [^\r\n]*)?', key):
     raise SystemExit('Expected one Ed25519 public key')
 entry = 'restrict,command="/usr/local/libexec/cully-personal-data-deploy" ' + key
 path = Path('/root/.ssh/authorized_keys')
-text = path.read_text()
-if entry not in text.splitlines():
-    with path.open('a') as f:
-        f.write(('' if not text or text.endswith('\n') else '\n') + entry + '\n')
+lines = path.read_text().splitlines()
+# The one-time password bootstrap adds this public key without restrictions.
+# Replace that entry after setup so the stored CI key can only deploy Cully.
+new_lines = [line for line in lines if line != key and line != entry]
+new_lines.append(entry)
+with tempfile.NamedTemporaryFile(mode='w', dir=path.parent, delete=False) as f:
+    f.write('\n'.join(new_lines) + '\n')
+    temporary = Path(f.name)
+os.chmod(temporary, 0o600)
+os.replace(temporary, path)
 PY
 echo 'Restricted personal data deployment controller installed.'

@@ -1,29 +1,13 @@
 # Add inside the existing workspace.mcpruntime.org site block before its
-# catch-all reverse_proxy. Cully MCP runs in MCP Runtime; only its data API
-# remains on this VM next to PostgreSQL. Keep this allowlist aligned with the
-# MCP Runtime node's public egress IP and retain the service bearer token.
+# catch-all handler. Cully MCP runs in MCP Runtime; only its data API remains
+# on this VM next to PostgreSQL. Keep this allowlist aligned with the MCP
+# Runtime node's public egress IP and retain the service bearer token.
 @cully_data path /cully-data/*
 handle @cully_data {
 	@runtime_node remote_ip 163.61.31.14
 	handle @runtime_node {
 		uri strip_prefix /cully-data
-		reverse_proxy data-api:8083
+		reverse_proxy cully-data-api:8083
 	}
 	respond "forbidden" 403
-}
-
-handle /.well-known/oauth-protected-resource/cully/mcp {
-	reverse_proxy https://mcp.mcpruntime.org {
-		header_up Host mcp.mcpruntime.org
-	}
-}
-
-handle /cully/* {
-	reverse_proxy https://mcp.mcpruntime.org {
-		header_up Host mcp.mcpruntime.org
-	}
-}
-
-handle {
-	reverse_proxy vikunja:3456
 }

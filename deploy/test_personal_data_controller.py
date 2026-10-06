@@ -47,7 +47,7 @@ class PersonalDataDeploymentTests(unittest.TestCase):
                 if 'compose' in args:
                     tag = kwargs['env']['CULLY_DATA_TAG']
                     activated.append(tag)
-                    if tag == 'v1.0.1' and 'data-api' in args:
+                    if tag == 'v1.0.1' and 'cully-data-api' in args:
                         raise subprocess.CalledProcessError(1, args)
             with self.assertRaises(subprocess.CalledProcessError):
                 execute(dict(action='deploy', tag='v1.0.1', token='test', registry_user='tester'), root, runner)
