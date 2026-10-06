@@ -1,0 +1,72 @@
+#!/usr/bin/env bash
+# Run the documented laptop path on an isolated GitHub runner: install, setup,
+# connect Codex, use the MCP tools, and remove the disposable local stack.
+set -euo pipefail
+: "${RUNNER_TEMP:?customer setup E2E runs only on an isolated CI runner}"
+
+repo_root="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../.." && pwd)"
+original_gopath="$(go env GOPATH)"
+original_gocache="$(go env GOCACHE)"
+stack_tag="$(git -C "$repo_root" describe --tags --abbrev=0 --match 'v[0-9]*')"
+[[ "$stack_tag" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "No stable Cully release tag for the customer setup test" >&2; exit 1; }
+
+e2e_root="$(mktemp -d "$RUNNER_TEMP/cully-e2e.XXXXXX")"
+trap 'rm -rf -- "$e2e_root"' EXIT
+e2e_home="$e2e_root/home"
+candidate="$e2e_root/cully-candidate"
+mkdir -p "$e2e_home"
+cd "$repo_root"
+go build -ldflags "-X main.version=${stack_tag#v}" -o "$candidate" ./cmd/cully
+
+export HOME="$e2e_home"
+export CODEX_HOME="$HOME/.codex"
+export CULLY_CONFIG_PATH="$HOME/.cully/config.json"
+export GOPATH="$original_gopath"
+export GOCACHE="$original_gocache"
+export PATH="$CODEX_HOME/bin:$PATH"
+export SHELL=/bin/bash
+export CULLY_E2E_MCP_URL=http://127.0.0.1:8080/mcp
+cli="$CODEX_HOME/bin/cully"
+stack_dir="$HOME/.cully/self-hosted/releases/$stack_tag/deploy/self-hosted"
+
+cleanup() {
+  "$cli" uninstall claude >/dev/null 2>&1 || true
+  if [[ -f "$stack_dir/compose.yaml" ]]; then
+    (
+      cd "$stack_dir"
+      CULLY_DB_NAME=unused CULLY_DB_USER=unused CULLY_DB_PASSWORD=unused \
+      CULLY_DATABASE_URL=unused CULLY_DATA_API_TOKEN=unused \
+      CULLY_MEM0_DB_PASSWORD=unused CULLY_MEM0_API_KEY=unused CULLY_MEM0_JWT_SECRET=unused \
+        docker compose --env-file "$HOME/.cully/self-hosted/config/.env" -f compose.yaml \
+          --profile oauth --profile mcp-auth down --volumes --remove-orphans
+    ) || true
+  fi
+  rm -rf -- "$e2e_root"
+}
+trap cleanup EXIT
+
+cd "$HOME"
+sh "$repo_root/install.sh" --agent codex
+test -x "$cli"
+# The installer starts an advisor. The isolated home has no Claude settings;
+# this supported command stops that advisor before replacing its executable.
+"$cli" uninstall claude
+install -m 0755 "$candidate" "$cli"
+
+# This must work from a clean home without running --prepare first. The CLI
+# downloads the matching public release archive and runs its setup script.
+"$cli" setup --agent codex
+curl --fail --retry 12 --retry-delay 2 --retry-all-errors http://127.0.0.1:8080/healthz
+test -f "$CULLY_CONFIG_PATH"
+test -f "$CODEX_HOME/skills/cully/SKILL.md"
+grep -Fq '[mcp_servers.cully]' "$CODEX_HOME/config.toml"
+grep -Fq 'http://127.0.0.1:8080/mcp' "$CODEX_HOME/config.toml"
+"$cli" status
+"$cli" suggestions
+
+cd "$repo_root"
+go test ./tests/e2e -run '^TestContainerStack$' -count=1 -v
+
+cd "$HOME"
+"$cli" setup --prepare
+test -f "$HOME/.cully/self-hosted/config/.env"

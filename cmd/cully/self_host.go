@@ -148,6 +148,9 @@ func extractStack(archive io.Reader, destination string) error {
 		if err != nil {
 			return err
 		}
+		if header.Typeflag == tar.TypeXGlobalHeader {
+			continue
+		}
 		if path.IsAbs(header.Name) || strings.Contains(header.Name, "\\") {
 			return fmt.Errorf("invalid path in Cully source archive: %q", header.Name)
 		}
@@ -161,7 +164,7 @@ func extractStack(archive io.Reader, destination string) error {
 			root = parts[0]
 		}
 		if parts[0] != root {
-			return fmt.Errorf("multiple roots in Cully source archive")
+			return fmt.Errorf("multiple roots in Cully source archive: %q and %q", root, parts[0])
 		}
 		if len(parts) < 2 {
 			continue
