@@ -8,7 +8,7 @@ Cully uses the [MCP Auth Go client SDK](https://github.com/mcp-runtime/mcp-auth/
 
 ## Example: the maintainer's deployment on MCP Runtime
 
-[MCP Runtime](https://mcpruntime.org) is a platform where you can deploy an MCP server. The Cully maintainer uses it for a personal Cully deployment at `https://mcp.mcpruntime.org/cully/mcp`. MCP Runtime provides OAuth through MCP Auth, so this Cully deployment only declares its public resource URL and `tools:read` and `tools:write` scopes. Its manifest contains no identity-provider secret.
+[MCP Runtime](https://mcpruntime.org) is an open source Kubernetes platform for building, publishing, routing and governing MCP servers. The Cully maintainer uses it for a personal Cully deployment at `https://mcp.mcpruntime.org/cully/mcp`. The platform runs MCP Auth, which can connect to an organization's identity provider for team sign-in. The Cully deployment declares its public resource URL and `tools:read` and `tools:write` scopes; its manifest contains no identity-provider secret.
 
 1. An agent connects to `https://mcp.mcpruntime.org/cully/mcp`. Without a token, Cully returns an OAuth challenge and protected-resource metadata pointing to MCP Auth.
 2. MCP Runtime's MCP Auth service sends the user to the configured identity provider, then issues a token for Cully's MCP URL.
