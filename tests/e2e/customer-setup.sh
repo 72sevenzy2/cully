@@ -30,7 +30,7 @@ cli="$CODEX_HOME/bin/cully"
 stack_dir="$HOME/.cully/self-hosted/releases/$stack_tag/deploy/self-hosted"
 
 cleanup() {
-  "$cli" daemon stop >/dev/null 2>&1 || true
+  "$cli" uninstall claude >/dev/null 2>&1 || true
   if [[ -f "$stack_dir/compose.yaml" ]]; then
     (
       cd "$stack_dir"
@@ -48,7 +48,9 @@ trap cleanup EXIT
 cd "$HOME"
 sh "$repo_root/install.sh" --agent codex
 test -x "$cli"
-"$cli" daemon stop
+# The installer starts an advisor. The isolated home has no Claude settings;
+# this supported command stops that advisor before replacing its executable.
+"$cli" uninstall claude
 install -m 0755 "$candidate" "$cli"
 
 # This must work from a clean home without running --prepare first. The CLI
@@ -60,7 +62,6 @@ test -f "$CODEX_HOME/skills/cully/SKILL.md"
 grep -Fq '[mcp_servers.cully]' "$CODEX_HOME/config.toml"
 grep -Fq 'http://127.0.0.1:8080/mcp' "$CODEX_HOME/config.toml"
 "$cli" status
-"$cli" daemon status
 "$cli" suggestions
 
 cd "$repo_root"
