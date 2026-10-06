@@ -6,6 +6,11 @@ on:
   pull_request:
     paths-ignore: ['README.md']
   workflow_dispatch:
+    inputs:
+      published_cli:
+        description: Exercise the published CLI from the matching release without replacing it
+        type: boolean
+        default: false
 permissions:
   contents: read
 jobs:
@@ -47,6 +52,8 @@ jobs:
   customer-setup:
     runs-on: ubuntu-latest
     timeout-minutes: 45
+    env:
+      CULLY_E2E_PUBLISHED_CLI: ${{ inputs.published_cli || false }}
     steps:
       - uses: actions/checkout@v4
         with:
