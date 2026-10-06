@@ -1,54 +1,47 @@
-# Configuration
+---
+title: Configuration reference
+description: Find settings for the local advisor, Docker setup or a manual Cully deployment.
+---
 
-## MCP access mode
+# Configuration reference
 
-`cully-mcp` defaults to no OAuth. Set `CULLY_MCP_OWNER` to a stable, single-user owner (1–512 bytes, without surrounding whitespace or control characters). Every tool call uses it; the caller cannot choose another owner. The listener defaults to `127.0.0.1` in this mode. Keep access on a loopback or private network. No issuer or JWKS request is made. Docker setup generates this owner automatically.
+Most people do not need to edit configuration files. The [quickstart](/quickstart) installs Cully and starts its memory stack with generated service credentials. Use this page when you need to change a setting or run the services yourself.
 
-Set `CULLY_MCP_AUTH_MODE=oauth` or start `cully-mcp --oauth` for OAuth. In that mode, unset `CULLY_MCP_OWNER` and explicitly set issuer, exact public resource audience and JWKS URL. The server verifies RS256 signature, issuer, audience, expiration, subject and read/write scopes. The `--oauth` flag overrides `CULLY_MCP_AUTH_MODE=none`.
+## Local advisor
 
-## Go memory services
+Run `cully status` to check the integration. The [advisor controls](/advisor#controls) cover display and analysis options such as `CULLY_DISPLAY` and `CULLY_ANALYZE_DISABLE`. Cully honors `CLAUDE_CONFIG_DIR`, `CODEX_HOME` and `CURSOR_CONFIG_DIR` when your agent uses a custom configuration directory. Agent setup preserves unrelated user-owned settings.
 
-| Variable | Used by | Meaning |
+## Docker setup files
+
+| File | When you need it |
+| --- | --- |
+| `~/.cully/self-hosted/config/.env` | Editable deployment options. The default laptop setup needs no edits. Add public hostnames and a client secret here for [OAuth setup](/oauth). |
+| `~/.cully/config.json` | Generated database passwords, service tokens and single-user owner. Keep it private and back it up with Docker volumes. |
+| `~/.cully/self-hosted/config/connectors.json` | Identity-provider connector settings for MCP Auth. |
+| `~/.cully/self-hosted/config/.secrets/signing-key.pem` | MCP Auth signing key for OAuth. |
+
+Run `cully setup --prepare` to create editable stack files before starting containers. Run `cully setup codex` for the default private stack, or follow the [OAuth guide](/oauth) before adding `--oauth`.
+
+## Manual MCP service settings
+
+These variables are for deploying `cully-mcp` and `cully-data` yourself. Docker setup supplies them automatically.
+
+| Variable | Service | Purpose |
 | --- | --- | --- |
-| `CULLY_DATABASE_URL` | Data service | PostgreSQL connection URL; required |
-| `CULLY_DB_MAX_CONNS` | Data service | Pool maximum, 2–100; default 8 |
-| `CULLY_DATA_API_TOKEN` | Both services | Shared private API bearer token; required for serving |
-| `CULLY_DATA_API_URL` | MCP service | Private API base URL; required |
-| `CULLY_MEM0_URL` | Data service | Self-hosted REST base URL; optional with matching key |
-| `CULLY_MEM0_API_KEY` | Data service | Authenticates data API requests to Mem0; required when URL is set. This is not an embedding-provider key |
-| `CULLY_HOST` | Both services | Bind address; MCP defaults to `127.0.0.1` without OAuth, `0.0.0.0` with OAuth; data service defaults to `0.0.0.0` |
-| `CULLY_PORT` | Both services | Default 8080 for MCP, 8083 for data |
-| `CULLY_MCP_AUTH_MODE` | MCP service | `none` (default) or `oauth` |
-| `CULLY_MCP_OWNER` | MCP service | Required fixed owner in no-OAuth mode; forbidden in OAuth mode |
-| `CULLY_AUTH_ISSUER` | OAuth MCP service | Required exact token issuer |
-| `CULLY_AUTH_RESOURCE` | OAuth MCP service | Required exact public MCP resource URL and token audience |
-| `CULLY_JWKS_URL` | OAuth MCP service | Required signing-key endpoint; configure explicitly because issuer paths vary |
+| `CULLY_DATA_API_URL` | MCP | Private data API base URL; required. |
+| `CULLY_DATA_API_TOKEN` | MCP and data API | Same private bearer token on both services; required for serving. |
+| `CULLY_DATABASE_URL` | Data API | PostgreSQL connection URL; required. |
+| `CULLY_MEM0_URL` | Data API | Self-hosted Mem0 base URL for semantic recall. The standard stack sets this. |
+| `CULLY_MEM0_API_KEY` | Data API | Mem0 API key. Set it with `CULLY_MEM0_URL` for semantic recall. |
+| `CULLY_DB_MAX_CONNS` | Data API | Database pool limit; default 8, allowed 2–100. |
+| `CULLY_HOST`, `CULLY_PORT` | Both | Bind address and port. MCP defaults to port 8080; data API to 8083. |
 
-MCP Runtime can inject `MCP_AUTH_ISSUER`, `MCP_AUTH_RESOURCE` and `MCP_PATH`. Platform issuer/resource values take precedence over `CULLY_AUTH_ISSUER` and `CULLY_AUTH_RESOURCE` in OAuth mode. `MCP_PATH` selects the internal transport path, default `/mcp`; the public resource may include an external route prefix. None of these variables implicitly enable OAuth. Docker `setup.sh` derives the resource URL from `CULLY_MCP_HOST` and, when it runs MCP Auth, derives the issuer and JWKS URL from `CULLY_AUTH_HOST`. Set an explicit JWKS URL only when an existing authorization server uses a different endpoint. See [MCP OAuth](/oauth) for examples.
+Keep the data API, Mem0 and databases on private networks. The MCP service receives the data API token; it does not need database credentials or the Mem0 key.
 
-Keep the data API token identical on both sides. The MCP workload does not receive database credentials or a Mem0 key. The data service accepts forwarded owner identity only from authenticated service calls.
+### MCP access mode
 
-## Service authentication boundaries
+For one person on a private endpoint, set a stable `CULLY_MCP_OWNER` (1–512 bytes, no surrounding whitespace or control characters). Every request uses that owner. `CULLY_MCP_AUTH_MODE=none` is the default, and the MCP listener defaults to `127.0.0.1` in this mode. Keep it on loopback or a trusted private network.
 
-| Connection | Credential | Where it belongs |
-| --- | --- | --- |
-| Agent to Cully MCP | OAuth bearer when enabled; otherwise a private single-user MCP endpoint | Agent and MCP service |
-| Cully MCP to data API | `CULLY_DATA_API_TOKEN`, independent of MCP OAuth | MCP and data service environments |
-| Data API to Mem0 | `CULLY_MEM0_API_KEY` | Data service and Mem0 only |
-| Data API to PostgreSQL | Database credentials in `CULLY_DATABASE_URL` | Data service and PostgreSQL only |
+For per-user sign-in, set `CULLY_MCP_AUTH_MODE=oauth` or start `cully-mcp --oauth`. Unset `CULLY_MCP_OWNER`, and set `CULLY_AUTH_ISSUER`, `CULLY_AUTH_RESOURCE` (the exact public MCP URL) and `CULLY_JWKS_URL`. MCP defaults to binding `0.0.0.0` in this mode; put HTTPS in front of it. The provided [OAuth setup](/oauth) derives these values from hostnames.
 
-Keep the data API, Mem0 and databases on private networks. The MCP service derives the record owner from the verified OAuth subject or the configured single-user owner, then sends it to the data API. The data API trusts that owner only after checking its service token, so protect that token as access to all owners' records.
-
-When MCP and the data API run on separate hosts, provision the same token on both services. Keep the Mem0 API key with the data service; do not send it to the MCP workload.
-
-## Docker Compose self-hosting
-
-The [Docker self-hosted stack](/hosting#one-command-full-stack) uses plain PostgreSQL for Cully records and a separate pgvector database for Mem0. `cully setup codex` generates the passwords and service tokens in `~/.cully/config.json` and exports them to Compose. PostgreSQL uses password authentication; its credentials are independent of MCP OAuth. To run MCP Auth in the stack, prepare its connector and use `cully setup codex --oauth`.
-
-The [team deployment guide](/team-deployment) explains MCP Auth and HTTPS. Mem0's local embedding model needs no provider key.
-
-## Local CLI
-
-The [local advisor guide](advisor.md#controls) lists local `CULLY_*` controls for display and advisor behavior. Agent-owned directories still honor `CLAUDE_CONFIG_DIR`, `CODEX_HOME` and `CURSOR_CONFIG_DIR`.
-
-Only the documented `CULLY_*` settings are supported.
+On MCP Runtime, `MCP_AUTH_ISSUER` and `MCP_AUTH_RESOURCE` take precedence over the matching `CULLY_AUTH_*` values. `MCP_PATH` changes the internal MCP transport path; it defaults to `/mcp`. These values do not enable OAuth by themselves.

@@ -34,10 +34,10 @@ export default withMermaid(defineConfig({
     logo: '/favicon.svg',
     siteTitle: 'Cully Docs',
     nav: [
-      { text: 'Get started', link: '/quickstart' },
-      { text: 'Local advisor', link: '/advisor' },
-      { text: 'Shared memory', link: '/memory' },
-      { text: 'Self-hosting', link: '/hosting' },
+      { text: 'Start', link: '/quickstart' },
+      { text: 'Memory', link: '/memory' },
+      { text: 'Advisor', link: '/advisor' },
+      { text: 'Self-host', link: '/hosting' },
       { text: 'Website', link: 'https://cully.net' }
     ],
     sidebar: [
@@ -46,38 +46,34 @@ export default withMermaid(defineConfig({
         items: [
           { text: 'Overview', link: '/' },
           { text: 'Quickstart', link: '/quickstart' },
-          { text: 'Installation', link: '/installation' },
-          { text: 'Connect an agent', link: '/agents' }
+          { text: 'Installation', link: '/installation' }
         ]
       },
       {
         text: 'Use Cully',
         items: [
+          { text: 'Memory', link: '/memory' },
           { text: 'Local advisor', link: '/advisor' },
-          { text: 'Shared memory', link: '/memory' },
-          { text: 'Mem0 recall', link: '/mem0' }
+          { text: 'Connect an agent', link: '/agents' }
         ]
       },
       {
-        text: 'Operate Cully',
+        text: 'Run Cully',
         items: [
           { text: 'Self-hosting', link: '/hosting' },
-          { text: 'MCP OAuth', link: '/oauth' },
-          { text: 'Configuration', link: '/configuration' },
           { text: 'Team deployment', link: '/team-deployment' },
-          { text: 'Architecture', link: '/architecture' },
-          { text: 'Website and docs hosting', link: '/website' },
-          { text: 'MCP Auth connector guide ↗', link: 'https://github.com/mcp-runtime/mcp-auth/blob/main/docs/auth-server.md#connect-an-organizations-identity-provider' }
+          { text: 'OAuth sign-in', link: '/oauth' }
         ]
       },
       {
-        text: 'Contribute',
+        text: 'Reference',
+        collapsed: true,
         items: [
-          { text: 'Development', link: '/development' },
-          { text: 'Roadmap', link: '/roadmap' },
-          { text: 'Cully changelog', link: 'https://github.com/mcp-runtime/cully/blob/main/CHANGELOG.md' }
+          { text: 'Configuration', link: '/configuration' },
+          { text: 'Mem0 recall', link: '/mem0' },
+          { text: 'Architecture', link: '/architecture' }
         ]
-      }
+      },
     ],
     search: { provider: 'local' },
     socialLinks: [{ icon: 'github', link: 'https://github.com/mcp-runtime/cully' }],

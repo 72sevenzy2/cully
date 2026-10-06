@@ -1,30 +1,37 @@
 ---
 title: Cully documentation
-description: Install Cully, connect your coding agents, and understand local guidance and shared memory.
+description: Install Cully, start memory on your laptop, and use it with your coding agent.
 ---
 
-# Make every session count
+# Cully docs
 
-Cully's main feature is useful suggestions while you work in Claude Code, Codex, or Cursor. Its local advisor uses the session signals your agent exposes to show warnings and suggest workflow improvements through supported status displays, commands, and skills. You can review advice inside your agent and preview a change before applying it. The optional MCP service stores durable records that the same owner can retrieve from another connected agent. Self-hosted Mem0 handles semantic indexing and recall when configured.
+Cully helps Claude Code, Codex and Cursor keep useful context between sessions and improve the session you are in. Its memory stack runs on your laptop, with Mem0 to find related notes even when you ask in different words. You choose what to save through Cully memory tools; it does not upload every session automatically.
 
-| I want to… | Start here |
+## Set up Cully
+
+For Codex:
+
+```sh
+curl -fsSL https://cully.net/install.sh | sh -s -- --agent codex
+```
+
+With Docker Compose and Python 3 installed, start memory and connect the same agent:
+
+```sh
+cully setup codex
+```
+
+Use `claude` or `cursor` in place of `codex` in both commands if needed. Agent setup starts the advisor daemon automatically. Restart your agent, then ask it to save a useful note and find it again. You do not need to clone the repository or choose database passwords. Follow the [quickstart](/quickstart) for the full sequence.
+
+## Guides
+
+| What you want to do | Guide |
 | --- | --- |
-| See suggestions while I work in my agent | [In-session guidance](/advisor#see-suggestions-as-you-work) |
-| Try the local CLI | [Quickstart](/quickstart) |
-| Set up Claude Code, Codex, or Cursor | [Connect an agent](/agents) |
-| Save and find durable notes | [Shared memory](/memory) |
-| Run my own memory service | [Self-hosting](/hosting) |
+| Install Cully and save your first note | [Quickstart](/quickstart) |
+| Save and find notes | [Memory](/memory) |
+| Use session guidance | [Local advisor](/advisor) |
+| Run the services on your laptop | [Self-hosting](/hosting) |
+| Connect to an existing server | [Connect an agent](/agents) |
+| Let multiple people sign in | [OAuth setup](/oauth) |
 
-## Two parts that work together
-
-**Local advisor.** The installer or `cully agent setup` configures supported integrations on your machine. `cully status` shows session state, and `cully suggestions` offers changes you can preview before applying. It works without a server. See the [local advisor guide](/advisor).
-
-**Shared memory.** `cully setup codex` starts your own Docker stack and registers its MCP server with Codex. For an already-running server, `cully agent setup codex --mcp-url URL` installs the skill and registers the endpoint. Cully tools can save and search your own personal or project records. PostgreSQL holds the source records; optional self-hosted Mem0 handles semantic indexing and recall. A single-user server needs no login by default; operators can enable OAuth for per-user access.
-
-## Choose a path
-
-| For yourself | For your team |
-| --- | --- |
-| [Install Cully](/quickstart) for local session guidance. When you want shared memory, [start your own Docker stack](/hosting) and connect your agent. | [Plan a team deployment](/team-deployment) on Docker Compose, Kubernetes or your container platform. Connect [MCP Auth](/oauth) to your organization's identity provider so each person signs in. |
-
-For the service contract, see [configuration](/configuration) and [architecture](/architecture). [MCP Runtime](https://mcpruntime.org) is a platform where you can deploy an MCP server. See [website and docs hosting](/website) for this project's public website and documentation.
+Manual service settings and system details are in the [configuration reference](/configuration) and [architecture](/architecture).

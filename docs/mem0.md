@@ -1,25 +1,22 @@
-# Self-hosted Mem0
+---
+title: Mem0 and semantic recall
+description: Understand how Cully indexes notes with self-hosted Mem0.
+---
 
-Cully targets the self-hosted Mem0 REST server, not Mem0's hosted API. Its Go adapter calls `GET /memories`, `POST /memories`, `POST /search` and `DELETE /memories/{id}` with `X-API-Key` authentication. Endpoint details follow [the upstream server](https://github.com/mem0ai/mem0/blob/c93420c49a6b14c3d446bdb156d96811908fd90a/server/main.py).
+# Mem0 and semantic recall
 
-The [self-hosted full stack](/hosting#one-command-full-stack) starts a pinned Mem0 REST server with a persistent vector database and history volume. Keep the REST endpoint private to the service network. A separately operated Mem0 instance must expose the REST contract below.
+Mem0 is part of Cully's standard memory stack. `cully setup codex` starts Mem0 alongside Cully, PostgreSQL and the private data API. You do not need a Mem0 account or embedding API key.
 
-Set `CULLY_MEM0_URL` and `CULLY_MEM0_API_KEY` on `cully-data`. Both are required to enable indexing. These values are never needed in the public MCP workload or coding-agent configuration. The base URL must omit a trailing endpoint path such as `/search`; a reverse-proxy base prefix is supported.
+PostgreSQL stores the source note. Cully sends an owner-scoped projection of its authored summary to Mem0, which indexes it by meaning. When an agent uses `cully_recall`, Mem0 finds candidates and Cully checks the live source records before returning them. `cully_search` and `cully_recent` read PostgreSQL directly.
 
-[`deploy/self-hosted/compose.yaml`](https://github.com/mcp-runtime/cully/blob/main/deploy/self-hosted/compose.yaml) builds the pinned upstream Mem0 server, provisions its own persistent PostgreSQL database and history volume, and keeps its REST endpoint private. `./setup.sh` brings it up with Cully's other services. Mem0 maintains its own Python runtime inside its container; the Cully CLI, MCP server and data API have no Python runtime dependency. The setup helper uses Python 3 on the Docker host to create private credentials.
+## What to expect
 
-The full-stack image uses FastEmbed with the open source `BAAI/bge-small-en-v1.5` model and 384-dimensional vectors. The model is cached in the image and runs on the host CPU, so indexing does not need an external embedding API. `infer=false` skips Mem0 fact extraction. Operators can configure a different embedder in their Mem0 build; a separate Mem0 instance can still be used through `CULLY_MEM0_URL` and `CULLY_MEM0_API_KEY`.
+A new or changed note can take a little time to appear in semantic recall because indexing runs in the background. Text search remains available during a Mem0 outage, and the worker retries indexing. Deleted notes are filtered from recall immediately, even if projection cleanup is still pending.
 
-Each source entry gets an owner-scoped Mem0 projection. The Mem0 user ID is a SHA-256 namespace derived from the Cully owner (fixed single-user owner or verified OAuth subject), and `run_id` is the Cully entry UUID. The projection carries section/project/category and source-update provenance. This is a service-mediated owner boundary; agents never receive the Mem0 service key.
+The standard stack uses self-hosted Mem0 with a separate pgvector/PostgreSQL database and persistent history volume. Its FastEmbed model runs locally on the host CPU. Cully sends authored summaries with `infer=false`; it does not ask Mem0 to extract new facts from transcripts.
 
-V1 uses `infer=false`: compact, already authored summaries are embedded directly. Automatic fact extraction can be added later with explicit model configuration and a stronger source-to-fact deletion contract. Do not assume the current projection worker consolidates or extracts facts.
+## Manual deployment
 
-After configuring Mem0 for an existing Cully database, queue source records:
+The [Compose file](https://github.com/mcp-runtime/cully/blob/main/deploy/self-hosted/compose.yaml) shows the Mem0 service, database, volumes and private network. If you deploy Cully's data API yourself, point `CULLY_MEM0_URL` at the Mem0 REST base URL and give the data API `CULLY_MEM0_API_KEY`. Mem0's `ADMIN_API_KEY` must match. Do not put these values in an agent's configuration or expose Mem0 REST publicly.
 
-```sh
-docker compose run --rm data-api reindex
-```
-
-Logging remains available during Mem0 outages. Projections retry with bounded exponential backoff. Semantic recall may temporarily miss recently created or updated records until indexing completes; `cully_search` and `cully_recent` continue to read PostgreSQL. Deleted source entries are filtered immediately from recall even before Mem0 cleanup finishes.
-
-The worker replaces one source projection at a time using a PostgreSQL row lock and bounded HTTP deadlines. It does not provide exactly-once delivery to Mem0; retries reconcile existing projections. Source UUIDs are deduplicated during recall. Future optimization can use leases and multiple bounded workers when measurements justify that complexity.
+If you add Mem0 to a database with existing notes, queue them for indexing with the data API's `reindex` command. See the [configuration reference](/configuration) and [architecture](/architecture) for service details.

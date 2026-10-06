@@ -7,7 +7,7 @@ flowchart LR
   A[Claude / Codex / Cursor] --> L[Cully CLI and daemon]
   L --> S[Local diagnostics and suggestions]
   A -->|Private no-OAuth or OAuth| M[Cully MCP]
-  M -->|Private authenticated HTTPS| D[Cully data API]
+  M -->|Authenticated private API| D[Cully data API]
   D --> P[(PostgreSQL source records)]
   P --> Q[Durable projection jobs]
   Q --> F[Self-hosted Mem0]
@@ -36,7 +36,7 @@ PostgreSQL stores authoritative records, owner-scoped indexes and a generated fu
 
 ## Semantic memory
 
-PostgreSQL is authoritative. When Mem0 is enabled, source edits and projection jobs commit in the same transaction. Self-hosted Mem0 uses its own pgvector-backed database for semantic indexing and candidate recall. A worker reconciles one owner's source entry into Mem0 and retries outages with backoff. Deletes remove the corresponding projection.
+PostgreSQL is authoritative. In the standard stack, source edits and Mem0 projection jobs commit in the same transaction. Self-hosted Mem0 uses its own pgvector-backed database for semantic indexing and candidate recall. A worker reconciles one owner's source entry into Mem0 and retries outages with backoff. Deletes remove the corresponding projection.
 
 `cully_recall` uses Mem0 to find candidates, then loads live records from PostgreSQL. It rejects another owner's records, deleted entries and projections with outdated source timestamps. It returns source records, not unverified raw Mem0 results.
 

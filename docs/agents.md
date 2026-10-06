@@ -1,48 +1,28 @@
 ---
 title: Connect an agent
-description: Set up Cully's local advisor and optional shared memory in Claude Code, Codex, or Cursor.
+description: Connect Claude Code, Codex or Cursor to Cully and its memory tools.
 ---
 
 # Connect an agent
 
-Cully brings session guidance and workflow suggestions into the agent you are
-working in. For the in-session commands and differences between each client's
-terminal or chat interface, see [suggestions as you work](/advisor#see-suggestions-as-you-work).
-
-When your MCP server is running, one command installs the Cully skill and local advisor integration **and** registers the server with your agent:
+The [quickstart](/quickstart) starts Cully and connects your first agent. To connect another agent or use an existing Cully server, give that agent the MCP URL printed by setup.
 
 ```sh
-cully agent setup codex --mcp-url https://mcp.example.com/mcp
+cully agent setup codex --mcp-url http://127.0.0.1:8080/mcp
 ```
 
-Replace `codex` with `claude` or `cursor`. Add `--oauth` if that MCP endpoint requires sign-in. The skill guides local session checks and calls the configured `cully_*` memory tools when useful. To start your own Docker stack and connect the selected agent instead, use `cully setup codex`; [self-hosting](/hosting) explains the prerequisites.
+Replace `codex` with `claude` or `cursor` and use the URL printed by your server. Restart your agent after setup. For an OAuth-enabled HTTPS server, append `--oauth` and sign in using the steps below.
 
-## Claude Code
+| Agent | Local Cully controls | OAuth sign-in, when enabled |
+| --- | --- | --- |
+| Claude Code | Status line and `/cully suggestions` | Use `/mcp`. |
+| Codex | `/prompts:cully suggestions` or ask Codex to check suggestions | Run `codex mcp login cully`. |
+| Cursor | Project `/cully suggestions` or ask Cursor to check suggestions | Use Cursor's MCP settings. |
 
-```sh
-cully agent setup claude --mcp-url https://your-server.example/mcp
-```
+The [local advisor guide](/advisor) shows what each integration can display. The [memory guide](/memory) explains what the MCP tools save and retrieve.
 
-Restart Claude Code. The local integration includes a status line, session hooks, a `/cully` command, and a skill. If the server uses OAuth, append `--oauth` to the setup command and use `/mcp` to sign in.
+## If you already installed the advisor
 
-## Codex
+Use `cully mcp add --agent codex --url URL` to add only the MCP connection. Add `--oauth` when the server requires sign-in. Setup preserves unrelated agent configuration and does not replace a Cully connection that points at another URL. Run `cully status` to inspect the local integration.
 
-```sh
-cully agent setup codex --mcp-url https://your-server.example/mcp
-```
-
-Restart Codex. The local integration uses native status fields, a `/prompts:cully` prompt, an AGENTS.md pointer, and a skill. For an OAuth-protected server, append `--oauth` to the setup command, then run `codex mcp login cully`.
-
-## Cursor
-
-```sh
-cully agent setup cursor --mcp-url https://your-server.example/mcp
-```
-
-Restart Cursor. If the server uses OAuth, append `--oauth` to the setup command and sign in from Cursor's MCP settings. The local integration provides a project `/cully` command and skill.
-
-## What setup changes
-
-`cully agent setup AGENT` without `--mcp-url` installs only the local advisor and skill. `cully setup AGENT` starts the self-hosted Docker stack and connects the agent. If the integration is already installed and you only need to add an MCP connection, use `cully mcp add --agent AGENT --url URL` (plus `--oauth` when needed). Agent setup preserves unrelated agent settings and does not sign you in automatically or replace a Cully entry that points at another URL. Use `cully status` to inspect local integration state.
-
-For operator requirements, see [self-hosting](/hosting) and [OAuth deployment](/oauth). For all client configuration details, see the [client reference](https://github.com/mcp-runtime/cully/blob/main/clients/README.md).
+For detailed client configuration, see the [client reference](https://github.com/mcp-runtime/cully/blob/main/clients/README.md).
