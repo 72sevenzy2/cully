@@ -49,7 +49,7 @@ cully setup --oauth
 
 This starts PostgreSQL, Mem0, the data API, Cully MCP, MCP Auth and Caddy. Each team member connects their own agent to the public MCP URL.
 
-The Cully maintainer uses [MCP Runtime's publishing guide](https://docs.mcpruntime.org/publish-mcp-server/) to deploy a personal Cully MCP endpoint. MCP Runtime runs MCP Auth and passes Cully its OAuth issuer and resource URL; the Cully [server manifest](https://github.com/mcp-runtime/cully/blob/main/.mcp/servers.yaml) declares `tools:read` and `tools:write` for that resource.
+The Cully maintainer deploys a personal Cully MCP endpoint on [MCP Runtime](https://mcpruntime.org), a platform for publishing MCP servers. Its [guide to publishing an MCP server](https://docs.mcpruntime.org/publish-mcp-server/) shows how that deployment works. MCP Runtime runs MCP Auth and passes Cully its OAuth issuer and resource URL; the Cully [server manifest](https://github.com/mcp-runtime/cully/blob/main/.mcp/servers.yaml) declares `tools:read` and `tools:write` for that resource.
 
 <div class="related-product">
   <p class="related-product__eyebrow">Another product from the Cully maintainer</p>
