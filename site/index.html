@@ -4,10 +4,10 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#f7f5ef">
-  <meta name="description" content="Cully helps you understand coding sessions, improve your workflow, and carry useful context across agents. Self-hosted Mem0 powers semantic recall.">
+  <meta name="description" content="Ship faster with confidence. Cully helps Claude Code, Codex, and Cursor recall what was done, how it was done, and which session did it, then suggests focused ways to check the work.">
   <meta property="og:type" content="website">
   <meta property="og:title" content="Cully — better work with AI agents">
-  <meta property="og:description" content="See your session clearly, improve your workflow, and keep useful context with Mem0-backed recall.">
+  <meta property="og:description" content="Recall what happened in earlier coding sessions, focus on the current task, and keep a clear trail of checks and next steps with Cully.">
   <meta property="og:url" content="https://cully.net/">
   <link rel="canonical" href="https://cully.net/">
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
@@ -35,8 +35,8 @@
       <section class="hero section-wrap" aria-labelledby="hero-title">
         <div class="hero-copy">
           <div class="eyebrow"><span class="eyebrow-line"></span> The companion for your coding agents</div>
-          <h1 id="hero-title">Make every session<br><em>work better.</em></h1>
-          <p class="hero-lead">Get useful suggestions while you work in Claude Code, Codex, or Cursor. Cully's background advisor brings session guidance into your agent through status displays, commands, and skills, and helps you carry useful context to the next session.</p>
+          <h1 id="hero-title">Ship faster.<br><em>Stay confident.</em></h1>
+          <p class="hero-lead">Cully helps Claude Code, Codex, and Cursor recall what was done, how it was done, and which session did it. It brings a few relevant notes into the next task, spots workflow gaps, and leaves a clear handoff with the checks that passed and the work still open.</p>
           <div id="install" class="hero-try">
             <div class="hero-try-heading"><strong>Try it out</strong><span>macOS and Linux</span></div>
             <div class="hero-command"><code>curl -fsSL https://cully.net/install.sh | sh</code><button class="copy-button" type="button" aria-label="Copy Cully install command">Copy</button></div>
@@ -44,7 +44,7 @@
           </div>
           <div class="hero-actions">
             <a class="button button-primary" href="https://docs.cully.net/quickstart">Read the quickstart <span aria-hidden="true">↗</span></a>
-            <a class="button button-text" href="#how-it-works">See how it works <span aria-hidden="true">↓</span></a>
+            <a class="button button-text" href="https://docs.cully.net/session-optimization">How Cully keeps sessions focused <span aria-hidden="true">↗</span></a>
           </div>
           <div class="hero-footnote"><span class="pulse-dot" aria-hidden="true"></span><span>Open source · Built for Claude Code, Codex and Cursor · Recall powered by <a href="https://mem0.ai/" target="_blank" rel="noopener noreferrer">Mem0 ↗</a></span></div>
         </div>
@@ -75,7 +75,7 @@
         <div class="section-intro"><div><div class="kicker">MAKE IT YOURS</div><h2 id="paths-title">For yourself.<br><em>For your team.</em></h2></div><p>Start with your own coding agent, or give everyone in your organization a shared way to work with Cully.</p></div>
         <div class="paths-grid">
           <article class="path-card"><div class="path-number">01 / YOURSELF</div><h3>Work better on your own.</h3><p>Install the local advisor and skill, then run <code>cully setup codex</code> to start Cully memory with PostgreSQL and Mem0 on your laptop and connect your agent.</p><div class="path-links"><a href="https://docs.cully.net/quickstart">Start for yourself <span aria-hidden="true">↗</span></a><a href="https://docs.cully.net/hosting">Run your own server <span aria-hidden="true">↗</span></a></div></article>
-          <article class="path-card path-card-team"><div class="path-number">02 / YOUR TEAM</div><h3>Bring Cully to your organization.</h3><p>Give each person their own records through your identity provider. Deploy versioned containers with Docker Compose, Kubernetes, or your team's platform, and connect MCP Auth for agent sign-in.</p><div class="path-links"><a href="https://docs.cully.net/team-deployment">Plan a team deployment <span aria-hidden="true">↗</span></a><a href="https://docs.cully.net/oauth">Set up OAuth <span aria-hidden="true">↗</span></a></div></article>
+          <article class="path-card path-card-team"><div class="path-number">02 / YOUR TEAM</div><h3>Bring Cully to your organization.</h3><p>Give each person their own records through your identity provider. Run Cully on your company's platform, including MCP Runtime on Kubernetes, and connect MCP Auth for agent sign-in.</p><div class="path-links"><a href="https://docs.cully.net/team-deployment">Plan a team deployment <span aria-hidden="true">↗</span></a><a href="https://docs.cully.net/oauth">Set up OAuth <span aria-hidden="true">↗</span></a></div></article>
         </div>
       </section>
 
@@ -83,12 +83,25 @@
         <div class="section-intro"><div><div class="kicker">01 / THE IDEA</div><h2 id="product-title">Less starting over.<br><em>More moving forward.</em></h2></div><p>Agents are good at the task in front of them. Cully gives you a way to guide the session you are in and keep the lessons that should last beyond it.</p></div>
         <div class="feature-grid">
           <article class="feature-card feature-green"><div class="feature-number">01 <span>↗</span></div><div class="feature-visual status-visual"><div class="mini-line"><span>SESSION HEALTH</span><b>GOOD</b></div><div class="meter"><span></span></div><div class="mini-line muted"><span>Context pressure</span><span>Comfortable</span></div></div><h3>Stay aware in the moment.</h3><p>The local advisor surfaces session signals and practical suggestions in the agent tools you already use.</p><a href="https://docs.cully.net/advisor">Explore local guidance <span aria-hidden="true">→</span></a></article>
-          <article class="feature-card feature-cream"><div class="feature-number">02 <span>↗</span></div><div class="feature-visual memory-visual"><div class="memory-visual-card"><span>✳ &nbsp; SAVED FOR LATER</span><strong>We chose the smaller, safer change.</strong><small>project · decision · today</small></div><div class="memory-visual-shadow"></div></div><h3>Keep what matters.</h3><p>Save decisions, lessons, and project context as structured records. Self-hosted Mem0 handles semantic recall so another agent can find the right context later.</p><a href="https://docs.cully.net/memory">Explore shared memory <span aria-hidden="true">→</span></a></article>
+          <article class="feature-card feature-cream"><div class="feature-number">02 <span>↗</span></div><div class="feature-visual memory-visual"><div class="memory-visual-card"><span>✳ &nbsp; SAVED FOR LATER</span><strong>We chose the smaller, safer change.</strong><small>project · decision · today</small></div><div class="memory-visual-shadow"></div></div><h3>Keep what matters.</h3><p>Your connected agent looks up relevant work and saves concise summaries as tasks finish. PostgreSQL keeps the notes; Mem0 helps the next agent find them by meaning.</p><a href="https://docs.cully.net/memory">Explore shared memory <span aria-hidden="true">→</span></a></article>
           <article class="feature-card feature-peach"><div class="feature-number">03 <span>↗</span></div><div class="feature-visual preview-visual"><span>CHANGE PREVIEW</span><div class="preview-line"><i>+</i> Add a focused project note</div><div class="preview-line dim"><i>+</i> Keep your existing settings</div><div class="preview-button">Apply when you are ready →</div></div><h3>Make changes on purpose.</h3><p>Review a dry run before applying an improvement. Cully keeps unrelated, user-owned settings intact.</p><a href="https://docs.cully.net/advisor#commands">Explore suggestions <span aria-hidden="true">→</span></a></article>
+        </div>
+        <div id="session-optimization" class="optimization-panel">
+          <div class="optimization-heading"><div><div class="kicker">HOW CULLY HELPS</div><h3>Less repeated work. More checked progress.</h3></div><p>These are the specific ways Cully keeps an agent focused while you work and test.</p></div>
+          <div class="optimization-grid">
+            <article><span>01</span><h4>Recall only what matters</h4><p>Start with three short project and task notes. Open a full record only when its details are needed.</p></article>
+            <article><span>02</span><h4>Keep a session trail</h4><p>Save the task, approach, result, missed step and next action with an opaque reference to the agent session.</p></article>
+            <article><span>03</span><h4>Find decisions by meaning</h4><p>Mem0 helps another connected agent find related work even when it asks in different words.</p></article>
+            <article><span>04</span><h4>Watch context pressure</h4><p>From available session signals, the local advisor points to the agent's own context controls when useful.</p></article>
+            <article><span>05</span><h4>Break wasteful loops</h4><p>Advice can flag repeated searches, tool failures or missing integrations and suggest a focused next move.</p></article>
+            <article><span>06</span><h4>Check before handoff</h4><p>The advisor can suggest a verifier or better test workflow; the saved note says what actually passed.</p></article>
+          </div>
+          <p class="optimization-caveat">Live advisor signals are richest in Claude Code. Codex and Cursor still get Cully's continuity hooks and the controls their clients expose.</p>
+          <a class="inline-link" href="https://docs.cully.net/session-optimization">See how session optimization works <span aria-hidden="true">↗</span></a>
         </div>
       </section>
 
-      <section id="how-it-works" class="workflow-section" aria-labelledby="workflow-title"><div class="section-wrap workflow-inner"><div class="workflow-heading"><div class="kicker">02 / GET GOING</div><h2 id="workflow-title">A simple path to<br><em>better continuity.</em></h2><p>Install Cully, start its memory stack on your laptop, and use it in the coding agent you already know.</p><a class="inline-link" href="https://docs.cully.net/quickstart">Read the quickstart <span aria-hidden="true">↗</span></a></div><div class="workflow-steps"><article><div class="step-number">01</div><div><h3>Install Cully</h3><p>Set up the advisor and skill for your coding agent.</p></div></article><article><div class="step-number">02</div><div><h3>Start memory</h3><p>Run <code>cully setup codex</code> to start Cully, PostgreSQL and Mem0 on your laptop and connect Codex.</p></div></article><article><div class="step-number">03</div><div><h3>Use Cully in your agent</h3><p>Save and recall useful work, check session status, and preview suggestions before applying them.</p></div></article></div></div></section>
+      <section id="how-it-works" class="workflow-section" aria-labelledby="workflow-title"><div class="section-wrap workflow-inner"><div class="workflow-heading"><div class="kicker">02 / GET GOING</div><h2 id="workflow-title">A simple path to<br><em>better continuity.</em></h2><p>Install Cully, start its memory stack on your laptop, and use it in the coding agent you already know.</p><a class="inline-link" href="https://docs.cully.net/quickstart">Read the quickstart <span aria-hidden="true">↗</span></a></div><div class="workflow-steps"><article><div class="step-number">01</div><div><h3>Install Cully</h3><p>Set up the advisor, skill and session hooks for your coding agent.</p></div></article><article><div class="step-number">02</div><div><h3>Start memory</h3><p>Run <code>cully setup codex</code> to start Cully, PostgreSQL and Mem0 on your laptop and connect Codex.</p></div></article><article><div class="step-number">03</div><div><h3>Keep working</h3><p>Your agent finds relevant notes, records useful results, and helps you review session suggestions.</p></div></article></div></div></section>
 
       <section class="section-wrap architecture-section" aria-labelledby="architecture-title">
         <div class="section-intro"><div><div class="kicker">03 / UNDER THE HOOD</div><h2 id="architecture-title">Built for the way<br><em>agents actually work.</em></h2></div><p>Cully brings together a background advisor, local session controls, skills, and MCP tools backed by durable memory.</p></div>
@@ -148,7 +161,7 @@
       </dialog>
     </main>
 
-    <footer class="site-footer section-wrap"><div><a class="brand" href="/" aria-label="Cully home"><span class="brand-mark" aria-hidden="true"><span></span></span><span>cully<span class="brand-dot">.</span></span></a><p>Your companion for better work<br>with AI agents.</p></div><div class="footer-links"><div><strong>Explore</strong><a href="#product">Product</a><a href="#how-it-works">How it works</a><a href="https://docs.cully.net/quickstart">Get started</a></div><div><strong>Resources</strong><a href="https://docs.cully.net/">Documentation</a><a href="https://github.com/mcp-runtime/cully">GitHub</a><a href="https://github.com/mcp-runtime/cully/releases">Releases</a></div></div><div class="footer-bottom"><span>© <span id="year">2026</span> Cully. Built in the open.</span><span>Make the next session a little better.</span></div></footer>
+    <footer class="site-footer section-wrap"><div><a class="brand" href="/" aria-label="Cully home"><span class="brand-mark" aria-hidden="true"><span></span></span><span>cully<span class="brand-dot">.</span></span></a><p>Your companion for better work<br>with AI agents.</p></div><div class="footer-links"><div><strong>Explore</strong><a href="#product">Product</a><a href="#how-it-works">How it works</a><a href="https://docs.cully.net/quickstart">Get started</a></div><div><strong>Resources</strong><a href="https://docs.cully.net/">Documentation</a><a href="https://docs.cully.net/session-optimization">Session optimization</a><a href="https://github.com/mcp-runtime/cully">GitHub</a><a href="https://github.com/mcp-runtime/cully/releases">Releases</a></div></div><div class="footer-bottom"><span>© <span id="year">2026</span> Cully. Built in the open.</span><span>Make the next session a little better.</span></div></footer>
   </div>
 </body>
 </html>

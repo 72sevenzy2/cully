@@ -17,6 +17,7 @@ func TestValidation(t *testing.T) {
 		{"section", func(r *Request) { r.Log.Section = "shared" }},
 		{"assistant", func(r *Request) { r.Log.Assistant = "anonymous-bot" }},
 		{"timestamp", func(r *Request) { r.Log.OccurredAt = "2026-10-06T10:00:00" }},
+		{"session reference", func(r *Request) { bad := "native-session-id"; r.Log.SessionRef = &bad }},
 		{"mismatched operation", func(r *Request) { r.Operation = "get" }},
 		{"ambiguous input", func(r *Request) { r.ID = &IDInput{EntryID: "wrong"} }},
 	}

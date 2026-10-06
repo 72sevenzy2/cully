@@ -157,13 +157,17 @@ func execute(t *testing.T, s *Store, owner string, r memory.Request) memory.Resu
 func TestDatabaseMemoryLifecycle(t *testing.T) {
 	s := testStore(t)
 	project := "git@github.com:MCP-Runtime/Cully.git"
-	input := memory.LogInput{Summary: "OAuth audience validation", Assistant: "Codex", Section: "company", ProjectURL: &project, OccurredAt: "2026-10-06T15:00:00+05:30", Tags: []string{"Auth"}}
+	ref := "codex-0123456789abcdef"
+	input := memory.LogInput{Summary: "OAuth audience validation", Assistant: "Codex", Section: "company", ProjectURL: &project, SessionRef: &ref, OccurredAt: "2026-10-06T15:00:00+05:30", Tags: []string{"Auth"}}
 	logged := execute(t, s, "owner-a", memory.Request{Operation: "log", Log: &input}).Entry
 	if logged == nil || logged.ID == "" || logged.OccurredAt.Format(time.RFC3339) != "2026-10-06T15:00:00+05:30" {
 		t.Fatalf("bad entry %+v", logged)
 	}
 	if logged.ProjectURL == nil || *logged.ProjectURL != "https://github.com/mcp-runtime/cully" {
 		t.Fatal("project not normalized")
+	}
+	if logged.SessionRef == nil || *logged.SessionRef != ref {
+		t.Fatal("session reference lost")
 	}
 	id := memory.IDInput{EntryID: logged.ID}
 	if execute(t, s, "owner-b", memory.Request{Operation: "get", ID: &id}).Entry != nil {
@@ -185,6 +189,13 @@ func TestDatabaseMemoryLifecycle(t *testing.T) {
 		if len(r.Entries) != 0 {
 			t.Fatal("cross-owner search")
 		}
+	}
+	bySession := execute(t, s, "owner-a", memory.Request{Operation: "recent", Recent: &memory.RecentInput{SessionRef: &ref}})
+	if len(bySession.Entries) != 1 || bySession.Entries[0].ID != logged.ID {
+		t.Fatal("session filter failed")
+	}
+	if entries := execute(t, s, "owner-b", memory.Request{Operation: "recent", Recent: &memory.RecentInput{SessionRef: &ref}}).Entries; len(entries) != 0 {
+		t.Fatal("cross-owner session filter")
 	}
 	learning := "Validate the public resource"
 	updated := execute(t, s, "owner-a", memory.Request{Operation: "update", Update: &memory.UpdateInput{EntryID: logged.ID, Learning: &learning, Summary: &summary}}).Entry

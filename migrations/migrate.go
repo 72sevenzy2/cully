@@ -10,6 +10,9 @@ import (
 //go:embed 002_source_only.sql
 var schema string
 
+//go:embed 003_session_ref.sql
+var sessionRefSchema string
+
 func Apply(ctx context.Context, pool *pgxpool.Pool) error {
 	tx, err := pool.Begin(ctx)
 	if err != nil {
@@ -31,6 +34,17 @@ func Apply(ctx context.Context, pool *pgxpool.Pool) error {
 			return err
 		}
 		if _, err = tx.Exec(ctx, "INSERT INTO cully_schema_versions(version) VALUES(2)"); err != nil {
+			return err
+		}
+	}
+	if err = tx.QueryRow(ctx, "SELECT EXISTS(SELECT 1 FROM cully_schema_versions WHERE version=3)").Scan(&exists); err != nil {
+		return err
+	}
+	if !exists {
+		if _, err = tx.Exec(ctx, sessionRefSchema); err != nil {
+			return err
+		}
+		if _, err = tx.Exec(ctx, "INSERT INTO cully_schema_versions(version) VALUES(3)"); err != nil {
 			return err
 		}
 	}

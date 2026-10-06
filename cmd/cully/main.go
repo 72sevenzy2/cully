@@ -189,6 +189,11 @@ func runInternal(args []string) error {
 		cully.RunAnalyze(os.Stdin)
 	case "cleanup":
 		cully.RunCleanup(os.Stdin)
+	case "continuity":
+		if len(args) != 3 {
+			return fmt.Errorf("internal continuity requires agent and event")
+		}
+		cully.RunContinuityHook(args[1], args[2], os.Stdin, os.Stdout)
 	case "daemon":
 		cully.RunDaemon()
 	case "worker":

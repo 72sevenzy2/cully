@@ -18,7 +18,7 @@ flowchart LR
 
 `cmd/cully` uses the imported session-control implementation in `internal/cully`. It renders instruments, discovers capabilities, runs advisory analysis, manages suggestions and records diagnostic session counters. Claude has the rich command-backed status line and hooks. Codex and Cursor use their available native integrations.
 
-The local advisor works offline. It does not run a background transcript scanner or maintain a second personal/project memory store. Local snapshots and diagnostic logs support session controls; agents use the Cully MCP tools for durable memory. Automatic session upload is not implemented.
+The local advisor works offline. It does not run a background transcript scanner or maintain a second personal/project memory store. Local snapshots and diagnostic logs support session controls. Managed session and stop hooks prompt Claude Code, Codex and Cursor to find relevant prior work and save concise task summaries through each agent's own Cully MCP connection. They derive an opaque `session_ref` from the client's hook session ID when available, so source notes can be grouped by session without storing the raw ID. The `cully_context` MCP tool projects a bounded preview from the same validated, owner-scoped search and recent operations; `cully_get` retrieves full details on demand. The hooks do not upload raw transcripts or give the advisor the agent's OAuth token.
 
 ## Public memory boundary
 

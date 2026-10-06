@@ -42,6 +42,9 @@ func (s *Store) Recall(ctx context.Context, owner string, input memory.SearchInp
 		if input.ProjectURL != nil && (e.ProjectURL == nil || *e.ProjectURL != *input.ProjectURL) {
 			continue
 		}
+		if input.SessionRef != nil && (e.SessionRef == nil || *e.SessionRef != *input.SessionRef) {
+			continue
+		}
 		if input.Section != nil && e.Section != *input.Section {
 			continue
 		}

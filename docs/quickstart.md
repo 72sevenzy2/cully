@@ -25,11 +25,13 @@ Make sure Docker is running, then run:
 cully setup codex
 ```
 
-Use the same agent name you installed. Setup starts PostgreSQL, Mem0, the private data API and Cully MCP in Docker, generates private service credentials, and connects your agent. Wait for `Cully MCP is configured at ...`, then restart the agent. No repository checkout or OAuth setup is needed. See [self-hosting](/hosting#one-command-full-stack) for details.
+Use the same agent name you installed. Setup starts PostgreSQL, Mem0, the private data API and Cully MCP in Docker, generates private service credentials, and connects your agent. Wait for `Cully MCP is configured at ...`, then restart the agent. In Codex, review and trust the installed Cully hooks in `/hooks` when Codex asks. No repository checkout or OAuth setup is needed. See [self-hosting](/hosting#one-command-full-stack) for details.
 
-## 3. Save and find a note
+## 3. Continue work in another session
 
-Ask your agent to save a short summary of useful work with Cully, then ask it to find that summary. The agent uses `cully_log` to save it and `cully_search` or `cully_recall` to find it. Mem0 handles semantic recall; PostgreSQL keeps the source note. Cully does not upload full session transcripts automatically. See the [memory guide](/memory).
+Work on a real task in your connected agent. Cully's installed session instructions ask the agent to look up relevant project notes before substantial work and save one concise summary when it finishes. Start a new session or switch between Claude Code, Codex and Cursor with the same Cully MCP server; the agent can pick up the task, decisions, result and remaining steps from those notes. You can also ask what happened earlier.
+
+The agent starts with a bounded `cully_context` lookup and uses `cully_get` only when it needs a full note. It saves the result with `cully_log` through its own MCP connection. Mem0 handles semantic recall; PostgreSQL keeps the source note. The advisor does not upload transcripts. If the MCP server is unavailable, the agent can keep working but cannot save shared continuity until it reconnects. See the [memory guide](/memory) and [session optimization guide](/session-optimization).
 
 ## 4. Check suggestions
 

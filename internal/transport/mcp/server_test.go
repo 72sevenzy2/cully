@@ -22,6 +22,9 @@ type fakeStore struct {
 func (s *fakeStore) Execute(_ context.Context, owner string, r memory.Request) (memory.Result, error) {
 	s.owner = owner
 	s.calls++
+	if r.Operation == "recent" {
+		return memory.Result{Entries: []memory.Entry{{ID: "00000000-0000-0000-0000-000000000002", Summary: "Previous project work", Section: "company", Assistant: "codex"}}}, nil
+	}
 	return memory.Result{Entry: &memory.Entry{ID: "00000000-0000-0000-0000-000000000001", Summary: r.Log.Summary, Section: r.Log.Section}}, nil
 }
 
@@ -61,7 +64,7 @@ func TestMCPToPrivateAPI(t *testing.T) {
 			t.Fatal(err)
 		}
 		tools, err := session.ListTools(ctx, nil)
-		if err != nil || len(tools.Tools) != 8 {
+		if err != nil || len(tools.Tools) != 9 {
 			t.Fatalf("tools=%v err=%v", tools, err)
 		}
 		result, err := session.CallTool(ctx, &sdk.CallToolParams{Name: "cully_log", Arguments: memory.LogInput{Summary: "Fixed OAuth", Assistant: "codex", Section: "company"}})
@@ -71,9 +74,15 @@ func TestMCPToPrivateAPI(t *testing.T) {
 		if result.IsError != (token == "reader") {
 			t.Fatalf("scope not enforced: %s %+v", token, result)
 		}
+		if token == "reader" {
+			contextResult, err := session.CallTool(ctx, &sdk.CallToolParams{Name: "cully_context", Arguments: ContextInput{Mode: "recent"}})
+			if err != nil || contextResult.IsError {
+				t.Fatalf("read-scoped context failed: %v %+v", err, contextResult)
+			}
+		}
 		_ = session.Close()
 	}
-	if backend.calls != 1 || backend.owner != "owner-a" {
+	if backend.calls != 2 || backend.owner != "owner-a" {
 		t.Fatalf("owner or permissions lost: %+v", backend)
 	}
 	for _, path := range []string{"/mcp", "/.well-known/oauth-protected-resource/cully/mcp"} {

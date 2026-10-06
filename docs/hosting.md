@@ -18,7 +18,7 @@ Cully's memory service runs on your laptop for the default single-user setup. Yo
 
    Use `claude` or `cursor` instead of `codex`. Run `cully setup` without an agent name if you only want to start the services.
 3. Wait for `Cully MCP is configured at ...` to appear, then restart your agent. Setup registers the MCP connection, installs the Cully skill and starts the advisor daemon if it is not already running.
-4. Ask your agent to save a useful work note, then ask it to find that note. The [memory guide](/memory) explains the tools and what gets saved.
+4. Work on a substantive task. Your connected agent is prompted to find relevant notes and save a concise work summary for later sessions. The [memory guide](/memory) explains what gets saved.
 
 The command downloads the matching Cully release's Docker files, starts PostgreSQL, Mem0, the private data API and the MCP server, and creates the database schema. No repository checkout is needed. It generates service credentials and a stable single-user owner in `~/.cully/config.json`; keep that file private and back it up with your Docker volumes. Editable stack settings live in `~/.cully/self-hosted/config/.env`. You do not need to edit either file for the default laptop setup.
 

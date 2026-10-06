@@ -24,6 +24,7 @@ type Entry struct {
 	Theme      string    `json:"theme"`
 	Section    string    `json:"section"`
 	ProjectURL *string   `json:"project_url"`
+	SessionRef *string   `json:"session_ref"`
 	Category   *string   `json:"category"`
 	EntryType  string    `json:"entry_type"`
 	Summary    string    `json:"summary"`
@@ -53,6 +54,7 @@ type LogInput struct {
 	Assistant  string   `json:"assistant"`
 	Section    string   `json:"section"`
 	ProjectURL *string  `json:"project_url,omitempty"`
+	SessionRef *string  `json:"session_ref,omitempty"`
 	Category   *string  `json:"category,omitempty"`
 	EntryType  string   `json:"entry_type,omitempty"`
 	Approach   *string  `json:"approach,omitempty"`
@@ -66,6 +68,7 @@ type LogInput struct {
 type SearchInput struct {
 	Query      string  `json:"query,omitempty"`
 	ProjectURL *string `json:"project_url,omitempty"`
+	SessionRef *string `json:"session_ref,omitempty"`
 	EntryType  *string `json:"entry_type,omitempty"`
 	Section    *string `json:"section,omitempty"`
 	Category   *string `json:"category,omitempty"`
@@ -74,6 +77,7 @@ type SearchInput struct {
 }
 type RecentInput struct {
 	ProjectURL *string `json:"project_url,omitempty"`
+	SessionRef *string `json:"session_ref,omitempty"`
 	EntryType  *string `json:"entry_type,omitempty"`
 	Section    *string `json:"section,omitempty"`
 	Category   *string `json:"category,omitempty"`
@@ -139,6 +143,7 @@ func (s Service) Execute(ctx context.Context, owner string, r Request) (Result, 
 var ownerRE = regexp.MustCompile(`^[A-Za-z0-9](?:[A-Za-z0-9-]{0,37}[A-Za-z0-9])?$`)
 var repoRE = regexp.MustCompile(`^[A-Za-z0-9_.-]{1,100}$`)
 var assistantRE = regexp.MustCompile(`(?i)^(codex|claude|cursor|chatgpt|other)(?:[- ][a-z0-9_.-]{1,40})?$`)
+var sessionRefRE = regexp.MustCompile(`^[a-z][a-z0-9-]{0,31}-[0-9a-f]{16}$`)
 var secrets = []*regexp.Regexp{
 	regexp.MustCompile(`-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----`),
 	regexp.MustCompile(`\b(?:gh[pousr]_[A-Za-z0-9_]{20,}|github_pat_[A-Za-z0-9_]{20,})\b`),
@@ -203,6 +208,15 @@ func section(v *string) error {
 func entryType(v *string) error {
 	if v != nil && *v != "work" && *v != "issue" && *v != "learning" && *v != "decision" {
 		return fmt.Errorf("%w: invalid entry_type", ErrInvalid)
+	}
+	return nil
+}
+func sessionRef(v *string) error {
+	if v == nil {
+		return nil
+	}
+	if !sessionRefRE.MatchString(*v) {
+		return fmt.Errorf("%w: invalid session_ref", ErrInvalid)
 	}
 	return nil
 }
@@ -284,7 +298,7 @@ func (r *Request) Validate() error {
 		if !assistantRE.MatchString(v.Assistant) {
 			return fmt.Errorf("%w: invalid assistant", ErrInvalid)
 		}
-		checks = append(checks, text(&v.Summary, true), section(&v.Section), category(v.Category), entryType(&v.EntryType), project(v.ProjectURL), stamp(v.OccurredAt), tags(&v.Tags))
+		checks = append(checks, text(&v.Summary, true), section(&v.Section), category(v.Category), entryType(&v.EntryType), project(v.ProjectURL), sessionRef(v.SessionRef), stamp(v.OccurredAt), tags(&v.Tags))
 		for _, p := range []*string{v.Approach, v.Outcome, v.Issue, v.Learning, v.NextSteps} {
 			checks = append(checks, text(p, false))
 		}
@@ -294,7 +308,7 @@ func (r *Request) Validate() error {
 			break
 		}
 		limit(&v.Limit, 50)
-		checks = append(checks, text(&v.Query, false), section(v.Section), category(v.Category), entryType(v.EntryType), project(v.ProjectURL), stamp(v.Since))
+		checks = append(checks, text(&v.Query, false), section(v.Section), category(v.Category), entryType(v.EntryType), project(v.ProjectURL), sessionRef(v.SessionRef), stamp(v.Since))
 		if v.Query == "" {
 			return fmt.Errorf("%w: provide query text", ErrInvalid)
 		}
@@ -307,7 +321,7 @@ func (r *Request) Validate() error {
 			break
 		}
 		limit(&v.Limit, 50)
-		checks = append(checks, section(v.Section), category(v.Category), entryType(v.EntryType), project(v.ProjectURL))
+		checks = append(checks, section(v.Section), category(v.Category), entryType(v.EntryType), project(v.ProjectURL), sessionRef(v.SessionRef))
 	case "get", "delete":
 		if r.ID == nil {
 			break

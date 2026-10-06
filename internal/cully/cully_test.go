@@ -363,6 +363,7 @@ func TestInstallCodexAndCursorProjectFiles(t *testing.T) {
 	dir := t.TempDir()
 	codexHome := filepath.Join(dir, "codex-home")
 	t.Setenv("CODEX_HOME", codexHome)
+	t.Setenv("CURSOR_CONFIG_DIR", filepath.Join(dir, "cursor-home"))
 	// Exercise the target helpers directly so the test does not chdir the whole
 	// process or write AGENTS.md into the checked-out repository.
 	if err := installCodex(dir); err != nil {

@@ -45,7 +45,9 @@ Review the preview. To apply it, run `cully apply 1` and confirm the proposed ch
 | `cully agent setup AGENT` | Installs or refreshes the local integration. |
 | `cully uninstall AGENT` | Removes Cully-managed local integration settings. |
 
-Cully's [memory tools](/memory) keep useful context across sessions. The local advisor can still show session guidance if the memory server is temporarily unavailable.
+Cully's [memory tools](/memory) keep useful context across sessions. The installed Cully hooks ask the connected agent to retrieve and save concise work notes. The local advisor can still show session guidance if the memory server is temporarily unavailable.
+
+The [session optimization guide](/session-optimization) shows how bounded memory previews, native agent controls and advisor suggestions work together without loading an old transcript into a new task.
 
 ## Controls
 

@@ -33,7 +33,7 @@ func add[I any](server *sdk.Server, service memory.Service, identity func(contex
 	})
 }
 func Handler(service memory.Service, cfg AuthConfig, path, version string) http.Handler {
-	server := sdk.NewServer(&sdk.Implementation{Name: "Cully", Version: version}, &sdk.ServerOptions{Instructions: "Your companion for better work and everyday life. Recall what the user does and how they work to help with coding-agent orchestration, project management and workflow improvements. Search before answering history questions. Record substantive work, decisions, issues and lessons; remember personal context when the user asks. Local session controls use the cully CLI."})
+	server := sdk.NewServer(&sdk.Implementation{Name: "Cully", Version: version}, &sdk.ServerOptions{Instructions: "Your companion for better work and everyday life. At the start of substantive work, use cully_context with a relevant project and query to get a few concise prior-work previews. Use semantic mode when text search misses, and cully_get only for a record whose full details matter. Before finishing substantive work, use cully_log to save one concise task summary with approach, outcome, issues or missed steps, and next steps. Include the opaque session_ref supplied by an installed Cully hook when available. Avoid duplicate records, raw transcripts and credentials. Search before answering history questions. Remember personal context when the user asks. Local session controls use the cully CLI."})
 	identity := func(ctx context.Context, write bool) (string, error) {
 		if cfg.Mode == "none" {
 			return cfg.Owner, nil
@@ -55,6 +55,14 @@ func Handler(service memory.Service, cfg AuthConfig, path, version string) http.
 	add(server, service, identity, "cully_search", "Search authoritative source records using PostgreSQL full-text search.", false, func(v memory.SearchInput) memory.Request { return memory.Request{Operation: "search", Search: &v} })
 	add(server, service, identity, "cully_recall", "Recall live source records through self-hosted Mem0 semantic memory. Requires configured Mem0 indexing.", false, func(v memory.SearchInput) memory.Request { return memory.Request{Operation: "recall", Search: &v} })
 	add(server, service, identity, "cully_recent", "List recent memory records by section or project.", false, func(v memory.RecentInput) memory.Request { return memory.Request{Operation: "recent", Recent: &v} })
+	sdk.AddTool(server, &sdk.Tool{Name: "cully_context", Description: "Get up to five concise, owner-scoped prior-work previews for a project or task. Filter by project or opaque session_ref when known. Use text or semantic mode with a query, or recent mode without one; fetch full details with cully_get only when needed.", Annotations: &sdk.ToolAnnotations{ReadOnlyHint: true}}, func(ctx context.Context, _ *sdk.CallToolRequest, input ContextInput) (*sdk.CallToolResult, ContextResult, error) {
+		owner, err := identity(ctx, false)
+		if err != nil {
+			return nil, ContextResult{}, err
+		}
+		out, err := compactContext(ctx, service, owner, input)
+		return nil, out, err
+	})
 	add(server, service, identity, "cully_get", "Get one owned memory record.", false, func(v memory.IDInput) memory.Request { return memory.Request{Operation: "get", ID: &v} })
 	add(server, service, identity, "cully_update", "Update selected fields. Empty optional text clears a field.", true, func(v memory.UpdateInput) memory.Request { return memory.Request{Operation: "update", Update: &v} })
 	add(server, service, identity, "cully_delete", "Delete one owned record and queue deletion of its Mem0 projection.", true, func(v memory.IDInput) memory.Request { return memory.Request{Operation: "delete", ID: &v} })

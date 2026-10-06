@@ -82,7 +82,7 @@ func (s *Store) execute(ctx context.Context, tx pgx.Tx, owner string, r memory.R
 		if v.OccurredAt != "" {
 			when, _ = time.Parse(time.RFC3339, v.OccurredAt)
 		}
-		e, err := one(ctx, tx, `INSERT INTO cully_entries AS e (id,owner_subject,section,project_url,category,entry_type,summary,approach,outcome,issue,learning,next_steps,assistant,tags,occurred_at) VALUES ($1::uuid,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15) RETURNING `+record, uuid.NewString(), owner, v.Section, v.ProjectURL, v.Category, v.EntryType, v.Summary, v.Approach, v.Outcome, v.Issue, v.Learning, v.NextSteps, v.Assistant, v.Tags, when)
+		e, err := one(ctx, tx, `INSERT INTO cully_entries AS e (id,owner_subject,section,project_url,session_ref,category,entry_type,summary,approach,outcome,issue,learning,next_steps,assistant,tags,occurred_at) VALUES ($1::uuid,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16) RETURNING `+record, uuid.NewString(), owner, v.Section, v.ProjectURL, v.SessionRef, v.Category, v.EntryType, v.Summary, v.Approach, v.Outcome, v.Issue, v.Learning, v.NextSteps, v.Assistant, v.Tags, when)
 		out.Entry = e
 		return out, err
 	case "get":
@@ -123,12 +123,12 @@ func (s *Store) execute(ctx context.Context, tx pgx.Tx, owner string, r memory.R
 		return out, err
 	case "recent":
 		v := r.Recent
-		where, args := filters(owner, v.ProjectURL, v.Section, v.Category, v.EntryType, "")
+		where, args := filters(owner, v.ProjectURL, v.SessionRef, v.Section, v.Category, v.EntryType, "")
 		args = append(args, v.Limit)
 		return rows(ctx, tx, "SELECT "+record+" FROM cully_entries e WHERE "+where+fmt.Sprintf(" ORDER BY occurred_at DESC,id LIMIT $%d", len(args)), args...)
 	case "search":
 		v := r.Search
-		where, args := filters(owner, v.ProjectURL, v.Section, v.Category, v.EntryType, v.Since)
+		where, args := filters(owner, v.ProjectURL, v.SessionRef, v.Section, v.Category, v.EntryType, v.Since)
 		args = append(args, v.Query, v.Limit)
 		q, count := len(args)-1, len(args)
 		sql := fmt.Sprintf(`SELECT %s FROM cully_entries e WHERE %s AND search_vector @@ websearch_to_tsquery('english',$%d) ORDER BY ts_rank_cd(search_vector,websearch_to_tsquery('english',$%d)) DESC,e.occurred_at DESC,e.id LIMIT $%d`, record, where, q, q, count)
@@ -153,13 +153,13 @@ func (s *Store) execute(ctx context.Context, tx pgx.Tx, owner string, r memory.R
 	}
 	return out, memory.ErrInvalid
 }
-func filters(owner string, project, section, category, kind *string, since string) (string, []any) {
+func filters(owner string, project, session, section, category, kind *string, since string) (string, []any) {
 	args := []any{owner}
 	parts := []string{"owner_subject=$1"}
 	for _, f := range []struct {
 		name  string
 		value *string
-	}{{"project_url", project}, {"section", section}, {"category", category}, {"entry_type", kind}} {
+	}{{"project_url", project}, {"session_ref", session}, {"section", section}, {"category", category}, {"entry_type", kind}} {
 		if f.value != nil {
 			args = append(args, *f.value)
 			parts = append(parts, fmt.Sprintf("%s=$%d", f.name, len(args)))

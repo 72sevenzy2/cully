@@ -5,9 +5,9 @@ description: Save useful notes and find them later from connected coding agents.
 
 # Use Cully memory
 
-After [starting Cully on your laptop](/hosting) or [connecting to a team server](/agents), your agent can save and find notes through Cully MCP tools.
+After [starting Cully on your laptop](/hosting) or [connecting to a team server](/agents), your agent uses Cully MCP tools to save and find useful work across sessions.
 
-Try asking your agent to save a short work summary, then ask it to find that summary in a later session. The Cully skill guides the agent on when a record is useful. Session transcripts are not uploaded automatically; a note is saved when the agent calls `cully_log`.
+The installed Cully skill and session hooks ask Claude Code, Codex and Cursor to find relevant notes when substantive work starts and save a concise note when that work ends. A record can capture the project and task, approach, outcome, checks, blocker or missed step, and next step. When a client supplies a hook session ID, Cully gives the agent an opaque `session_ref` to save with the note. This distinguishes sessions without storing a raw client ID or transcript. The connected agent decides what is useful and calls `cully_log` with its own MCP identity. Codex asks you to trust newly installed hooks in `/hooks` before they run. The local advisor analyzes session signals for suggestions; it does not hold an OAuth token or upload session transcripts. You can still ask the agent to save, find or correct a note explicitly.
 
 ## What you can save
 
@@ -20,6 +20,7 @@ Both sections belong to the same owner. `company` is a label for organizing your
 | Tool | Use it to |
 | --- | --- |
 | `cully_log` | Save a structured note. |
+| `cully_context` | Get a few short, task-oriented previews before opening full records. |
 | `cully_recent` | See recent notes. |
 | `cully_search` | Find text in saved notes. |
 | `cully_recall` | Find semantically related notes through Mem0. |
@@ -30,8 +31,10 @@ Both sections belong to the same owner. `company` is a label for organizing your
 
 PostgreSQL holds the source notes. `cully_search` and `cully_recent` read those records directly. Mem0 is part of the standard Cully stack and provides semantic candidates for `cully_recall`; Cully checks them against live, owned records before returning them. A new or edited note may take a little time to appear in recall, while text search remains available.
 
+For a normal task, the agent starts with `cully_context`. It uses PostgreSQL text search when you provide a query, recent records when you do not, and Mem0 when `mode: semantic` is requested. The result is a bounded preview, with `cully_get` available for the full note. See [how Cully keeps sessions focused](/session-optimization).
+
 ## Record details
 
-`cully_log` requires a summary, assistant and section. Entry types are `work`, `issue`, `learning` and `decision`; `work` is the default. Optional fields include project URL, category, approach, outcome, issue, learning, next steps and tags. GitHub project URLs normalize to `https://github.com/owner/repo`.
+`cully_log` requires a summary, assistant and section. Entry types are `work`, `issue`, `learning` and `decision`; `work` is the default. Optional fields include project URL, opaque session reference, category, approach, outcome, issue, learning, next steps and tags. GitHub project URLs normalize to `https://github.com/owner/repo`.
 
-Text fields allow up to 8,000 characters and records allow up to 20 tags of 64 characters. Search can filter by project, section, category, entry type and time. Changes through `cully_update` affect only supplied fields. See [Mem0 recall](/mem0) for its indexing behavior.
+Text fields allow up to 8,000 characters and records allow up to 20 tags of 64 characters. Search and recent lookup can filter by project or `session_ref`; search also supports section, category, entry type and time. The reference groups Cully notes from one client session; it is not a link to reopen that client's conversation. Changes through `cully_update` affect only supplied fields. See [Mem0 recall](/mem0) for its indexing behavior.

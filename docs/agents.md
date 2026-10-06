@@ -11,7 +11,7 @@ The [quickstart](/quickstart) starts Cully and connects your first agent. To con
 cully agent setup codex --mcp-url http://127.0.0.1:8080/mcp
 ```
 
-Replace `codex` with `claude` or `cursor` and use the URL printed by your server. Restart your agent after setup. For an OAuth-enabled HTTPS server, append `--oauth` and sign in using the steps below.
+Replace `codex` with `claude` or `cursor` and use the URL printed by your server. Restart your agent after setup. In Codex, review and trust the Cully hooks in `/hooks` when prompted. For an OAuth-enabled HTTPS server, append `--oauth` and sign in using the steps below.
 
 | Agent | Local Cully controls | OAuth sign-in, when enabled |
 | --- | --- | --- |
@@ -23,6 +23,6 @@ The [local advisor guide](/advisor) shows what each integration can display. The
 
 ## If you already installed the advisor
 
-Use `cully mcp add --agent codex --url URL` to add only the MCP connection. Add `--oauth` when the server requires sign-in. Setup preserves unrelated agent configuration and does not replace a Cully connection that points at another URL. Run `cully status` to inspect the local integration.
+Use `cully mcp add --agent codex --url URL` to add only the MCP connection. Add `--oauth` when the server requires sign-in. If you installed Cully before continuity hooks were available, rerun `cully agent setup codex` (with your agent name) to refresh the skill and hooks. Setup preserves unrelated agent configuration and does not replace a Cully connection that points at another URL. Run `cully status` to inspect the local integration.
 
 For detailed client configuration, see the [client reference](https://github.com/mcp-runtime/cully/blob/main/clients/README.md).

@@ -162,6 +162,8 @@ func installClaude() error {
 		"padding": 0,
 	}
 	setEventHook(m, "Stop", quote(exe)+" _internal analyze", "analyze")
+	setEventHook(m, "SessionStart", quote(exe)+" _internal continuity claude start", "continuity claude start")
+	setEventHook(m, "Stop", quote(exe)+" _internal continuity claude stop", "continuity claude stop")
 	setEventHook(m, "SessionEnd", quote(exe)+" _internal cleanup", "cleanup")
 
 	if err := writeSettings(settingsPath, m); err != nil {
@@ -173,7 +175,7 @@ func installClaude() error {
 		fmt.Println("Registered /cully (status · suggestions · apply).")
 	}
 	fmt.Printf("\033[32mInstalled.\033[0m Registered cully in %s\n", settingsPath)
-	fmt.Println("Restart Claude Code (or run /hooks) so the Stop hook loads. The status bar is live immediately.")
+	fmt.Println("Restart Claude Code (or run /hooks) so advisor and continuity hooks load. The status bar is live immediately.")
 	fmt.Println("Accept a suggestion: cully apply <n>  (updates agent instructions, MCP, skills after you confirm)")
 	return nil
 }
@@ -191,6 +193,9 @@ func installCodex(cwd string) error {
 	if err := upsertCodexStatusLine(codexConfigPath()); err != nil {
 		return fmt.Errorf("configure Codex status line: %w", err)
 	}
+	if err := installCodexContinuityHooks(); err != nil {
+		return fmt.Errorf("configure Codex continuity hooks: %w", err)
+	}
 	if wrote, err := writeCodexPrompt(); err != nil {
 		return fmt.Errorf("install Codex cully prompt: %w", err)
 	} else if !wrote {
@@ -198,6 +203,7 @@ func installCodex(cwd string) error {
 	}
 	fmt.Printf("\033[32mInstalled.\033[0m Registered Cully for Codex in %s\n", cwd)
 	fmt.Printf("Codex status line configured in %s\n", codexConfigPath())
+	fmt.Printf("Codex continuity hooks configured in %s; review them with /hooks.\n", codexHooksPath())
 	fmt.Printf("Codex cully prompt available as /prompts:cully -> %s\n", codexPromptPath())
 	return nil
 }
@@ -209,12 +215,16 @@ func installCursor(cwd string) error {
 	if err := writeSharedSkill(cwd, "cully", cullySkill()); err != nil {
 		return err
 	}
+	if err := installCursorContinuityHooks(); err != nil {
+		return fmt.Errorf("configure Cursor continuity hooks: %w", err)
+	}
 	if wrote, err := writeCursorCommand(cwd); err != nil {
 		return fmt.Errorf("install Cursor cully command: %w", err)
 	} else if !wrote {
 		fmt.Printf("Preserved existing Cursor command -> %s\n", cursorCommandPath(cwd))
 	}
 	fmt.Printf("\033[32mInstalled.\033[0m Registered shared Cully skill for Cursor in %s\n", sharedSkillPath(cwd, "cully"))
+	fmt.Printf("Cursor continuity hooks configured in %s\n", cursorHooksPath())
 	fmt.Printf("Cursor cully command available as /cully -> %s\n", cursorCommandPath(cwd))
 	return nil
 }
@@ -269,6 +279,8 @@ func uninstallClaude() error {
 			}
 		}
 		removeEventHook(m, "Stop", quote(exe)+" _internal analyze", "analyze")
+		removeEventHook(m, "SessionStart", quote(exe)+" _internal continuity claude start", "continuity claude start")
+		removeEventHook(m, "Stop", quote(exe)+" _internal continuity claude stop", "continuity claude stop")
 		removeEventHook(m, "SessionEnd", quote(exe)+" _internal cleanup", "cleanup")
 		if err := writeSettings(settingsPath, m); err != nil {
 			return err
@@ -320,6 +332,9 @@ func uninstallCodex(cwd string) error {
 	if err := removeCodexStatusLine(codexConfigPath()); err != nil {
 		return err
 	}
+	if err := uninstallCodexContinuityHooks(); err != nil {
+		return err
+	}
 	fmt.Printf("\033[32mUninstalled.\033[0m Removed Cully Codex integration from %s\n", cwd)
 	return nil
 }
@@ -329,6 +344,9 @@ func uninstallCursor(cwd string) error {
 		cwd, _ = os.Getwd()
 	}
 	if err := removeOwnedFile(cursorCommandPath(cwd), cursorCommandMarkerStart); err != nil {
+		return err
+	}
+	if err := uninstallCursorContinuityHooks(); err != nil {
 		return err
 	}
 	fmt.Printf("\033[32mUninstalled.\033[0m Removed Cursor cully command; shared skill remains at %s\n", sharedSkillPath(cwd, "cully"))
@@ -613,6 +631,7 @@ func codexAgentInstructions() string {
 
 - Use the shared project skill at ` + "`.cully/skills/cully/SKILL.md`" + ` for Cully session controls.
 - In Codex, use /prompts:cully (or type /cully and select the saved cully prompt) for the in-session cully command.
+- For each substantive task, find relevant prior work with Cully MCP and save one concise work summary before finishing. Follow the Cully skill for project identity, owner section, and private-data rules.
 - Use the configured Cully MCP tools for shared personal and project memory.`
 }
 

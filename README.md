@@ -16,7 +16,7 @@ Cully remembers what you do and how you work. It helps you guide coding agents, 
 | `cully-mcp` | Shared memory tools; private single-owner mode by default, optional OAuth |
 | `cully-data` | Private PostgreSQL API and Mem0 projection worker |
 
-Works with Claude Code, Codex and Cursor. It brings local session guidance, workflow improvement and memory into one Go repository. The standard self-hosted stack runs PostgreSQL for authoritative records and Mem0 for semantic indexing and recall.
+Works with Claude Code, Codex and Cursor. Installed hooks ask the connected agent to find a few short work notes when a task starts and save a concise summary when substantive work finishes, so another session or agent can continue from it. The standard self-hosted stack runs PostgreSQL for authoritative records and Mem0 for semantic indexing and recall. See [how Cully keeps sessions focused](https://docs.cully.net/session-optimization). Companies can also [deploy Cully with MCP Runtime](https://docs.cully.net/team-deployment#example-run-cully-with-mcp-runtime).
 
 ## Get started
 
