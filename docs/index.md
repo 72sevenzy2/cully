@@ -26,4 +26,4 @@ Cully helps you work with coding agents across projects and devices. The local C
 2. [Connect the coding agent you use](/agents).
 3. [Explore the memory tools](/memory) or [run your own service](/hosting).
 
-To operate Cully, see [Docker self-hosting](/hosting), [MCP OAuth](/oauth), [configuration](/configuration), and [architecture](/architecture). [MCP Runtime](https://mcpruntime.org) is a platform where you can deploy an MCP server; the maintainer's [personal Cully deployment](/personal-deployment) is one example. [MCP Auth](https://github.com/mcp-runtime/mcp-auth) can broker OAuth through your organization's identity provider. See [website and docs hosting](/website) for this project's static sites.
+To operate Cully, see [Docker self-hosting](/hosting), [MCP OAuth](/oauth), [configuration](/configuration), and [architecture](/architecture). The [team OAuth example](/personal-deployment) shows how Cully can use MCP Auth with an organization's identity provider. [MCP Runtime](https://mcpruntime.org) is a platform where you can deploy an MCP server. See [website and docs hosting](/website) for this project's static sites.

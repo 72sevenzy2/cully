@@ -26,7 +26,7 @@ The local advisor works offline. It does not run a background transcript scanner
 
 In OAuth mode, the verified subject becomes the owner. In no-OAuth mode, `CULLY_MCP_OWNER` is the fixed owner. Public tool inputs cannot choose a different owner. OAuth resource metadata is published only in OAuth mode and advertises the configured public resource rather than relying on a proxy-rewritten Host header.
 
-`internal/store/remote` calls the private Go data API with a service token. Database and Mem0 credentials stay on the VM.
+`internal/store/remote` calls the private Go data API with a service token. Database and Mem0 credentials stay with the private data services.
 
 ## Private memory service
 
@@ -46,4 +46,4 @@ Projection uses `infer=false`: Mem0 embeds authored summaries without adding a f
 
 The product website and technical docs have separate images, Compose services, path-filtered CI workflows and rollback state. A change under `site/` deploys `cully-web`; a change under `docs/` deploys `cully-docs`. Caddy routes their domains to separate containers on the existing workspace network. See [website hosting](website.md).
 
-The personal services follow the release pipeline. A successful GoReleaser job publishes tagged data and Mem0 images. The gated [personal deployment workflow](personal-deployment.md) starts isolated PostgreSQL, Mem0 and data API services on the VM, runs the schema migration, then updates the MCP Runtime workload.
+For a team deployment, [MCP Auth can connect Cully to an organization's identity provider](personal-deployment.md). It authenticates the agent at the MCP boundary; service credentials protect the private data path.

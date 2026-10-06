@@ -2,7 +2,7 @@
 
 Cully targets the self-hosted Mem0 REST server, not Mem0's hosted API. Its Go adapter calls `GET /memories`, `POST /memories`, `POST /search` and `DELETE /memories/{id}` with `X-API-Key` authentication. Endpoint details follow [the upstream server](https://github.com/mem0ai/mem0/blob/c93420c49a6b14c3d446bdb156d96811908fd90a/server/main.py).
 
-The [self-hosted full stack](/hosting#one-command-full-stack) and gated [personal release stack](/personal-deployment) each start a pinned Mem0 REST server with a persistent vector database and history volume. Keep the REST endpoint private to the service network. A separately operated Mem0 instance must expose the REST contract below.
+The [self-hosted full stack](/hosting#one-command-full-stack) starts a pinned Mem0 REST server with a persistent vector database and history volume. Keep the REST endpoint private to the service network. A separately operated Mem0 instance must expose the REST contract below.
 
 Set `CULLY_MEM0_URL` and `CULLY_MEM0_API_KEY` on `cully-data`. Both are required to enable indexing. These values are never needed in the public MCP workload or coding-agent configuration. The base URL must omit a trailing endpoint path such as `/search`; a reverse-proxy base prefix is supported.
 

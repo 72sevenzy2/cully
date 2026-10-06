@@ -64,11 +64,11 @@ export default withMermaid(defineConfig({
           { text: 'Docker self-hosting', link: '/hosting' },
           { text: 'MCP OAuth', link: '/oauth' },
           { text: 'Configuration', link: '/configuration' },
-          { text: 'Maintainer deployment example', link: '/personal-deployment' },
+          { text: 'Team OAuth example', link: '/personal-deployment' },
           { text: 'Architecture', link: '/architecture' },
           { text: 'Website and docs hosting', link: '/website' },
           { text: 'Deploy on MCP Runtime ↗', link: 'https://docs.mcpruntime.org/publish-mcp-server/' },
-          { text: 'MCP Auth ↗', link: 'https://github.com/mcp-runtime/mcp-auth' }
+          { text: 'MCP Auth connector guide ↗', link: 'https://github.com/mcp-runtime/mcp-auth/blob/main/docs/auth-server.md#oidc-or-plain-oauth-20' }
         ]
       },
       {

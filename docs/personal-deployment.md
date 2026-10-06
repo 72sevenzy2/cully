@@ -1,34 +1,42 @@
-# Maintainer deployment example
+# Team deployment with OAuth
 
-The Cully maintainer's personal deployment has a separate release flow. A `v*` tag first runs GoReleaser. After that succeeds, `personal-deploy.yml` builds and publishes tagged Cully data and pinned self-hosted Mem0 images. The restricted VM controller starts two PostgreSQL databases, Mem0 and the data API, runs the Cully schema migration, and then the workflow updates Cully MCP on MCP Runtime. The deployment job fails if `CULLY_PERSONAL_DEPLOY_ENABLED` is unset. Website and docs changes do not trigger this release flow.
+This example shows how a team can use Cully with its organization's existing identity provider. Cully's MCP endpoint is the OAuth-protected resource. [MCP Auth](https://github.com/mcp-runtime/mcp-auth) is the authorization server between the coding agent and the identity provider; it handles the MCP OAuth flow and delegates sign-in to the provider. The identity provider continues to manage users and access. Cully uses the verified token subject as the record owner, so each person sees their own records.
 
-Keep the deployment gate disabled until the VM network, secrets, OAuth and Caddy route are ready. A release with the gate disabled fails its deployment job explicitly. This Compose project uses named volumes: plain PostgreSQL for Cully's authoritative records and a separate pgvector database for Mem0.
+```mermaid
+flowchart LR
+  Agent[Coding agent] -->|MCP tools and bearer token| MCP[Cully MCP]
+  Agent -->|OAuth sign-in| Auth[MCP Auth]
+  Auth -->|OIDC or OAuth 2.0| IdP[Organization identity provider]
+  MCP -->|Private service token| Data[Cully data API]
+  Data --> PG[(PostgreSQL source records)]
+  Data --> Mem0[Self-hosted Mem0]
+```
 
-## Prepare the VM once
+## Set up the services
 
-Prepare the OAuth issuer, resource and JWKS settings. The release controller creates `cully-db`, `mem0-db` and `mem0-history` volumes in its own Compose project.
+1. Choose public HTTPS names for the MCP endpoint and authorization server, such as `mcp.example.com` and `auth.example.com`. The MCP resource URL is `https://mcp.example.com/mcp`.
+2. Follow the [MCP Auth identity-provider connector guide](https://github.com/mcp-runtime/mcp-auth/blob/main/docs/auth-server.md#oidc-or-plain-oauth-20) for the OIDC or OAuth 2.0 provider your organization uses, including its identity claims and upstream endpoints. Register the [MCP Auth callback URL](https://github.com/mcp-runtime/mcp-auth/blob/main/docs/auth-server.md#the-redirect-uri-you-register-with-your-identity-provider) with that provider. Keep its client secret private. MCP Auth uses this connector to complete the MCP OAuth flow.
+3. In a Cully checkout, set `CULLY_MCP_HOST`, `CULLY_AUTH_HOST` and `MCP_AUTH_UPSTREAM_CLIENT_SECRET` in `deploy/self-hosted/.env`. Prepare the connector JSON and MCP Auth signing key as shown in [MCP OAuth](/oauth#self-hosted-docker-with-mcp-auth). Then start the Docker stack from `deploy/self-hosted`:
 
-Create `/opt/cully-personal-data/.env` on the VM with mode `600`, using [`deploy/personal-data.env.example`](https://github.com/mcp-runtime/cully/blob/main/deploy/personal-data.env.example). Set distinct database passwords, the URL-encoded Cully database URL, data API token, Mem0 API key and JWT secret. The Mem0 image runs a local open source embedding model, so no embedding-provider key is needed. The data API joins `workspace_workspace` so Caddy can reach `cully-data-api:8083`; neither database nor Mem0 publishes a port. The [configuration reference](configuration.md) describes the runtime values.
+   ```sh
+   ./setup.sh --oauth mcp-auth
+   ```
 
-## MCP Runtime OAuth
+   Setup derives the resource URL, issuer and JWKS URL from the two hostnames. It generates the database passwords and private service tokens and starts PostgreSQL, Mem0, the data API, Cully MCP, MCP Auth and Caddy. The data API, Mem0 and databases stay on private Docker networks.
+4. Give each team member the MCP URL. They install the Cully skill and register the endpoint in one command, then sign in from their agent:
 
-This personal deployment uses MCP Runtime's OAuth service at `https://auth.mcpruntime.org/mcp-auth`. The platform manages its MCP Auth instance and identity-provider connector. [Cully's Runtime manifest](https://github.com/mcp-runtime/cully/blob/main/.mcp/servers.yaml) declares the public resource `https://mcp.mcpruntime.org/cully/mcp`, the platform issuer, and `tools:read` and `tools:write` scopes. MCP Runtime reconciles the resource and scopes into MCP Auth and injects the issuer and resource into the MCP container. Cully verifies tokens against the platform JWKS. See [OAuth for the MCP endpoint](/oauth) for the interaction flow and the [MCP Runtime OAuth guide](https://docs.mcpruntime.org/mcp-oauth/) for platform configuration.
+   ```sh
+   curl -fsSL https://cully.net/install.sh | sh -s -- --agent codex --mcp-url https://mcp.example.com/mcp --oauth
+   ```
 
-Set `CULLY_DATA_API_TOKEN` as a Cully GitHub Actions secret with the same value as the VM data service. The release workflow injects it into its temporary `.mcp/servers.yaml` after building the image, then deploys the MCP workload through the platform API. MCP OAuth identifies the user; the data API service token authenticates the MCP workload independently. Mem0 uses its separate `CULLY_MEM0_API_KEY`. The Runtime API stores a literal workload environment variable in its server spec, so people with platform server-spec read access can view this personal service token. Rotate it if that access changes.
+   Use `claude` or `cursor` instead of `codex` as needed. An agent does not receive the database password, Mem0 key or MCP-to-data API token.
 
-Create a dedicated Ed25519 deploy key and configure the public key with `sh deploy/bootstrap-personal-data.sh /path/to/key.pub` as root. This installs the full personal Compose file, Mem0 database initialization SQL, and a restricted SSH controller. Its forced command accepts only deploy and rollback requests for tagged Cully service images. Keep the private key in `CULLY_PERSONAL_SSH_KEY`, and pin the VM host key in `CULLY_PERSONAL_KNOWN_HOSTS`.
+## Authorization boundaries
 
-Apply the [Caddy data route](https://github.com/mcp-runtime/cully/blob/main/deploy/Caddyfile.fragment) to the `workspace.mcpruntime.org` site, keeping the MCP Runtime egress allowlist current. Prepare OAuth registration for `https://mcp.mcpruntime.org/cully/mcp` and verify the platform token can update the `cully` workload. The data service uses the dedicated `cully-data-api` network name.
+| Connection | How it is authorized |
+| --- | --- |
+| Agent → Cully MCP | MCP Auth issues a token for the exact MCP resource URL. Cully checks its signature, issuer, audience, subject and tool scope. Reads require `tools:read`; writes require `tools:write`. |
+| Cully MCP → data API | A private Cully service token, independent of the agent's OAuth token. |
+| Data API → PostgreSQL and Mem0 | Separate private database and Mem0 credentials. |
 
-| Setting | Type | Purpose |
-| --- | --- | --- |
-| `CULLY_PERSONAL_DEPLOY_ENABLED` | Repository variable | Enable release deployment after VM and OAuth setup is ready |
-| `CULLY_PERSONAL_HOST` | Repository variable | VM address |
-| `CULLY_PERSONAL_SSH_USER` | Repository variable | `root`, restricted to the data controller |
-| `CULLY_PERSONAL_SSH_PORT` | Repository variable | SSH port |
-| `CULLY_PERSONAL_SSH_KEY` | Secret | Dedicated personal deployment private key |
-| `CULLY_PERSONAL_KNOWN_HOSTS` | Secret | Pinned SSH host key; defaults to the existing `CULLY_WEB_KNOWN_HOSTS` secret for the same VM |
-| `MCP_PLATFORM_API_TOKEN` | Secret | MCP Runtime deployment token |
-| `CULLY_DATA_API_TOKEN` | Secret | Private MCP-to-data API service token, shared with the VM data service |
-
-The workflow checks the live MCP Auth issuer and JWKS before building service images. It connects the pinned `mcp-runtime` binary to `https://platform.mcpruntime.org` using `MCP_PLATFORM_API_TOKEN`, validates metadata, builds, pushes and deploys the Cully MCP image after the VM data stack passes health checks. It then queries the platform for the deployed service and checks both tool scopes, Cully's public protected-resource metadata and the unauthenticated challenge. A full interactive sign-in and authorized tool call still require an agent after release. The workflow uses the `personal-cully` GitHub environment. After VM setup, set the gate and dispatch `personal-deploy.yml` with a release tag created after this workflow was added. Later releases deploy automatically after GoReleaser succeeds. The VM controller records current and previous image tags in `/opt/cully-personal-data/state.json`; it restores the prior Cully service images if startup fails. If MCP deployment fails, the workflow requests a service rollback; a later OAuth verification failure leaves the new data stack running for diagnosis. Compose never removes database volumes during rollback. Take a verified backup before any release that changes schema; image rollback does not reverse a database migration.
+The Cully maintainer also deploys a personal MCP endpoint on [MCP Runtime](https://mcpruntime.org), a platform for publishing MCP servers. That platform operates MCP Auth and passes the configured issuer and resource URL to Cully. You can use MCP Runtime or operate MCP Auth and Cully yourself; [MCP Runtime's publishing guide](https://docs.mcpruntime.org/publish-mcp-server/) explains its platform path. The identity-provider connector is configured on the authorization server, while the Cully MCP resource declares its own `tools:read` and `tools:write` scopes.

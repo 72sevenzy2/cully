@@ -31,6 +31,6 @@ Separate workflows provide independent checks and badge targets:
 
 These run on pushes and pull requests. The website and docs retain separate build/deploy workflows for their own paths. The hosted VM services are verified during release deployment after the deployment gate is enabled.
 
-Build server images with `docker build -t cully-mcp .` and `docker build -f Dockerfile.data-api -t cully-data .`. GoReleaser builds independent CLI, MCP and data archives from a Cully release tag. The [personal deployment workflow](personal-deployment.md) publishes data and Mem0 images and deploys the hosted stack after GoReleaser succeeds.
+Build server images with `docker build -t cully-mcp .` and `docker build -f Dockerfile.data-api -t cully-data .`. GoReleaser builds independent CLI, MCP and data archives from a Cully release tag.
 
 Keep domain validation in `internal/memory`, SQL in `internal/store/postgres`, protocol handlers in `internal/transport`, and initialization in `internal/app`. Follow the [architecture](architecture.md) and [roadmap](roadmap.md) when extending session capture or synchronization.

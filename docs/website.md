@@ -42,7 +42,7 @@ The current VM has separate `cully-web` and `cully-docs` Compose projects. Its C
 
 To rebuild the controller on a replacement VM, copy `deploy/` and the dedicated deployment public key there, then run `sh deploy/bootstrap-website.sh /path/to/deployment-key.pub` as root. Install the two Caddy routes from `deploy/Caddyfile.website.fragment`, validate the Caddyfile and reload Caddy. Set the three deployment variables to `true` after the routes and controller are ready. Changes to either site then deploy that site from `main`.
 
-The website domains do not change the MCP resource URL. The maintainer's personal MCP endpoint is `https://mcp.mcpruntime.org/cully/mcp`; its deployment requirements are in the [maintainer deployment example](personal-deployment.md).
+The website domains do not change an operator's MCP resource URL. See the [team OAuth example](personal-deployment.md) for the MCP and authorization server relationship.
 
 ## Installation copy
 

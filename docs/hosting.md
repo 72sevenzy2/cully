@@ -2,7 +2,7 @@
 
 Cully currently supports Docker Compose for self-hosting on a local machine or VM. The local advisor runs on the user's machine. The MCP service talks to a private data API. PostgreSQL stores authoritative source records; Mem0 uses its own pgvector database for semantic indexing and recall. See [architecture](/architecture) and [Mem0](/mem0).
 
-You can run all Cully services in Docker Compose. [MCP Runtime](https://mcpruntime.org) is a separate platform for deploying MCP servers; the Cully maintainer uses it for a personal Cully MCP deployment while operating the data services separately. See [that deployment example](/personal-deployment) and [MCP Runtime's publishing guide](https://docs.mcpruntime.org/publish-mcp-server/).
+You can run all Cully services in Docker Compose. [MCP Runtime](https://mcpruntime.org) is a separate platform for deploying MCP servers. See the [team OAuth example](/personal-deployment) for a deployment using an organization's identity provider, or [MCP Runtime's publishing guide](https://docs.mcpruntime.org/publish-mcp-server/) for that platform.
 
 ## Choose MCP access
 
@@ -38,9 +38,9 @@ PostgreSQL uses its native password authentication. The data API receives a Post
 
 The same MCP binary supports OAuth. The [OAuth guide](/oauth) has commands for an existing authorization server and for MCP Auth connected to your organization's identity provider. The examples add Caddy for HTTPS. Register the exact public MCP resource and grant `tools:read` and `tools:write`. Clients sign in only in OAuth mode.
 
-## Maintainer deployment example on MCP Runtime
+## Team OAuth example
 
-The [personal deployment guide](/personal-deployment) describes an example release-triggered stack with PostgreSQL and Mem0 volumes. Its `.mcp/servers.yaml` uses OAuth for public ingress; its issuer, JWKS URL and audience must match the authorization server. Keep a no-OAuth deployment on a private route.
+The [team deployment example](/personal-deployment) shows how MCP Auth can connect Cully's public MCP endpoint to an organization's identity provider. The MCP resource, issuer and JWKS URL must match the authorization server. Keep a no-OAuth deployment on a private route.
 
 Only the MCP URL belongs in agent configuration. The private API token, database credentials and Mem0 key stay with the operator. [Connect an agent](/agents) explains client setup.
 
