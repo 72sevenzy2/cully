@@ -16,7 +16,9 @@ e2e_home="$e2e_root/home"
 candidate="$e2e_root/cully-candidate"
 mkdir -p "$e2e_home"
 cd "$repo_root"
-go build -ldflags "-X main.version=${stack_tag#v}" -o "$candidate" ./cmd/cully
+if [[ "${CULLY_E2E_PUBLISHED_CLI:-false}" != true ]]; then
+  go build -ldflags "-X main.version=${stack_tag#v}" -o "$candidate" ./cmd/cully
+fi
 
 export HOME="$e2e_home"
 export CODEX_HOME="$HOME/.codex"
@@ -48,10 +50,14 @@ trap cleanup EXIT
 cd "$HOME"
 sh "$repo_root/install.sh" --agent codex
 test -x "$cli"
-# The installer starts an advisor. The isolated home has no Claude settings;
-# this supported command stops that advisor before replacing its executable.
-"$cli" uninstall claude
-install -m 0755 "$candidate" "$cli"
+if [[ "${CULLY_E2E_PUBLISHED_CLI:-false}" == true ]]; then
+  test "$("$cli" version)" = "cully ${stack_tag#v}"
+else
+  # The installer starts an advisor. The isolated home has no Claude settings;
+  # this supported command stops that advisor before replacing its executable.
+  "$cli" uninstall claude
+  install -m 0755 "$candidate" "$cli"
+fi
 
 # This must work from a clean home without running --prepare first. The CLI
 # downloads the matching public release archive and runs its setup script.
