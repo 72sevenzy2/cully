@@ -124,12 +124,13 @@ def exports(current):
         print(f"export {key}={shlex.quote(value)}")
 
 
-def validate_oauth(mode, endpoint):
-    values = read_env(Path(__file__).with_name(".env"))
-    values.update({key: value for key, value in os.environ.items() if key.startswith("CULLY_AUTH_") or key in {"CULLY_MCP_HOST", "CULLY_AUTH_HOST", "KEYCLOAK_CLIENT_SECRET"}})
+def validate_oauth(mode, endpoint, directory=None):
+    directory = Path(directory) if directory else Path(__file__).parent
+    values = read_env(directory / ".env")
+    values.update({key: value for key, value in os.environ.items() if key.startswith("CULLY_AUTH_") or key in {"CULLY_MCP_HOST", "CULLY_MCP_AUTH_CONNECTOR", "MCP_AUTH_UPSTREAM_CLIENT_SECRET"}})
     required = ["CULLY_AUTH_ISSUER", "CULLY_AUTH_RESOURCE", "CULLY_JWKS_URL", "CULLY_MCP_HOST"]
     if mode == "mcp-auth":
-        required += ["CULLY_AUTH_HOST", "KEYCLOAK_CLIENT_SECRET"]
+        required += ["CULLY_AUTH_HOST", "MCP_AUTH_UPSTREAM_CLIENT_SECRET"]
     missing = [key for key in required if not values.get(key) or "example.com" in values[key] or values[key].startswith("replace-with-")]
     if missing:
         raise ValueError("set real OAuth values in .env: " + ", ".join(missing))
@@ -138,6 +139,13 @@ def validate_oauth(mode, endpoint):
             raise ValueError(f"{key} must use HTTPS")
     if endpoint and endpoint != values["CULLY_AUTH_RESOURCE"]:
         raise ValueError("--mcp-url must equal CULLY_AUTH_RESOURCE")
+    if mode == "mcp-auth":
+        selected = values.get("CULLY_MCP_AUTH_CONNECTOR") or "keycloak"
+        connectors = json.loads((directory / "connectors.json").read_text())
+        if not isinstance(connectors, dict) or not isinstance(connectors.get(selected), dict):
+            raise ValueError(f"connectors.json must define selected connector {selected!r}")
+        if connectors[selected].get("client_secret_env") != "MCP_AUTH_UPSTREAM_CLIENT_SECRET":
+            raise ValueError("selected connector must use client_secret_env MCP_AUTH_UPSTREAM_CLIENT_SECRET")
 
 
 def main():

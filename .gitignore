@@ -14,6 +14,7 @@ build/
 /node_modules/
 /deploy/self-hosted/.secrets/
 /deploy/self-hosted/connectors.keycloak.json
+/deploy/self-hosted/connectors.json
 /docs/.vitepress/cache/
 
 /cully

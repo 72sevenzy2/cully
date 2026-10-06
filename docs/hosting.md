@@ -41,11 +41,11 @@ PostgreSQL uses its native password authentication. The data API receives a Post
 
 ## OAuth installation
 
-The same MCP binary supports OAuth. The [OAuth guide](/oauth) has commands for an existing authorization server and for a new MCP Auth broker with a Keycloak connector. The examples add Caddy for HTTPS. Register the exact public MCP resource and grant `tools:read` and `tools:write`. Clients sign in only in OAuth mode.
+The same MCP binary supports OAuth. The [OAuth guide](/oauth) has commands for an existing authorization server and for MCP Auth connected to your organization's identity provider. The examples add Caddy for HTTPS. Register the exact public MCP resource and grant `tools:read` and `tools:write`. Clients sign in only in OAuth mode.
 
-## Reference hosted deployment
+## Example personal deployment on MCP Runtime
 
-The [personal deployment guide](/personal-deployment) describes a release-triggered stack with PostgreSQL and Mem0 volumes. The hosted `.mcp/servers.yaml` uses OAuth for its public ingress; its issuer, JWKS URL and audience must match the authorization server. Keep a no-OAuth deployment on a private route.
+The [personal deployment guide](/personal-deployment) describes an example release-triggered stack with PostgreSQL and Mem0 volumes. Its `.mcp/servers.yaml` uses OAuth for public ingress; its issuer, JWKS URL and audience must match the authorization server. Keep a no-OAuth deployment on a private route.
 
 Only the MCP URL belongs in agent configuration. The private API token, database credentials and Mem0 key stay with the operator. [Connect an agent](/agents) explains client setup.
 

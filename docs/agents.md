@@ -16,7 +16,7 @@ cully setup claude
 cully mcp add --agent claude --url https://your-server.example/mcp
 ```
 
-Restart Claude Code. The local integration includes a status line, session hooks, a `/cully` command, and a skill. If your MCP server enables OAuth, add `--oauth` to `cully mcp add`, then open `/mcp` to sign in. The URL is for your own deployed service until Cully's hosted endpoint is available.
+Restart Claude Code. The local integration includes a status line, session hooks, a `/cully` command, and a skill. If your MCP server enables OAuth, add `--oauth` to `cully mcp add`, then open `/mcp` to sign in. Use the URL of your deployed MCP service.
 
 ## Codex
 

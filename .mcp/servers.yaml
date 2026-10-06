@@ -59,6 +59,7 @@ servers:
         tokenHeader: Authorization
         issuerURL: https://auth.mcpruntime.org/mcp-auth
         audience: https://mcp.mcpruntime.org/cully/mcp
+        scopes: [tools:read, tools:write]
       policy:
         mode: observe
         defaultDecision: allow

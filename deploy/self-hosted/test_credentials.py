@@ -1,9 +1,11 @@
 import importlib.util
 import json
+import os
 import stat
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 
 SPEC = importlib.util.spec_from_file_location("credentials", Path(__file__).with_name("credentials.py"))
@@ -50,6 +52,28 @@ class CredentialTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "must be private"):
                 credentials.ensure(shared / "config.json", shared / ".env")
             self.assertEqual(stat.S_IMODE(shared.stat().st_mode), 0o755)
+
+    def test_oauth_connector_selects_organization_provider(self):
+        with tempfile.TemporaryDirectory() as directory, patch.dict(os.environ, {}, clear=True):
+            root = Path(directory)
+            (root / ".env").write_text(
+                "CULLY_MCP_HOST=mcp.acme.test\n"
+                "CULLY_AUTH_HOST=auth.acme.test\n"
+                "CULLY_AUTH_ISSUER=https://auth.acme.test/mcp-auth\n"
+                "CULLY_AUTH_RESOURCE=https://mcp.acme.test/mcp\n"
+                "CULLY_JWKS_URL=https://auth.acme.test/mcp-auth/.well-known/jwks.json\n"
+                "CULLY_MCP_AUTH_CONNECTOR=acme\n"
+                "MCP_AUTH_UPSTREAM_CLIENT_SECRET=private-value\n"
+            )
+            (root / "connectors.json").write_text(json.dumps({
+                "acme": {"client_secret_env": "MCP_AUTH_UPSTREAM_CLIENT_SECRET"}
+            }))
+            credentials.validate_oauth("mcp-auth", "https://mcp.acme.test/mcp", root)
+            (root / "connectors.json").write_text(json.dumps({
+                "other": {"client_secret_env": "MCP_AUTH_UPSTREAM_CLIENT_SECRET"}
+            }))
+            with self.assertRaisesRegex(ValueError, "selected connector 'acme'"):
+                credentials.validate_oauth("mcp-auth", "https://mcp.acme.test/mcp", root)
 
 
 if __name__ == "__main__":

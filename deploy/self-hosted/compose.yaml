@@ -129,24 +129,24 @@ services:
     networks: [edge]
   mcp-auth:
     profiles: [mcp-auth]
-    image: princekrroshan01/mcp-auth-server:0.3.0
+    image: princekrroshan01/mcp-auth-server:0.4.4
     restart: unless-stopped
     environment:
       MCP_AUTH_ISSUER: ${CULLY_AUTH_ISSUER:-}
       MCP_AUTH_RESOURCES: ${CULLY_AUTH_RESOURCE:-}
+      MCP_AUTH_RESOURCE_SCOPES: '{"${CULLY_AUTH_RESOURCE:-}":["tools:read","tools:write"]}'
       MCP_AUTH_CONNECTORS_FILE: /etc/mcp-auth/connectors.json
-      MCP_AUTH_CONNECTOR: keycloak
+      MCP_AUTH_CONNECTOR: ${CULLY_MCP_AUTH_CONNECTOR:-keycloak}
       MCP_AUTH_PRIVATE_KEY_FILE: /run/secrets/signing_key
       MCP_AUTH_STORE: sqlite
       MCP_AUTH_DATABASE_URL: /var/lib/mcp-auth/state.db
-      MCP_AUTH_ALLOWED_SCOPES: tools:read,tools:write
       MCP_AUTH_REGISTRATION_ENABLED: "true"
       MCP_AUTH_REQUIRE_HTTPS: "true"
       MCP_AUTH_TRUST_PROXY_TLS: "true"
-      KEYCLOAK_CLIENT_SECRET: ${KEYCLOAK_CLIENT_SECRET:-}
+      MCP_AUTH_UPSTREAM_CLIENT_SECRET: ${MCP_AUTH_UPSTREAM_CLIENT_SECRET:-}
     secrets: [signing_key]
     volumes:
-      - ./connectors.keycloak.json:/etc/mcp-auth/connectors.json:ro
+      - ./connectors.json:/etc/mcp-auth/connectors.json:ro
       - auth-state:/var/lib/mcp-auth
     expose: ["8080"]
     networks: [edge]

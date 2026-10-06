@@ -39,12 +39,12 @@ if [ ! -f .env ]; then
 fi
 exports=$(python3 ./credentials.py export)
 eval "$exports"
+if [ "$mode" = mcp-auth ]; then
+  [ -f connectors.json ] || { echo 'Create connectors.json for your identity provider first.' >&2; exit 2; }
+  [ -f .secrets/signing-key.pem ] || { echo 'Create .secrets/signing-key.pem first.' >&2; exit 2; }
+fi
 if [ "$mode" != none ]; then
   python3 ./credentials.py validate-oauth "$mode" "$endpoint"
-fi
-if [ "$mode" = mcp-auth ]; then
-  [ -f connectors.keycloak.json ] || { echo 'Create connectors.keycloak.json from the example first.' >&2; exit 2; }
-  [ -f .secrets/signing-key.pem ] || { echo 'Create .secrets/signing-key.pem first.' >&2; exit 2; }
 fi
 if [ -n "$agent" ]; then
   cli=cully
