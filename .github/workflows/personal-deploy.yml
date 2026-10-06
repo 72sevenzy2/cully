@@ -67,7 +67,6 @@ jobs:
   deploy:
     needs: service-images
     runs-on: ubuntu-latest
-    environment: personal-cully
     permissions:
       contents: read
       packages: read
