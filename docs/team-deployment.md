@@ -33,7 +33,7 @@ The [configuration reference](/configuration) has the full variable list and cre
 
 ### Quick path with Docker Compose
 
-After installing the Cully CLI, run `cully setup --prepare` to create editable files. Set the public MCP and authorization hostnames and the upstream identity-provider client secret in `~/.cully/self-hosted/config/.env`. Add the provider's `connectors.json` and a persistent signing key as shown in the [OAuth setup](/oauth#self-hosted-docker-with-mcp-auth). Then start the stack:
+After installing the Cully CLI, open a new terminal and run `cully setup --prepare` to create editable files. Set the public MCP and authorization hostnames and the upstream identity-provider client secret in `~/.cully/self-hosted/config/.env`. Add the provider's `connectors.json` and a persistent signing key as shown in the [OAuth setup](/oauth#self-hosted-docker-with-mcp-auth). Then start the stack:
 
 ```sh
 cully setup --oauth
@@ -43,12 +43,12 @@ This starts PostgreSQL, Mem0, the data API, Cully MCP, MCP Auth and Caddy. Each 
 
 ### Example: run Cully with MCP Runtime
 
-A company already using [MCP Runtime](https://github.com/mcp-runtime/mcp-runtime) can deploy Cully's MCP container as an `MCPServer` workload on its Kubernetes cluster. MCP Runtime manages the container rollout, service and workload status; Cully supplies the memory tools and owner-scoped storage. The [MCP Runtime API reference](https://github.com/mcp-runtime/mcp-runtime/blob/main/docs/api.md#mcpserver-surface) lists the workload image, port and secret environment fields. The company ingress publishes Cully's OAuth and MCP routes.
+The Cully maintainer runs a personal Cully MCP endpoint on [MCP Runtime](https://mcpruntime.org). Its [deployment workflow](https://github.com/mcp-runtime/cully/blob/main/.github/workflows/deploy.yml) builds and publishes the MCP image, then deploys the [server manifest](https://github.com/mcp-runtime/cully/blob/main/.mcp/servers.yaml). Cully's data API, PostgreSQL and Mem0 run separately. The [MCP Runtime publishing guide](https://docs.mcpruntime.org/publish-mcp-server/) shows the build, push and deploy flow.
 
-The [MCP Runtime deployment workflow](https://github.com/mcp-runtime/cully/blob/main/.github/workflows/deploy.yml) builds and publishes only the Cully MCP service. Its [server metadata](https://github.com/mcp-runtime/cully/blob/main/.mcp/servers.yaml) reads `CULLY_DATA_API_TOKEN` from the Kubernetes Secret `cully-data-api-token` in `mcp-servers`. Provision that Secret with the key `CULLY_DATA_API_TOKEN` and the same value used by the private data API before deploying. Keep the value out of server metadata and Git.
+A company can use this pattern to run Cully's MCP container as an `MCPServer` workload on its Kubernetes cluster. MCP Runtime manages the container rollout, service and workload status; Cully supplies the memory tools and owner-scoped storage. The [MCP Runtime API reference](https://github.com/mcp-runtime/mcp-runtime/blob/main/docs/api.md#mcpserver-surface) lists the workload image, port and secret environment fields. The company ingress publishes Cully's OAuth and MCP routes.
 
 1. Deploy Cully's PostgreSQL, Mem0 and private data API in the cluster. Keep those services on private networking and run `cully-data migrate` before starting the API. Use the [Compose file](https://github.com/mcp-runtime/cully/blob/main/deploy/self-hosted/compose.yaml) to map the service dependencies and volumes.
-2. Publish `ghcr.io/mcp-runtime/cully-mcp:<matching-release-tag>` through MCP Runtime as a workload listening on Cully's configured port. Set `CULLY_DATA_API_URL` to the private data API, give `CULLY_DATA_API_TOKEN` through a secret, and set `CULLY_MCP_AUTH_MODE=oauth`, `CULLY_AUTH_ISSUER`, `CULLY_AUTH_RESOURCE` and `CULLY_JWKS_URL` as described below. Do not set a fixed `CULLY_MCP_OWNER` for a multi-person server.
+2. Publish `ghcr.io/mcp-runtime/cully-mcp:<matching-release-tag>` through MCP Runtime as a workload listening on Cully's configured port. Set `CULLY_DATA_API_URL` to the private data API and set `CULLY_MCP_AUTH_MODE=oauth`, `CULLY_AUTH_ISSUER`, `CULLY_AUTH_RESOURCE` and `CULLY_JWKS_URL` as described below. Give `CULLY_DATA_API_TOKEN` through a Kubernetes Secret with the same value used by the private data API. The maintainer's manifest expects `cully-data-api-token` in `mcp-servers` with key `CULLY_DATA_API_TOKEN`; provision it before rollout and keep the value out of Git. Do not set a fixed `CULLY_MCP_OWNER` for a multi-person server.
 3. Route a dedicated HTTPS host, for example `https://cully.example.com/mcp`, to the Cully service. Forward its OAuth discovery and MCP paths as well as the `Authorization` header to Cully. Connect the company's identity provider through MCP Auth or a compatible authorization server, then sign in from each person's agent.
 
 Keep MCP Runtime's OAuth gateway **off for this Cully route** in the current integration. Its gateway [strips the client bearer token before forwarding](https://github.com/mcp-runtime/mcp-runtime/blob/main/docs/api.md#security-and-auth), while Cully currently validates that token to identify each memory owner. Use Cully's OAuth mode at the service boundary until an explicit, verified identity handoff is implemented. This example uses MCP Runtime's workload management; it does not claim its grant and session policy for Cully.
@@ -58,7 +58,7 @@ After deployment, check that the Cully Deployment's updated and ready replicas m
 <div class="related-product">
   <p class="related-product__eyebrow">Another product from the Cully maintainer</p>
   <h3>MCP Runtime</h3>
-  <p>An open source Kubernetes platform for deploying and operating MCP servers. In the example above, it manages Cully's MCP workload and service while Cully keeps its owner-scoped memory and token validation.</p>
+  <p>An open source Kubernetes platform for deploying and operating MCP servers. The Cully maintainer uses it to publish Cully's MCP workload and route, while Cully keeps its owner-scoped memory and token validation.</p>
   <div class="related-product__links">
     <a href="https://mcpruntime.org">Explore MCP Runtime ↗</a>
     <a href="https://docs.mcpruntime.org/publish-mcp-server/">Read the publishing guide ↗</a>

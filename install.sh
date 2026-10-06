@@ -9,8 +9,6 @@
 set -eu
 
 REPO="mcp-runtime/cully"
-CLAUDE_DIR="${CLAUDE_CONFIG_DIR:-$HOME/.claude}"
-BIN_DIR="$CLAUDE_DIR/bin"
 
 agent=""
 mcp_url=""
@@ -34,6 +32,13 @@ case "$agent" in
   ""|claude|codex|cursor|all) ;;
   *) echo 'choose --agent claude, codex, cursor, or all' >&2; exit 2 ;;
 esac
+case "$agent" in
+  claude) agent_dir="${CLAUDE_CONFIG_DIR:-$HOME/.claude}"; default_dir="$HOME/.claude"; path_entry='$HOME/.claude/bin' ;;
+  codex) agent_dir="${CODEX_HOME:-$HOME/.codex}"; default_dir="$HOME/.codex"; path_entry='$HOME/.codex/bin' ;;
+  cursor) agent_dir="${CURSOR_CONFIG_DIR:-$HOME/.cursor}"; default_dir="$HOME/.cursor"; path_entry='$HOME/.cursor/bin' ;;
+  *) agent_dir="$HOME/.local"; default_dir="$HOME/.local"; path_entry='$HOME/.local/bin' ;;
+esac
+BIN_DIR="$agent_dir/bin"
 
 die() { printf '\033[31mx\033[0m %s\n' "$1" >&2; exit 1; }
 say() { printf '\033[36m==>\033[0m %s\n' "$1"; }
@@ -122,8 +127,44 @@ install -m 0755 "$tmp_bin" "$BIN_DIR/cully"
 [ "$os" = "darwin" ] && xattr -d com.apple.quarantine "$BIN_DIR/cully" 2>/dev/null || true
 
 say "Installed binary -> $BIN_DIR/cully ($("$BIN_DIR/cully" version 2>/dev/null || echo "$ver"))"
-if ! command -v cully >/dev/null 2>&1; then
-  say "For later CLI commands, add $BIN_DIR to PATH or use $BIN_DIR/cully"
+# A previous install may have used another agent's bin directory. Restart the
+# shared advisor even when this target directory did not contain cully yet.
+"$BIN_DIR/cully" daemon stop >/dev/null 2>&1 || true
+current_cully="$(command -v cully 2>/dev/null || true)"
+if [ "$current_cully" != "$BIN_DIR/cully" ]; then
+    # Setup starts the advisor daemon, so its first run needs the selected
+    # binary ahead of a Cully installed for another agent.
+    PATH="$BIN_DIR:$PATH"
+    export PATH
+
+    # A piped installer cannot change its parent shell. Add one line for new
+    # terminals, without replacing any user-owned shell configuration.
+    profile=""
+    if [ "$agent_dir" = "$default_dir" ]; then
+      case "${SHELL##*/}" in
+        zsh) profile="$HOME/.zshrc" ;;
+        bash)
+          if [ "$os" = darwin ]; then
+            profile="$HOME/.bash_profile"
+          else
+            profile="$HOME/.bashrc"
+          fi ;;
+      esac
+    fi
+    if [ -n "$profile" ]; then
+      path_line="export PATH=\"$path_entry:\$PATH\""
+      if [ ! -f "$profile" ] || ! grep -Fqx "$path_line" "$profile"; then
+        if ! printf '\n%s\n' "$path_line" >> "$profile"; then
+          say "Could not update $profile. Add $BIN_DIR to PATH manually or use $BIN_DIR/cully"
+          profile=""
+        fi
+      fi
+      if [ -n "$profile" ]; then
+        say "Cully PATH entry is in $profile. Open a new terminal or run: . $profile"
+      fi
+    else
+      say "For later CLI commands, add $BIN_DIR to your shell's PATH or use $BIN_DIR/cully"
+    fi
 fi
 set --
 [ -z "$agent" ] || set -- "$@" "$agent"

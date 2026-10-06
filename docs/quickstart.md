@@ -5,7 +5,7 @@ description: Install Cully, start its memory stack and try it in your coding age
 
 # Quickstart
 
-Cully saves useful notes for your connected agents and helps you review suggestions while you work. This setup runs on your laptop. It needs Docker with the Compose plugin, Python 3 and Claude Code, Codex or Cursor.
+Set up Cully on your laptop with Docker Compose, Python 3 and Claude Code, Codex or Cursor.
 
 ## 1. Install Cully
 
@@ -15,7 +15,9 @@ For Codex:
 curl -fsSL https://cully.net/install.sh | sh -s -- --agent codex
 ```
 
-Use `--agent claude` or `--agent cursor` for another agent. The installer sets up the agent and starts the advisor daemon in the background automatically. If your shell cannot find `cully`, use the binary path printed by the installer or add that directory to `PATH`.
+Use `--agent claude` or `--agent cursor` for another agent. The installer sets up the agent, starts the advisor daemon and adds its agent-specific `bin` directory to your zsh or Bash startup file when needed. Open a new terminal before the next step, or use the installed binary path printed by the installer.
+
+For source builds, version pinning or custom PATH setup, see [installer options](/installation).
 
 ## 2. Start Cully memory
 

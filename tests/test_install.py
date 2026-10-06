@@ -24,7 +24,8 @@ class InstallerTest(unittest.TestCase):
 case "$1" in
   version) echo v-test ;;
   help) echo 'cully agent setup' ;;
-  agent) printf '%s\\n' "$*" > "$TEST_ROOT/setup" ;;
+  daemon) printf '%s\\n' "$*" > "$TEST_ROOT/daemon-call" ;;
+  agent) printf '%s\\n' "$*" > "$TEST_ROOT/setup"; printf '%s\\n' "$PATH" > "$TEST_ROOT/setup-path" ;;
 esac
 ''')
         self.cli.chmod(0o755)
@@ -54,8 +55,10 @@ cp "$TEST_ROOT/$source_file" "$destination"
 printf '%s\\n' "$*" > "$TEST_ROOT/go-call"
 cp "$TEST_ROOT/cully" "$GOBIN/cully"
 ''')
-        self.env = dict(os.environ, TEST_ROOT=str(self.root),
+        self.env = dict(os.environ, HOME=str(self.root), TEST_ROOT=str(self.root),
                         CLAUDE_CONFIG_DIR=str(self.root / "claude"),
+                        CODEX_HOME=str(self.root / "codex"),
+                        CURSOR_CONFIG_DIR=str(self.root / "cursor"),
                         PATH=str(self.bin) + os.pathsep + os.environ["PATH"])
 
     def stub(self, name, body):
@@ -85,7 +88,7 @@ cp "$TEST_ROOT/cully" "$GOBIN/cully"
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("--from-source", result.stderr)
         self.assertFalse((self.root / "go-call").exists())
-        self.assertFalse((self.root / "claude" / "bin" / "cully").exists())
+        self.assertFalse((self.root / ".local" / "bin" / "cully").exists())
 
     def test_explicit_source_install_uses_selected_ref(self):
         for version, ref in [("latest", "main"), ("v0.3.0", "v0.3.0")]:
@@ -103,7 +106,59 @@ cp "$TEST_ROOT/cully" "$GOBIN/cully"
         result = self.run_installer()
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("checksum mismatch", result.stderr)
-        self.assertFalse((self.root / "claude" / "bin" / "cully").exists())
+        self.assertFalse((self.root / ".local" / "bin" / "cully").exists())
+
+    def test_agent_binary_and_path_follow_selected_agent(self):
+        for agent, directory in [("claude", ".claude"),
+                                 ("codex", ".codex"),
+                                 ("cursor", ".cursor"),
+                                 ("all", ".local"),
+                                 (None, ".local")]:
+            with self.subTest(agent=agent):
+                self.env.pop("CLAUDE_CONFIG_DIR", None)
+                self.env.pop("CODEX_HOME", None)
+                self.env.pop("CURSOR_CONFIG_DIR", None)
+                self.env["SHELL"] = "/bin/zsh"
+                args = ("--agent", agent) if agent else ()
+                result = self.run_installer(*args)
+                self.assertEqual(result.returncode, 0, result.stderr)
+                installed = self.root / directory / "bin" / "cully"
+                self.assertTrue(installed.is_file())
+                self.assertEqual((self.root / "daemon-call").read_text().strip(),
+                                 "daemon stop")
+                self.assertEqual((self.root / "setup-path").read_text().split(os.pathsep)[0],
+                                 str(installed.parent))
+                path_line = f'export PATH="$HOME/{directory}/bin:$PATH"'
+                self.assertEqual((self.root / ".zshrc").read_text().count(path_line), 1)
+
+    def test_path_line_is_idempotent_and_preserves_shell_config(self):
+        self.env.pop("CODEX_HOME")
+        self.env["SHELL"] = "/bin/zsh"
+        profile = self.root / ".zshrc"
+        profile.write_text("# my own settings\n")
+        for _ in range(2):
+            result = self.run_installer("--agent", "codex")
+            self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(profile.read_text().count('export PATH="$HOME/.codex/bin:$PATH"'), 1)
+        self.assertTrue(profile.read_text().startswith("# my own settings\n"))
+
+    def test_selected_agent_binary_overrides_older_claude_install(self):
+        self.env.pop("CODEX_HOME")
+        self.env["SHELL"] = "/bin/zsh"
+        old_bin = self.root / ".claude" / "bin"
+        selected_bin = self.root / ".codex" / "bin"
+        old_bin.mkdir(parents=True)
+        selected_bin.mkdir(parents=True)
+        old_cli = old_bin / "cully"
+        old_cli.write_text("#!/bin/sh\necho old\n")
+        old_cli.chmod(0o755)
+        self.env["PATH"] = os.pathsep.join((str(old_bin), str(selected_bin), self.env["PATH"]))
+        result = self.run_installer("--agent", "codex")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual((self.root / "setup-path").read_text().split(os.pathsep)[0],
+                         str(selected_bin))
+        self.assertIn('export PATH="$HOME/.codex/bin:$PATH"',
+                      (self.root / ".zshrc").read_text())
 
 
 if __name__ == "__main__":

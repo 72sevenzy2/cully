@@ -1,27 +1,22 @@
 ---
-title: Install Cully
-description: Install Cully and start its standard memory stack on your laptop.
+title: Installer options
+description: Choose an agent, set up PATH, pin a release or build Cully from source.
 ---
 
-# Install Cully
+# Installer options
 
-Choose the coding agent you use. For Codex:
+Follow the [quickstart](/quickstart) for the normal laptop setup. The installer accepts `--agent claude`, `--agent codex`, `--agent cursor` or `--agent all`; with no agent selected, Cully detects installed agents. It registers the selected integrations and starts the advisor daemon.
 
-```sh
-curl -fsSL https://cully.net/install.sh | sh -s -- --agent codex
-```
+## Binary location and PATH
 
-Use `--agent claude` or `--agent cursor` for another agent. The installer adds the Cully CLI, advisor and skill, and starts the advisor daemon in the background. It prints `Advisor started` when that succeeds. If your shell cannot find `cully` afterward, use the binary path printed by the installer or add that directory to `PATH`.
+| Install target | CLI path |
+| --- | --- |
+| Claude Code | `~/.claude/bin/cully` |
+| Codex | `~/.codex/bin/cully` |
+| Cursor | `~/.cursor/bin/cully` |
+| All agents or automatic detection | `~/.local/bin/cully` |
 
-## Start Cully memory
-
-Install and start Docker with the Compose plugin, and install Python 3. Then run:
-
-```sh
-cully setup codex
-```
-
-Use the same agent name you installed. Setup starts Cully MCP, the data API, PostgreSQL and Mem0, then connects your agent and starts the advisor daemon if it is not already running. Restart the agent after setup. Follow the [quickstart](/quickstart) to save and find your first note.
+The installer adds the selected directory to your zsh or Bash startup file when needed. Open a new terminal before typing `cully`, or use the full path printed by the installer in your current terminal. A piped installer cannot update the shell that launched it. With a custom `CLAUDE_CONFIG_DIR`, `CODEX_HOME` or `CURSOR_CONFIG_DIR`, or another shell, add the printed directory to PATH yourself. Existing shell settings are preserved.
 
 ## Connect to a server already running
 

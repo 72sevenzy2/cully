@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 )
 
@@ -190,11 +191,29 @@ func runClaude(allowTools, prompt string) (string, error) {
 	if allowTools != "" {
 		args = append(args, "--allowedTools", allowTools)
 	}
-	cmd := exec.Command("claude", args...)
+	cmd := exec.Command(claudeExecutable(), args...)
 	cmd.Stdin = strings.NewReader(prompt)
 	cmd.Env = append(os.Environ(), "MODEL_HINT_GUARD=1")
 	out, err := cmd.Output()
 	return string(out), err
+}
+
+func claudeExecutable() string {
+	if path, err := exec.LookPath("claude"); err == nil {
+		return path
+	}
+	// GUI launches and background hooks may not inherit the user's shell PATH.
+	dirs := []string{ConfigDir()}
+	if home, err := os.UserHomeDir(); err == nil {
+		dirs = append(dirs, filepath.Join(home, ".claude"))
+	}
+	for _, dir := range dirs {
+		path := filepath.Join(dir, "bin", "claude")
+		if _, err := exec.LookPath(path); err == nil {
+			return path
+		}
+	}
+	return "claude"
 }
 
 // toolGap is the advisor's structured gap analysis: what capability is missing,

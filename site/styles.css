@@ -128,6 +128,7 @@ h1 em { color: #54926b; }
 .path-number { color: #5b8866; font-size: 11px; font-weight: 800; letter-spacing: .13em; }
 .path-card h3 { margin: 29px 0 11px; font-size: 25px; line-height: 1.25; letter-spacing: -.05em; }
 .path-card p { max-width: 475px; color: #5e7465; font-size: 14px; line-height: 1.7; }
+.path-card p a { color: var(--forest); text-decoration: underline; text-underline-offset: 3px; }
 .path-card p code { color: var(--forest); font-size: .92em; font-weight: 700; }
 .path-links { display: flex; flex-wrap: wrap; gap: 12px 25px; margin-top: auto; padding-top: 20px; }
 .path-links a { color: var(--forest); font-size: 12px; font-weight: 800; }

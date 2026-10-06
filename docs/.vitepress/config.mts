@@ -41,14 +41,7 @@ export default withMermaid(defineConfig({
       { text: 'Website', link: 'https://cully.net' }
     ],
     sidebar: [
-      {
-        text: 'Start here',
-        items: [
-          { text: 'Overview', link: '/' },
-          { text: 'Quickstart', link: '/quickstart' },
-          { text: 'Installation', link: '/installation' }
-        ]
-      },
+      { text: 'Quickstart', link: '/quickstart' },
       {
         text: 'Use Cully',
         items: [
@@ -70,6 +63,7 @@ export default withMermaid(defineConfig({
         text: 'Reference',
         collapsed: true,
         items: [
+          { text: 'Installer and PATH', link: '/installation' },
           { text: 'Configuration', link: '/configuration' },
           { text: 'Mem0 recall', link: '/mem0' },
           { text: 'Architecture', link: '/architecture' },
