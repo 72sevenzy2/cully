@@ -1,7 +1,7 @@
 interface:
   display_name: "Cully"
-  short_description: "Remember and retrieve coding project work"
-  default_prompt: "Use $cully to log this work to the shared project memory."
+  short_description: "Your companion for better work and everyday life"
+  default_prompt: "Use $cully to recall how I work, help guide my coding agents, and suggest useful improvements. Remember personal context when I ask."
 
 dependencies:
   tools:

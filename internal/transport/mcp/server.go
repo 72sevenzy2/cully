@@ -32,7 +32,7 @@ func add[I any](server *sdk.Server, service memory.Service, name, description st
 	})
 }
 func Handler(service memory.Service, verifier auth.TokenVerifier, issuer, resource, path, version string) http.Handler {
-	server := sdk.NewServer(&sdk.Implementation{Name: "Cully", Version: version}, &sdk.ServerOptions{Instructions: "Shared personal and company memory. Search before answering history questions. Record substantive work, decisions, issues and lessons. Local session controls use the cully CLI."})
+	server := sdk.NewServer(&sdk.Implementation{Name: "Cully", Version: version}, &sdk.ServerOptions{Instructions: "Your companion for better work and everyday life. Recall what the user does and how they work to help with coding-agent orchestration, project management and workflow improvements. Search before answering history questions. Record substantive work, decisions, issues and lessons; remember personal context when the user asks. Local session controls use the cully CLI."})
 	add(server, service, "cully_log", "Save a personal or company memory record.", true, func(v memory.LogInput) memory.Request { return memory.Request{Operation: "log", Log: &v} })
 	add(server, service, "cully_search", "Search source records using full-text search and optional vectors.", false, func(v memory.SearchInput) memory.Request { return memory.Request{Operation: "search", Search: &v} })
 	add(server, service, "cully_recall", "Recall live source records through self-hosted Mem0 semantic memory. Requires configured Mem0 indexing.", false, func(v memory.SearchInput) memory.Request { return memory.Request{Operation: "recall", Search: &v} })

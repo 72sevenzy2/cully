@@ -184,4 +184,4 @@ macOS and Linux binaries.
 
 ## License
 
-MIT. See [LICENSE](LICENSE).
+The imported session-control source is MIT licensed. See [the original license](../../licenses/flightdeck-MIT.txt).

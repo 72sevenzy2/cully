@@ -1,0 +1,122 @@
+[
+  {
+    "name": "v0.4.0",
+    "zipball_url": "https://api.github.com/repos/mcp-runtime/agent-flightdeck/zipball/refs/tags/v0.4.0",
+    "tarball_url": "https://api.github.com/repos/mcp-runtime/agent-flightdeck/tarball/refs/tags/v0.4.0",
+    "commit": {
+      "sha": "90d4ff4fc8cd45df31b6d6597ff1a85a96212498",
+      "url": "https://api.github.com/repos/mcp-runtime/agent-flightdeck/commits/90d4ff4fc8cd45df31b6d6597ff1a85a96212498"
+    },
+    "node_id": "REF_kwDOTErIk7ByZWZzL3RhZ3MvdjAuNC4w"
+  },
+  {
+    "name": "v0.3.0",
+    "zipball_url": "https://api.github.com/repos/mcp-runtime/agent-flightdeck/zipball/refs/tags/v0.3.0",
+    "tarball_url": "https://api.github.com/repos/mcp-runtime/agent-flightdeck/tarball/refs/tags/v0.3.0",
+    "commit": {
+      "sha": "f26cd6667d7ce5219ddaa349c799d6ea2754a276",
+      "url": "https://api.github.com/repos/mcp-runtime/agent-flightdeck/commits/f26cd6667d7ce5219ddaa349c799d6ea2754a276"
+    },
+    "node_id": "REF_kwDOTErIk7ByZWZzL3RhZ3MvdjAuMy4w"
+  },
+  {
+    "name": "v0.2.1",
+    "zipball_url": "https://api.github.com/repos/mcp-runtime/agent-flightdeck/zipball/refs/tags/v0.2.1",
+    "tarball_url": "https://api.github.com/repos/mcp-runtime/agent-flightdeck/tarball/refs/tags/v0.2.1",
+    "commit": {
+      "sha": "234d30cea8299a8ebd2b98874779cbcfff4100e9",
+      "url": "https://api.github.com/repos/mcp-runtime/agent-flightdeck/commits/234d30cea8299a8ebd2b98874779cbcfff4100e9"
+    },
+    "node_id": "REF_kwDOTErIk7ByZWZzL3RhZ3MvdjAuMi4x"
+  },
+  {
+    "name": "v0.2.0",
+    "zipball_url": "https://api.github.com/repos/mcp-runtime/agent-flightdeck/zipball/refs/tags/v0.2.0",
+    "tarball_url": "https://api.github.com/repos/mcp-runtime/agent-flightdeck/tarball/refs/tags/v0.2.0",
+    "commit": {
+      "sha": "4e69f97097961bbdb4fccf17972d4e1ecc221295",
+      "url": "https://api.github.com/repos/mcp-runtime/agent-flightdeck/commits/4e69f97097961bbdb4fccf17972d4e1ecc221295"
+    },
+    "node_id": "REF_kwDOTErIk7ByZWZzL3RhZ3MvdjAuMi4w"
+  },
+  {
+    "name": "v0.1.7",
+    "zipball_url": "https://api.github.com/repos/mcp-runtime/agent-flightdeck/zipball/refs/tags/v0.1.7",
+    "tarball_url": "https://api.github.com/repos/mcp-runtime/agent-flightdeck/tarball/refs/tags/v0.1.7",
+    "commit": {
+      "sha": "ed3d2b601a4778e6a8e8f0a41a53141adc4c1acf",
+      "url": "https://api.github.com/repos/mcp-runtime/agent-flightdeck/commits/ed3d2b601a4778e6a8e8f0a41a53141adc4c1acf"
+    },
+    "node_id": "REF_kwDOTErIk7ByZWZzL3RhZ3MvdjAuMS43"
+  },
+  {
+    "name": "v0.1.6",
+    "zipball_url": "https://api.github.com/repos/mcp-runtime/agent-flightdeck/zipball/refs/tags/v0.1.6",
+    "tarball_url": "https://api.github.com/repos/mcp-runtime/agent-flightdeck/tarball/refs/tags/v0.1.6",
+    "commit": {
+      "sha": "74615b5cc0b35d663323488cbd72f6c42421b477",
+      "url": "https://api.github.com/repos/mcp-runtime/agent-flightdeck/commits/74615b5cc0b35d663323488cbd72f6c42421b477"
+    },
+    "node_id": "REF_kwDOTErIk7ByZWZzL3RhZ3MvdjAuMS42"
+  },
+  {
+    "name": "v0.1.5",
+    "zipball_url": "https://api.github.com/repos/mcp-runtime/agent-flightdeck/zipball/refs/tags/v0.1.5",
+    "tarball_url": "https://api.github.com/repos/mcp-runtime/agent-flightdeck/tarball/refs/tags/v0.1.5",
+    "commit": {
+      "sha": "d4f0ae55d83b3f8a8c7423a7ae3c79872ee0b85d",
+      "url": "https://api.github.com/repos/mcp-runtime/agent-flightdeck/commits/d4f0ae55d83b3f8a8c7423a7ae3c79872ee0b85d"
+    },
+    "node_id": "REF_kwDOTErIk7ByZWZzL3RhZ3MvdjAuMS41"
+  },
+  {
+    "name": "v0.1.4",
+    "zipball_url": "https://api.github.com/repos/mcp-runtime/agent-flightdeck/zipball/refs/tags/v0.1.4",
+    "tarball_url": "https://api.github.com/repos/mcp-runtime/agent-flightdeck/tarball/refs/tags/v0.1.4",
+    "commit": {
+      "sha": "46ad683e1bd03bbf86bb9b5d8d784f6ded34fa47",
+      "url": "https://api.github.com/repos/mcp-runtime/agent-flightdeck/commits/46ad683e1bd03bbf86bb9b5d8d784f6ded34fa47"
+    },
+    "node_id": "REF_kwDOTErIk7ByZWZzL3RhZ3MvdjAuMS40"
+  },
+  {
+    "name": "v0.1.3",
+    "zipball_url": "https://api.github.com/repos/mcp-runtime/agent-flightdeck/zipball/refs/tags/v0.1.3",
+    "tarball_url": "https://api.github.com/repos/mcp-runtime/agent-flightdeck/tarball/refs/tags/v0.1.3",
+    "commit": {
+      "sha": "40865daf45752ef1c08a9cb9c3afd40cfa59631a",
+      "url": "https://api.github.com/repos/mcp-runtime/agent-flightdeck/commits/40865daf45752ef1c08a9cb9c3afd40cfa59631a"
+    },
+    "node_id": "REF_kwDOTErIk7ByZWZzL3RhZ3MvdjAuMS4z"
+  },
+  {
+    "name": "v0.1.2",
+    "zipball_url": "https://api.github.com/repos/mcp-runtime/agent-flightdeck/zipball/refs/tags/v0.1.2",
+    "tarball_url": "https://api.github.com/repos/mcp-runtime/agent-flightdeck/tarball/refs/tags/v0.1.2",
+    "commit": {
+      "sha": "8d4df94050c6d0c58ddeea8f26f416fd26f7751d",
+      "url": "https://api.github.com/repos/mcp-runtime/agent-flightdeck/commits/8d4df94050c6d0c58ddeea8f26f416fd26f7751d"
+    },
+    "node_id": "REF_kwDOTErIk7ByZWZzL3RhZ3MvdjAuMS4y"
+  },
+  {
+    "name": "v0.1.1",
+    "zipball_url": "https://api.github.com/repos/mcp-runtime/agent-flightdeck/zipball/refs/tags/v0.1.1",
+    "tarball_url": "https://api.github.com/repos/mcp-runtime/agent-flightdeck/tarball/refs/tags/v0.1.1",
+    "commit": {
+      "sha": "896460515768713e14a07dc8ca2b3f2f34ae85cc",
+      "url": "https://api.github.com/repos/mcp-runtime/agent-flightdeck/commits/896460515768713e14a07dc8ca2b3f2f34ae85cc"
+    },
+    "node_id": "REF_kwDOTErIk7ByZWZzL3RhZ3MvdjAuMS4x"
+  },
+  {
+    "name": "v0.1.0",
+    "zipball_url": "https://api.github.com/repos/mcp-runtime/agent-flightdeck/zipball/refs/tags/v0.1.0",
+    "tarball_url": "https://api.github.com/repos/mcp-runtime/agent-flightdeck/tarball/refs/tags/v0.1.0",
+    "commit": {
+      "sha": "2c311794c8e3c76c906722d2fc0014c99798af52",
+      "url": "https://api.github.com/repos/mcp-runtime/agent-flightdeck/commits/2c311794c8e3c76c906722d2fc0014c99798af52"
+    },
+    "node_id": "REF_kwDOTErIk7ByZWZzL3RhZ3MvdjAuMS4w"
+  }
+]

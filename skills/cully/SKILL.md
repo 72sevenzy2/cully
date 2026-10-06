@@ -1,10 +1,12 @@
 ---
 name: cully
-description: Inspect coding-agent session controls and record, retrieve or manage substantive personal and project memory through the Cully MCP service.
+description: Help the user guide coding agents, improve project workflows and recall how they work; remember personal context when asked and use it to help with everyday life.
 ---
 
 <!-- cully:skill:managed -->
 # Cully
+
+Your companion for better work and everyday life. Use remembered work, approaches, decisions and lessons to understand the user's workflow and suggest practical improvements. Focus on software engineering, coding-agent orchestration and project management; remember personal context when the user asks and use it to support their goals and routines.
 
 Use the local `cully` command for session instruments and controls. Use the configured Cully MCP server for shared memory across agents and devices. PostgreSQL holds source records; self-hosted Mem0 supplies optional semantic recall.
 
@@ -21,6 +23,7 @@ Claude uses the Cully status line and hooks. Codex uses its native status fields
 
 - Derive project identity from the current Git remote and normalize to `https://github.com/OWNER/REPO`. Do not guess repository identity from a local directory name.
 - Choose `personal` or `company`. Personal categories include career, fitness, relationship, finance, food, water, reading, mood, check-in and other. Company is an owner's section, not organization-wide sharing.
+- Save personal context when the user asks to remember it. Use existing personal memory when relevant to their request; do not infer or log private details from unrelated coding sessions.
 - After substantive work, call `cully_log` with the assistant name, a concise summary and useful approach, outcome, issue, learning or next steps. Choose work, issue, learning or decision as entry type. Do not log each command or trivial edit.
 - Before answering history questions, use `cully_search`, scoped to the relevant project and section. Use `cully_recall` for semantic recall through self-hosted Mem0 when configured. Cite dates and source record IDs. Say when no matching memory exists.
 - Use `cully_get` before correcting a record with `cully_update`. Empty optional text clears a field. Use `cully_delete` only for records the user asked to remove.

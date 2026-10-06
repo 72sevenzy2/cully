@@ -1,7 +1,7 @@
 version: v1
 servers:
     - name: cully
-      description: cully MCP server
+      description: Your companion for better work and everyday life
       image: registry.mcpruntime.org/org/cully-mcp/cully
       imageTag: dev
       route: /cully/mcp
