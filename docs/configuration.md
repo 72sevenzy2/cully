@@ -33,7 +33,7 @@ Keep the data API token identical on both sides. The MCP workload does not recei
 | Connection | Credential | Where it belongs |
 | --- | --- | --- |
 | Agent to Cully MCP | OAuth bearer when enabled; otherwise a private single-user MCP endpoint | Agent and MCP service |
-| Cully MCP to data API | `CULLY_DATA_API_TOKEN`, independent of MCP OAuth | MCP workload Secret and data service environment |
+| Cully MCP to data API | `CULLY_DATA_API_TOKEN`, independent of MCP OAuth | MCP deployment environment (from the Actions secret) and data service environment |
 | Data API to Mem0 | `CULLY_MEM0_API_KEY` | Data service and Mem0 only |
 | Data API to PostgreSQL | Database credentials in `CULLY_DATABASE_URL` | Data service and PostgreSQL only |
 
