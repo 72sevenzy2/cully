@@ -1,6 +1,6 @@
 # Team deployment with OAuth
 
-This example shows how a team can use Cully with its organization's existing identity provider. Cully's MCP endpoint is the OAuth-protected resource. [MCP Auth](https://github.com/mcp-runtime/mcp-auth) is the authorization server between the coding agent and the identity provider; it handles the MCP OAuth flow and delegates sign-in to the provider. The identity provider continues to manage users and access. Cully uses the verified token subject as the record owner, so each person sees their own records.
+This example shows how a team can use Cully with its organization's existing identity provider. Cully's MCP endpoint is the OAuth-protected resource. [MCP Auth](https://github.com/mcp-runtime/mcp-auth) is the authorization server between the coding agent and the identity provider; it handles the MCP OAuth 2.1 flow and delegates sign-in to the provider through an OIDC or OAuth 2.0 connector. The identity provider continues to manage users and access. Cully uses the verified token subject as the record owner, so each person sees their own records.
 
 ```mermaid
 flowchart LR
@@ -15,7 +15,7 @@ flowchart LR
 ## Set up the services
 
 1. Choose public HTTPS names for the MCP endpoint and authorization server, such as `mcp.example.com` and `auth.example.com`. The MCP resource URL is `https://mcp.example.com/mcp`.
-2. Follow the [MCP Auth identity-provider connector guide](https://github.com/mcp-runtime/mcp-auth/blob/main/docs/auth-server.md#oidc-or-plain-oauth-20) for the OIDC or OAuth 2.0 provider your organization uses, including its identity claims and upstream endpoints. Register the [MCP Auth callback URL](https://github.com/mcp-runtime/mcp-auth/blob/main/docs/auth-server.md#the-redirect-uri-you-register-with-your-identity-provider) with that provider. Keep its client secret private. MCP Auth uses this connector to complete the MCP OAuth flow.
+2. Follow the [MCP Auth identity-provider setup guide](https://github.com/mcp-runtime/mcp-auth/blob/main/docs/auth-server.md#connect-an-organizations-identity-provider) for the OIDC or OAuth 2.0 provider your organization uses, including its identity claims and upstream endpoints. Register the [MCP Auth callback URL](https://github.com/mcp-runtime/mcp-auth/blob/main/docs/auth-server.md#the-redirect-uri-you-register-with-your-identity-provider) with that provider. Keep its client secret private. MCP Auth uses this connector to complete the MCP OAuth 2.1 flow.
 3. In a Cully checkout, set `CULLY_MCP_HOST`, `CULLY_AUTH_HOST` and `MCP_AUTH_UPSTREAM_CLIENT_SECRET` in `deploy/self-hosted/.env`. Prepare the connector JSON and MCP Auth signing key as shown in [MCP OAuth](/oauth#self-hosted-docker-with-mcp-auth). Then start the Docker stack from `deploy/self-hosted`:
 
    ```sh

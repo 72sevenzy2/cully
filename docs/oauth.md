@@ -2,6 +2,8 @@
 
 OAuth is optional for Cully's MCP endpoint. `cully-mcp` starts without it by default; use `cully-mcp --oauth` or `CULLY_MCP_AUTH_MODE=oauth` to enable bearer validation. Cully validates tokens issued for its public MCP URL. The authorization server and your identity provider handle sign-in, users and grants; the Cully data API and Mem0 use separate private service credentials.
 
+When enabled, the agent-to-MCP authorization flow follows the [MCP OAuth 2.1 profile](https://modelcontextprotocol.io/specification/2026-07-28/basic/authorization). MCP Auth can connect upstream to an organization's OIDC or OAuth 2.0 identity provider; that provider connection is separate from the MCP-facing OAuth 2.1 flow. Follow the [MCP Auth identity-provider setup guide](https://github.com/mcp-runtime/mcp-auth/blob/main/docs/auth-server.md#connect-an-organizations-identity-provider) to configure the connector and callback.
+
 Cully uses the [MCP Auth Go client SDK](https://github.com/mcp-runtime/mcp-auth/tree/main/auth-client/go) to verify RS256 signatures, exact issuer and resource audience, expiration, subject and scopes. The official MCP Go SDK handles MCP transport and the OAuth challenge. Read tools require `tools:read`; writes require `tools:write`.
 
 ## Example: the maintainer's deployment on MCP Runtime
