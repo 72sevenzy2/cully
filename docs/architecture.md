@@ -6,7 +6,7 @@ Cully has one Go module and three executable entry points. Domain validation is 
 flowchart LR
   A[Claude / Codex / Cursor] --> L[Cully CLI and daemon]
   L --> S[Local diagnostics and suggestions]
-  A -->|OAuth| M[Cully MCP]
+  A -->|Private no-OAuth or OAuth| M[Cully MCP]
   M -->|Private authenticated HTTPS| D[Cully data API]
   D --> P[(PostgreSQL + pgvector)]
   P --> Q[Durable projection jobs]
@@ -22,9 +22,9 @@ The local advisor works offline. It does not run a background transcript scanner
 
 ## Public memory boundary
 
-`cmd/cully-mcp` exposes tools through the official Go MCP SDK and Streamable HTTP. `internal/identity` verifies the configured issuer, public resource audience, RS256 signature, expiration and subject. Each tool checks read or write permission.
+`cmd/cully-mcp` exposes tools through the official Go MCP SDK and Streamable HTTP. By default it serves one configured owner without OAuth, intended for loopback or a trusted private network. It does not contact an identity provider in that mode. With `--oauth` or `CULLY_MCP_AUTH_MODE=oauth`, `internal/identity` verifies the configured issuer, public resource audience, RS256 signature, expiration and subject. Each tool checks read or write permission.
 
-The verified subject becomes the owner. Public tool inputs cannot choose a different owner. Resource metadata advertises the configured public OAuth resource rather than relying on a proxy-rewritten Host header.
+In OAuth mode, the verified subject becomes the owner. In no-OAuth mode, `CULLY_MCP_OWNER` is the fixed owner. Public tool inputs cannot choose a different owner. OAuth resource metadata is published only in OAuth mode and advertises the configured public resource rather than relying on a proxy-rewritten Host header.
 
 `internal/store/remote` calls the private Go data API with a service token. Database and Mem0 credentials stay on the VM.
 
@@ -36,7 +36,7 @@ Full-text search uses PostgreSQL's generated search vector. Optional 1536-dimens
 
 ## Semantic memory
 
-PostgreSQL is authoritative. When Mem0 is enabled, source edits and projection jobs commit in the same transaction. A worker reconciles one owner's source entry into self-hosted Mem0 and retries outages with backoff. Deletes remove the corresponding projection.
+PostgreSQL is authoritative. When Mem0 is enabled, source edits and projection jobs commit in the same transaction. Self-hosted Mem0 does the semantic indexing and candidate recall work. A worker reconciles one owner's source entry into Mem0 and retries outages with backoff. Deletes remove the corresponding projection.
 
 `cully_recall` uses Mem0 to find candidates, then loads live records from PostgreSQL. It rejects another owner's records, deleted entries and projections with outdated source timestamps. It returns source records, not unverified raw Mem0 results.
 

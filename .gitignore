@@ -12,6 +12,8 @@ venv/
 dist/
 build/
 /node_modules/
+/deploy/self-hosted/.secrets/
+/deploy/self-hosted/connectors.keycloak.json
 /docs/.vitepress/cache/
 
 /cully

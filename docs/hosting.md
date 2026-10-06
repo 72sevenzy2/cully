@@ -1,56 +1,49 @@
-# Hosted and self-hosted Cully
+# Host Cully
 
-The deployment model changes who operates the server, not the client protocol.
+Cully's local advisor runs on your machine. The optional MCP service talks to a private data API. PostgreSQL stores authoritative source records; self-hosted Mem0 does the semantic indexing and recall work when configured. See [architecture](/architecture) and [Mem0](/mem0).
 
-| Component | Cully hosted service | Self-hosted service |
+| Component | Planned Cully hosted service | Self-hosted service |
 | --- | --- | --- |
-| Local CLI/advisor | User's machine | User's machine |
+| Local CLI and advisor | User's machine | User's machine |
 | `cully-mcp` | Cully operator | Self-hosting operator |
 | `cully-data` and PostgreSQL | Cully operator | Self-hosting operator |
 | Self-hosted Mem0 runtime | Cully operator | Self-hosting operator |
 
-## Coding-agent setup
+## Choose MCP access
+
+| Mode | Start | Owner | Network |
+| --- | --- | --- | --- |
+| No OAuth (default) | `cully-mcp` or `CULLY_MCP_AUTH_MODE=none` | Required `CULLY_MCP_OWNER`; every call uses this fixed owner | Loopback, private network or trusted tunnel. Anyone who reaches the endpoint can use its tools. |
+| OAuth | `cully-mcp --oauth` or `CULLY_MCP_AUTH_MODE=oauth` | Verified token subject | HTTPS route, with issuer, audience, signature, expiration and read/write scopes checked. |
+
+No-OAuth mode makes no identity-provider or JWKS requests. Cully never accepts an owner from a tool input. Keep a stable `CULLY_MCP_OWNER` to access the same records over time. Do not expose no-OAuth mode on an untrusted public route. OAuth is provider-neutral: MCP Auth with a connector is one option, while another compatible authorization server can work too. See [OAuth deployment](/oauth).
+
+## Fresh single-user Compose installation
+
+The files in [`deploy/self-hosted`](https://github.com/mcp-runtime/cully/tree/main/deploy/self-hosted) build the MCP and data binaries, create a PostgreSQL volume and bind MCP to `127.0.0.1:8080`. From the repository root:
 
 ```sh
-cully install
-cully mcp add --agent codex
-# Or connect this agent to your own deployment:
-cully mcp add --agent codex --url https://my-host.example/mcp
+cd deploy/self-hosted
+cp .env.example .env
+# Edit .env: database password, URL-encoded database password in CULLY_DATABASE_URL,
+# private API token, and stable CULLY_MCP_OWNER.
+chmod 600 .env
+docker compose up -d db
+docker compose --profile ops run --rm migrate
+docker compose up -d --build data-api mcp
+curl -fsS http://127.0.0.1:8080/healthz
 ```
 
-Repeat MCP setup separately for each chosen agent. The default URL is
-`https://mcp.mcpruntime.org/cully/mcp`; this endpoint requires the planned Cully
-cutover before it is available. Setup writes the connection, then prints client
-OAuth instructions. It does not deploy the service or perform sign-in.
+Connect a local agent with `cully mcp add --agent codex --url http://127.0.0.1:8080/mcp`. A remote agent needs a private tunnel or trusted network route. The example does not ship a Mem0 server: set `CULLY_MEM0_URL` and `CULLY_MEM0_API_KEY` only after provisioning the [self-hosted Mem0 REST service](/mem0). `cully_recall` requires Mem0; logging, text search and recent records work without it.
 
-Only the MCP URL belongs in agent configuration. The data API service token,
-database credentials and Mem0 key stay with the operator. The local daemon
-supports session analysis; it is not a local copy of the remote memory servers.
+## OAuth installation
 
-## Operator setup
+The same MCP binary supports OAuth. The [OAuth guide](/oauth) has commands for an existing authorization server and for a new MCP Auth broker with a Keycloak connector. The examples add Caddy for HTTPS. Register the exact public MCP resource and grant `tools:read` and `tools:write`. Clients sign in only in OAuth mode.
 
-Configure `cully-data` with `CULLY_DATABASE_URL`, `CULLY_DATA_API_TOKEN`, and the
-private self-hosted Mem0 URL/key. PostgreSQL is authoritative; Mem0 adds semantic
-recall when enabled. Deploy and persist Mem0 separately using [its guide](mem0.md).
+## Existing personal deployment
 
-Configure `cully-mcp` with the matching `CULLY_DATA_API_TOKEN`,
-`CULLY_DATA_API_URL`, OAuth issuer/JWKS and its exact public resource URL. An
-operator may place data and MCP on the same host or use a private authenticated
-network between them. Agents never connect directly to the data API.
+The root `compose.yaml` and [personal deployment guide](/personal-deployment) target an existing VM database volume and network. They are separate from the fresh installation above. The personal `.mcp/servers.yaml` stays explicitly in OAuth mode for its public ingress; its JWKS URL and audience must match the authorization server. Do not reuse its public route in no-OAuth mode.
 
-For the existing Buddy VM, follow [migration.md](migration.md) and retain its
-actual database volume. A new self-hosted installation must provision a database,
-volume, private network, compatible OAuth issuer and HTTPS routing. The supplied
-Compose file is an existing-volume data-service deployment; it does not provision
-an OAuth issuer or the public MCP workload. Build the public service using
-`Dockerfile` and deploy it through your container platform; MCP Runtime metadata
-is in `.mcp/servers.yaml`. See [configuration](configuration.md) for every variable.
+Only the MCP URL belongs in agent configuration. The private API token, database credentials and Mem0 key stay with the operator. [Connect an agent](/agents) explains client setup.
 
-Before connecting clients, run the explicit schema migration and verify health,
-OAuth metadata, read/write scopes, owner isolation and Mem0 indexing. Registration
-in a coding agent is not evidence that the server has been deployed.
-
-Client formats and sign-in steps follow the official
-[Codex MCP documentation](https://developers.openai.com/codex/mcp),
-[Claude Code MCP documentation](https://code.claude.com/docs/en/mcp) and
-[Cursor MCP documentation](https://cursor.com/docs/mcp).
+Client formats and OAuth sign-in behavior also follow the official [Codex MCP documentation](https://developers.openai.com/codex/mcp), [Claude Code MCP documentation](https://code.claude.com/docs/en/mcp) and [Cursor MCP documentation](https://cursor.com/docs/mcp).

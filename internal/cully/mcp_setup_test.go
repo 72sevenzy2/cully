@@ -96,11 +96,11 @@ func TestAddMCPSingleAgentSelfHosted(t *testing.T) {
 	t.Setenv("CURSOR_CONFIG_DIR", filepath.Join(dir, "cursor"))
 	endpoint := "https://self.example/mcp"
 	var out bytes.Buffer
-	if err := AddMCP(&out, "all", endpoint); err == nil {
+	if err := AddMCP(&out, "all", endpoint, false); err == nil {
 		t.Fatal("accepted all")
 	}
 	for _, agent := range []string{"claude", "codex", "cursor"} {
-		if err := AddMCP(&out, agent, endpoint); err != nil {
+		if err := AddMCP(&out, agent, endpoint, false); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -110,11 +110,15 @@ func TestAddMCPSingleAgentSelfHosted(t *testing.T) {
 			t.Fatalf("%s: %s %v", path, b, err)
 		}
 	}
-	if !strings.Contains(out.String(), "codex mcp login cully") {
-		t.Fatal("missing OAuth instructions")
+	if strings.Contains(out.String(), "codex mcp login cully") || !strings.Contains(out.String(), "does not require sign-in") {
+		t.Fatal("no-OAuth instructions are incorrect")
+	}
+	var oauthOut bytes.Buffer
+	if err := AddMCP(&oauthOut, "codex", endpoint, true); err != nil || !strings.Contains(oauthOut.String(), "codex mcp login cully") {
+		t.Fatal("missing opt-in OAuth instructions")
 	}
 	for _, endpoint := range []string{"not-a-url", "file:///tmp/a", "https://user:secret@host/mcp", "https://host/mcp?secret=x"} {
-		if err := AddMCP(&out, "codex", endpoint); err == nil {
+		if err := AddMCP(&out, "codex", endpoint, false); err == nil {
 			t.Fatalf("accepted invalid endpoint %s", endpoint)
 		}
 	}
@@ -132,14 +136,14 @@ func TestAddMCPAutoDetectionChoosesOneAgent(t *testing.T) {
 	os.Mkdir(claude, 0700)
 	os.Mkdir(codex, 0700)
 	var out bytes.Buffer
-	if err := AddMCP(&out, "", HostedMCPURL); err == nil {
+	if err := AddMCP(&out, "", HostedMCPURL, false); err == nil {
 		t.Fatal("ambiguous detection should require an explicit agent")
 	}
 	if _, err := os.Stat(filepath.Join(claude, ".claude.json")); !os.IsNotExist(err) {
 		t.Fatal("ambiguous detection wrote config")
 	}
 	os.Remove(codex)
-	if err := AddMCP(&out, "", HostedMCPURL); err != nil {
+	if err := AddMCP(&out, "", HostedMCPURL, false); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := os.Stat(filepath.Join(claude, ".claude.json")); err != nil {

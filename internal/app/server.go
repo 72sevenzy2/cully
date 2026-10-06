@@ -43,8 +43,8 @@ func serve(ctx context.Context, address string, handler http.Handler) error {
 	defer cancel()
 	return server.Shutdown(stop)
 }
-func MCP(version string) error {
-	s, err := config.Load(false)
+func MCP(version string, oauthFlag bool) error {
+	s, err := config.LoadMCP(oauthFlag)
 	if err != nil {
 		return err
 	}
@@ -54,11 +54,14 @@ func MCP(version string) error {
 	}
 	ctx, cancel := lifetime()
 	defer cancel()
-	verify, err := identity.NewVerifier(ctx, s.Issuer, s.Resource, s.JWKSURL)
-	if err != nil {
-		return fmt.Errorf("OAuth signing key initialization failed")
+	option := mcpt.AuthConfig{Mode: s.AuthMode, Owner: s.Owner, Issuer: s.Issuer, Resource: s.Resource}
+	if s.AuthMode == "oauth" {
+		option.Verifier, err = identity.NewVerifier(ctx, s.Issuer, s.Resource, s.JWKSURL)
+		if err != nil {
+			return fmt.Errorf("OAuth signing key initialization failed: %w", err)
+		}
 	}
-	return serve(ctx, s.Address, mcpt.Handler(memory.Service{Store: store}, verify, s.Issuer, s.Resource, s.MCPPath, version))
+	return serve(ctx, s.Address, mcpt.Handler(memory.Service{Store: store}, option, s.MCPPath, version))
 }
 func Data(command string) error {
 	s, err := config.Load(true)

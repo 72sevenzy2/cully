@@ -16,7 +16,7 @@ import (
 const HostedMCPURL = "https://mcp.mcpruntime.org/cully/mcp"
 
 // AddMCP registers a remote service. It neither deploys servers nor stores OAuth tokens.
-func AddMCP(w io.Writer, agent, endpoint string) error {
+func AddMCP(w io.Writer, agent, endpoint string, oauth bool) error {
 	if err := validateMCPURL(endpoint); err != nil {
 		return err
 	}
@@ -59,17 +59,21 @@ func AddMCP(w io.Writer, agent, endpoint string) error {
 			return fmt.Errorf("configure %s MCP: %w", target, err)
 		}
 		fmt.Fprintf(w, "Cully MCP configured for %s in %s\n", target, path)
-		switch target {
-		case "codex":
-			fmt.Fprintln(w, "Sign in: codex mcp login cully")
-		case "claude":
-			fmt.Fprintln(w, "Restart Claude Code, then use /mcp to sign in to cully.")
-		case "cursor":
-			fmt.Fprintln(w, "Restart Cursor, then sign in to cully in MCP settings.")
+		if oauth {
+			switch target {
+			case "codex":
+				fmt.Fprintln(w, "Sign in: codex mcp login cully")
+			case "claude":
+				fmt.Fprintln(w, "Restart Claude Code, then use /mcp to sign in to cully.")
+			case "cursor":
+				fmt.Fprintln(w, "Restart Cursor, then sign in to cully in MCP settings.")
+			}
+		} else {
+			fmt.Fprintln(w, "Connect to Cully directly; this server does not require sign-in.")
 		}
 	}
 	fmt.Fprintf(w, "Remote MCP: %s\n", endpoint)
-	fmt.Fprintln(w, "The server must be deployed before sign-in can succeed. Data, PostgreSQL and Mem0 are configured by its operator.")
+	fmt.Fprintln(w, "The server must be deployed before the connection can succeed. Data, PostgreSQL and Mem0 are configured by its operator.")
 	return nil
 }
 

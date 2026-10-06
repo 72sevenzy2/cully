@@ -1,5 +1,11 @@
 # Configuration
 
+## MCP access mode
+
+`cully-mcp` defaults to no OAuth. Set `CULLY_MCP_OWNER` to a stable, single-user owner (1–512 bytes, without surrounding whitespace or control characters). Every tool call uses it; the caller cannot choose another owner. The listener defaults to `127.0.0.1` in this mode. Keep access on a loopback, private network or trusted tunnel. No issuer or JWKS request is made.
+
+Set `CULLY_MCP_AUTH_MODE=oauth` or start `cully-mcp --oauth` for OAuth. In that mode, unset `CULLY_MCP_OWNER` and explicitly set issuer, exact public resource audience and JWKS URL. The server verifies RS256 signature, issuer, audience, expiration, subject and read/write scopes. The `--oauth` flag overrides `CULLY_MCP_AUTH_MODE=none`.
+
 ## Go memory services
 
 | Variable | Used by | Meaning |
@@ -10,13 +16,15 @@
 | `CULLY_DATA_API_URL` | MCP service | Private API base URL; required |
 | `CULLY_MEM0_URL` | Data service | Self-hosted REST base URL; optional with matching key |
 | `CULLY_MEM0_API_KEY` | Data service | Mem0 service API key; required when URL is set |
-| `CULLY_HOST` | Both services | Bind address; default `0.0.0.0` |
+| `CULLY_HOST` | Both services | Bind address; MCP defaults to `127.0.0.1` without OAuth, `0.0.0.0` with OAuth; data service defaults to `0.0.0.0` |
 | `CULLY_PORT` | Both services | Default 8080 for MCP, 8083 for data |
-| `CULLY_AUTH_ISSUER` | MCP service | OAuth issuer; default `https://auth.mcpruntime.org/mcp-auth` |
-| `CULLY_AUTH_RESOURCE` | MCP service | Public resource; default `https://mcp.mcpruntime.org/cully/mcp` |
-| `CULLY_JWKS_URL` | MCP service | Signing-key URL; defaults to the issuer's `/.well-known/jwks.json` |
+| `CULLY_MCP_AUTH_MODE` | MCP service | `none` (default) or `oauth` |
+| `CULLY_MCP_OWNER` | MCP service | Required fixed owner in no-OAuth mode; forbidden in OAuth mode |
+| `CULLY_AUTH_ISSUER` | OAuth MCP service | Required exact token issuer |
+| `CULLY_AUTH_RESOURCE` | OAuth MCP service | Required exact public MCP resource URL and token audience |
+| `CULLY_JWKS_URL` | OAuth MCP service | Required signing-key endpoint; configure explicitly because issuer paths vary |
 
-MCP Runtime can inject platform variables `MCP_AUTH_ISSUER`, `MCP_AUTH_RESOURCE` and `MCP_PATH`. Platform issuer/resource values take precedence over Cully defaults. `MCP_PATH` selects the workload's internal transport path, default `/mcp`; the public OAuth resource still includes the external `/cully/mcp` route.
+MCP Runtime can inject `MCP_AUTH_ISSUER`, `MCP_AUTH_RESOURCE` and `MCP_PATH`. Platform issuer/resource values take precedence over `CULLY_AUTH_ISSUER` and `CULLY_AUTH_RESOURCE` in OAuth mode. `MCP_PATH` selects the internal transport path, default `/mcp`; the public resource may include an external route prefix. None of these variables implicitly enable OAuth. See [OAuth deployment](/oauth) for MCP Auth and existing-server examples.
 
 Keep the data API token identical on both sides. The MCP workload does not receive database credentials or a Mem0 key. The data service accepts forwarded owner identity only from authenticated service calls.
 
@@ -24,7 +32,7 @@ Keep the data API token identical on both sides. The MCP workload does not recei
 
 `.env.example` lists `CULLY_DB_NAME`, `CULLY_DB_USER`, `CULLY_DB_PASSWORD` and `CULLY_DB_VOLUME` for the existing database. These values describe actual storage assets; changing their names does not migrate their contents. `CULLY_DB_VOLUME` must identify the existing external volume. Construct a correctly escaped database URL separately.
 
-The Compose workspace network is external and must already exist. Self-hosted Mem0 must be reachable from the data service's network. Configuration alone does not start or reconfigure an existing Mem0 instance.
+The root Compose workspace network is external and must already exist. The [fresh self-hosted Compose example](/hosting#fresh-single-user-compose-installation) creates its own network and volume. Self-hosted Mem0 must be reachable from the data service's network. Configuration alone does not start or reconfigure an existing Mem0 instance.
 
 ## Local CLI
 

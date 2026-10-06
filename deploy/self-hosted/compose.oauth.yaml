@@ -1,0 +1,24 @@
+# Add to compose.yaml for OAuth. Route only Caddy to the public network.
+services:
+  mcp:
+    environment:
+      CULLY_MCP_AUTH_MODE: oauth
+      CULLY_MCP_OWNER: ""
+      CULLY_AUTH_ISSUER: ${CULLY_AUTH_ISSUER:?set HTTPS issuer}
+      CULLY_AUTH_RESOURCE: ${CULLY_AUTH_RESOURCE:?set exact public MCP URL}
+      CULLY_JWKS_URL: ${CULLY_JWKS_URL:?set issuer JWKS URL}
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+    environment:
+      CULLY_MCP_HOST: ${CULLY_MCP_HOST:?set MCP public host}
+      CULLY_AUTH_HOST: ${CULLY_AUTH_HOST:-}
+    volumes:
+      - ./${CULLY_CADDYFILE:-Caddyfile.existing-auth}:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    ports: ["80:80", "443:443"]
+    networks: [edge]
+volumes:
+  caddy-data:
+  caddy-config:

@@ -1,6 +1,6 @@
 # Shared memory
 
-Every record belongs to the authenticated OAuth subject. The same identity can retrieve it across connected agents and devices. `personal` and `company` are sections within that owner's memory; company records are not automatically shared with an organization.
+Every record belongs to an owner. In default no-OAuth mode, the operator fixes one owner with `CULLY_MCP_OWNER`; in OAuth mode, the verified token subject becomes the owner. The same owner can retrieve records across connected agents and devices. `personal` and `company` are sections within that owner's memory; company records are not automatically shared with an organization.
 
 ## Tools
 
@@ -39,4 +39,4 @@ See [self-hosted Mem0](mem0.md) for configuration, indexing and deletion behavio
 
 ## Local versus shared capture
 
-Shared memory is written through `cully_log`; the combined skill tells agents when useful work warrants a record. The CLI has no separate transcript scanner or local memory command. Local session diagnostics do not become memory records automatically. PostgreSQL stores durable personal/project records, with self-hosted Mem0 providing semantic recall.
+Shared memory is written through `cully_log`; the combined skill tells agents when useful work warrants a record. The CLI has no separate transcript scanner or local memory command. Local session diagnostics do not become memory records automatically. PostgreSQL stores durable personal/project records; self-hosted Mem0 does semantic indexing and recall when configured.

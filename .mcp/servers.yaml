@@ -14,6 +14,10 @@ servers:
           value: https://workspace.mcpruntime.org/cully-data
         - name: CULLY_PORT
           value: "8080"
+        - name: CULLY_MCP_AUTH_MODE
+          value: oauth
+        - name: CULLY_JWKS_URL
+          value: https://auth.mcpruntime.org/.well-known/jwks.json
       secretEnvVars:
         - name: CULLY_DATA_API_TOKEN
           secretKeyRef:

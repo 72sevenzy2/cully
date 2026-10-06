@@ -44,8 +44,7 @@ Local guidance is optional and advisory. Cully preserves unrelated, user-owned a
 If you run a Cully MCP service, connect one agent to it:
 
 ```sh
-./build/cully mcp add --agent codex --url https://your-server.example/mcp
-codex mcp login cully
+./build/cully mcp add --agent codex --url http://127.0.0.1:8080/mcp
 ```
 
-See [agent setup](/agents) for Claude Code and Cursor. The default hosted MCP endpoint is planned and is not yet available for new connections. The local advisor works without it.
+The default single-user server needs no login. If the operator enables OAuth, use a public HTTPS URL and add `--oauth` to the setup command; then run `codex mcp login cully`. See [agent setup](/agents) for Claude Code and Cursor. The default hosted MCP endpoint is planned and is not yet available for new connections. The local advisor works without it.

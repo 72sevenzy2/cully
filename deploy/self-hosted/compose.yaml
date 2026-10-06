@@ -1,0 +1,71 @@
+# Single-user, no-OAuth deployment. The MCP port is bound to loopback only.
+services:
+  db:
+    image: pgvector/pgvector:pg17
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${CULLY_DB_NAME:?set CULLY_DB_NAME}
+      POSTGRES_USER: ${CULLY_DB_USER:?set CULLY_DB_USER}
+      POSTGRES_PASSWORD: ${CULLY_DB_PASSWORD:?set CULLY_DB_PASSWORD}
+    volumes: [db-data:/var/lib/postgresql/data]
+    healthcheck:
+      test: [CMD-SHELL, 'pg_isready -U "$$POSTGRES_USER" -d "$$POSTGRES_DB"']
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    networks: [private]
+  migrate:
+    profiles: [ops]
+    build:
+      context: ../..
+      dockerfile: Dockerfile.data-api
+    command: [migrate]
+    environment:
+      CULLY_DATABASE_URL: ${CULLY_DATABASE_URL:?set CULLY_DATABASE_URL}
+    depends_on:
+      db:
+        condition: service_healthy
+    networks: [private]
+  data-api:
+    build:
+      context: ../..
+      dockerfile: Dockerfile.data-api
+    restart: unless-stopped
+    environment:
+      CULLY_DATABASE_URL: ${CULLY_DATABASE_URL:?set CULLY_DATABASE_URL}
+      CULLY_DATA_API_TOKEN: ${CULLY_DATA_API_TOKEN:?set CULLY_DATA_API_TOKEN}
+      CULLY_MEM0_URL: ${CULLY_MEM0_URL:-}
+      CULLY_MEM0_API_KEY: ${CULLY_MEM0_API_KEY:-}
+    depends_on:
+      db:
+        condition: service_healthy
+    expose: ["8083"]
+    healthcheck:
+      test: [CMD, /cully-data, health]
+      interval: 20s
+      timeout: 5s
+      retries: 5
+    networks: [private]
+  mcp:
+    build:
+      context: ../..
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      CULLY_HOST: 0.0.0.0
+      CULLY_DATA_API_URL: http://data-api:8083
+      CULLY_DATA_API_TOKEN: ${CULLY_DATA_API_TOKEN:?set CULLY_DATA_API_TOKEN}
+      CULLY_MCP_AUTH_MODE: none
+      CULLY_MCP_OWNER: ${CULLY_MCP_OWNER:-}
+    depends_on:
+      data-api:
+        condition: service_healthy
+    ports:
+      - 127.0.0.1:${CULLY_MCP_PORT:-8080}:8080
+    networks: [private, edge]
+volumes:
+  db-data:
+networks:
+  private:
+    internal: true
+  edge:

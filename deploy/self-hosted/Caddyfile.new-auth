@@ -1,0 +1,7 @@
+{$CULLY_MCP_HOST} {
+    reverse_proxy mcp:8080
+}
+
+{$CULLY_AUTH_HOST} {
+    reverse_proxy mcp-auth:8080
+}

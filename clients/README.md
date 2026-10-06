@@ -2,6 +2,10 @@
 
 # Connect an agent to Cully
 
+Self-hosted `cully-mcp` defaults to a private single-owner server without OAuth. Register its private URL with `cully mcp add --agent codex --url http://127.0.0.1:8080/mcp` and connect directly. An operator can enable OAuth with `cully-mcp --oauth` or `CULLY_MCP_AUTH_MODE=oauth`; add `--oauth` to `cully mcp add` for sign-in instructions. See [hosting](../docs/hosting.md) and [OAuth deployment](../docs/oauth.md).
+
+The rest of this page describes the planned **personal public OAuth deployment**:
+
 Cully's Streamable HTTP endpoint is `https://mcp.mcpruntime.org/cully/mcp`, served
 by MCP Runtime. Clients use the MCP OAuth issuer
 `https://auth.mcpruntime.org/mcp-auth`. The OAuth resource identifier is the full

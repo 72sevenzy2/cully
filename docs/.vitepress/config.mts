@@ -62,6 +62,7 @@ export default withMermaid(defineConfig({
         text: 'Operate Cully',
         items: [
           { text: 'Hosting', link: '/hosting' },
+          { text: 'OAuth deployment', link: '/oauth' },
           { text: 'Configuration', link: '/configuration' },
           { text: 'Personal deployment', link: '/personal-deployment' },
           { text: 'Architecture', link: '/architecture' },

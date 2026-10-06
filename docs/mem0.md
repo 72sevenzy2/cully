@@ -8,7 +8,7 @@ Set `CULLY_MEM0_URL` and `CULLY_MEM0_API_KEY` on `cully-data`. Both are required
 
 The VM Compose file deliberately does not invent a Mem0 image or change an existing Mem0 deployment. Attach the self-hosted Mem0 service to a network reachable from `data-api`, configure the actual URL, and verify the documented API contract with that pinned upstream version. Mem0 maintains its own runtime and dependency requirements; the Cully CLI, MCP server and data API have no Python runtime dependency.
 
-Each source entry gets an owner-scoped Mem0 projection. The Mem0 user ID is a SHA-256 namespace derived from the authenticated subject, and `run_id` is the Cully entry UUID. The projection carries section/project/category and source-update provenance. This is a service-mediated multi-user boundary; agents never receive the Mem0 service key.
+Each source entry gets an owner-scoped Mem0 projection. The Mem0 user ID is a SHA-256 namespace derived from the Cully owner (fixed single-user owner or verified OAuth subject), and `run_id` is the Cully entry UUID. The projection carries section/project/category and source-update provenance. This is a service-mediated owner boundary; agents never receive the Mem0 service key.
 
 V1 uses `infer=false`: compact, already authored summaries are embedded directly. Automatic fact extraction can be added later with explicit model configuration and a stronger source-to-fact deletion contract. Do not assume the current projection worker consolidates or extracts facts.
 

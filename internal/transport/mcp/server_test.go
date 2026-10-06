@@ -50,7 +50,7 @@ func TestMCPToPrivateAPI(t *testing.T) {
 		}
 		return &auth.TokenInfo{UserID: "owner-a", Scopes: scopes, Expiration: time.Now().Add(time.Hour)}, nil
 	}
-	server := httptest.NewServer(Handler(memory.Service{Store: store}, verifier, "https://issuer.test", "https://public.test/cully/mcp", "/mcp", "test"))
+	server := httptest.NewServer(Handler(memory.Service{Store: store}, AuthConfig{Mode: "oauth", Verifier: verifier, Issuer: "https://issuer.test", Resource: "https://public.test/cully/mcp"}, "/mcp", "test"))
 	defer server.Close()
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
@@ -89,5 +89,40 @@ func TestMCPToPrivateAPI(t *testing.T) {
 			t.Fatalf("%s status %d", path, resp.StatusCode)
 		}
 		resp.Body.Close()
+	}
+}
+
+func TestNoOAuthUsesFixedOwner(t *testing.T) {
+	backend := &fakeStore{}
+	data := httptest.NewServer(datahttp.Handler(memory.Service{Store: backend}, "private-service-secret", nil))
+	defer data.Close()
+	store, err := remote.New(data.URL, "private-service-secret")
+	if err != nil {
+		t.Fatal(err)
+	}
+	server := httptest.NewServer(Handler(memory.Service{Store: store}, AuthConfig{Mode: "none", Owner: "personal-owner"}, "/mcp", "test"))
+	defer server.Close()
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	client := sdk.NewClient(&sdk.Implementation{Name: "test", Version: "1"}, nil)
+	session, err := client.Connect(ctx, &sdk.StreamableClientTransport{Endpoint: server.URL + "/mcp", DisableStandaloneSSE: true}, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer session.Close()
+	result, err := session.CallTool(ctx, &sdk.CallToolParams{Name: "cully_log", Arguments: memory.LogInput{Summary: "No OAuth", Assistant: "codex", Section: "personal"}})
+	if err != nil || result.IsError {
+		t.Fatalf("tool result=%v error=%v", result, err)
+	}
+	if backend.calls != 1 || backend.owner != "personal-owner" {
+		t.Fatalf("owner was not fixed: %+v", backend)
+	}
+	resp, err := http.Get(server.URL + "/.well-known/oauth-protected-resource")
+	if err != nil {
+		t.Fatal(err)
+	}
+	resp.Body.Close()
+	if resp.StatusCode != http.StatusNotFound {
+		t.Fatalf("unexpected OAuth metadata: %d", resp.StatusCode)
 	}
 }

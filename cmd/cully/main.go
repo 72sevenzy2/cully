@@ -20,7 +20,7 @@ Usage:
   cully status [directory]                Show session and agent status
   cully suggestions                       Review suggested improvements
   cully apply <n> [--dry-run] [--yes] [--cwd DIR]
-  cully mcp add [--agent claude|codex|cursor] [--url URL]
+  cully mcp add [--agent claude|codex|cursor] [--url URL] [--oauth]
   cully version
 
 Shared personal and project memory is available through Cully's MCP tools.
@@ -70,18 +70,19 @@ func run(args []string) error {
 		fmt.Println("cully", version)
 	case "mcp":
 		if len(args) < 2 || args[1] != "add" {
-			return fmt.Errorf("usage: cully mcp add [--agent claude|codex|cursor] [--url URL]")
+			return fmt.Errorf("usage: cully mcp add [--agent claude|codex|cursor] [--url URL] [--oauth]")
 		}
 		fs := flag.NewFlagSet("mcp add", flag.ContinueOnError)
 		agent := fs.String("agent", "", "coding agent; default: detect configured agents")
 		endpoint := fs.String("url", cully.HostedMCPURL, "hosted or self-hosted MCP URL")
+		oauth := fs.Bool("oauth", false, "print sign-in instructions for an OAuth-protected server")
 		if err := fs.Parse(args[2:]); err != nil {
 			return err
 		}
 		if len(fs.Args()) != 0 {
 			return fmt.Errorf("mcp add: unexpected arguments")
 		}
-		return cully.AddMCP(os.Stdout, *agent, *endpoint)
+		return cully.AddMCP(os.Stdout, *agent, *endpoint, *oauth)
 	case "_internal":
 		return runInternal(args[1:])
 	default:
