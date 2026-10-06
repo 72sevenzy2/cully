@@ -4,4 +4,4 @@
 !.env.example
 dist
 build
-docs/flightdeck/*.png
+node_modules

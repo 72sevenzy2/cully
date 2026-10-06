@@ -28,6 +28,6 @@ The Compose workspace network is external and must already exist. Self-hosted Me
 
 ## Local CLI
 
-The [session-control guide](flightdeck/README.md#controls) lists local `CULLY_*` controls for display and advisor behavior. Agent-owned directories still honor `CLAUDE_CONFIG_DIR`, `CODEX_HOME` and `CURSOR_CONFIG_DIR`.
+The [local advisor guide](advisor.md#controls) lists local `CULLY_*` controls for display and advisor behavior. Agent-owned directories still honor `CLAUDE_CONFIG_DIR`, `CODEX_HOME` and `CURSOR_CONFIG_DIR`.
 
 No `BUDDY_*` or `COCKPIT_*` environment aliases are maintained.

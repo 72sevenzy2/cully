@@ -167,7 +167,7 @@ func installCodex(cwd string) error {
 	if err := upsertManagedSection(filepath.Join(cwd, "AGENTS.md"), "codex", codexAgentInstructions()); err != nil {
 		return err
 	}
-	if err := writeSharedSkill(cwd, "cully", flightdeckSkill()); err != nil {
+	if err := writeSharedSkill(cwd, "cully", cullySkill()); err != nil {
 		return err
 	}
 	if err := upsertCodexStatusLine(codexConfigPath()); err != nil {
@@ -188,7 +188,7 @@ func installCursor(cwd string) error {
 	if cwd == "" {
 		cwd, _ = os.Getwd()
 	}
-	if err := writeSharedSkill(cwd, "cully", flightdeckSkill()); err != nil {
+	if err := writeSharedSkill(cwd, "cully", cullySkill()); err != nil {
 		return err
 	}
 	if wrote, err := writeCursorCommand(cwd); err != nil {
@@ -598,7 +598,7 @@ func codexAgentInstructions() string {
 - Use the configured Cully MCP tools for shared personal and project memory.`
 }
 
-func flightdeckSkill() string {
+func cullySkill() string {
 	return cullyskill.Content
 }
 

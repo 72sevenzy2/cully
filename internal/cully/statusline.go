@@ -148,9 +148,6 @@ func statuslineAgent() string {
 	if v := strings.TrimSpace(os.Getenv("CULLY_AGENT")); v != "" {
 		return v
 	}
-	if v := strings.TrimSpace(os.Getenv("AGENT_FLIGHTDECK_AGENT")); v != "" {
-		return v
-	}
 	switch {
 	case os.Getenv("CURSOR_TRACE_ID") != "", os.Getenv("CURSOR_SESSION_ID") != "", os.Getenv("CURSOR_WORKSPACE_ID") != "":
 		return "cursor"

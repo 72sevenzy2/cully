@@ -1,0 +1,16 @@
+# Add these routes to the existing Caddy configuration after copying
+# dist/site -> /srv/cully/site and dist/docs -> /srv/cully/docs.
+# Keep the existing service routes in their current Caddyfile.
+
+cully.net {
+    root * /srv/cully/site
+    encode zstd gzip
+    file_server
+}
+
+docs.cully.net {
+    root * /srv/cully/docs
+    encode zstd gzip
+    try_files {path} {path}.html {path}/index.html
+    file_server
+}

@@ -57,7 +57,7 @@ internal/config/     typed configuration
 migrations/          explicit, versioned SQL
 skills/cully/        combined session and memory guidance
 deploy/              future VM and Runtime routing
-docs/                guides, roadmap and historical records
+docs/                guides and roadmap
 ```
 
 The intended cutover uses the VM currently running Buddy for PostgreSQL, the Cully data API and self-hosted Mem0. The public MCP service can continue in MCP Runtime. See [the VM runbook](migration.md) for preserving the existing volume and switching clients.

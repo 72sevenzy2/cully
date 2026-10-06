@@ -15,7 +15,7 @@ go build -o ./build/cully ./cmd/cully
 
 Use `install claude`, `install codex` or `install cursor` to select a local
 integration. Local installation can target `all`; MCP setup selects one agent
-per invocation. See [installation](../installation.md) for hosted and self-hosted
+per invocation. See [installation](installation.md) for hosted and self-hosted
 connections and OAuth sign-in. New Cully endpoints require the future server cutover.
 
 | Agent | Local integration |
@@ -67,6 +67,6 @@ memory files are not deleted or automatically uploaded.
 | `CURSOR_CONFIG_DIR` | Custom Cursor configuration directory |
 
 Local snapshots, suggestion state and diagnostic counters support the advisor.
-Durable personal/project records are managed through the [shared memory tools](../memory.md).
+Durable personal/project records are managed through the [shared memory tools](memory.md).
 
-Cully is licensed under [Apache 2.0](../../LICENSE).
+Cully is licensed under [Apache 2.0](https://github.com/mcp-runtime/cully/blob/main/LICENSE).

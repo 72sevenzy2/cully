@@ -32,7 +32,7 @@ Configure the self-hosted Mem0 service as described in [mem0.md](mem0.md), then 
 
 Prepare the new `cully-data-api-token` Runtime secret and `CULLY_DATA_API_URL=https://workspace.mcpruntime.org/cully-data`. Adapt `deploy/Caddyfile.fragment` to the existing site block; review the Runtime egress-IP allowlist rather than blindly assuming it is unchanged.
 
-Register `https://mcp.mcpruntime.org/cully/mcp` with the OAuth issuer and configure grants for `tools:read` and `tools:write`. Deploy `cully-mcp` using `.mcp/servers.yaml`; gateway is disabled because Cully verifies and retains the bearer itself. Validate that the protected-resource metadata advertises the exact public resource even through proxy Host rewrites. Client setup is in [clients/README.md](../clients/README.md).
+Register `https://mcp.mcpruntime.org/cully/mcp` with the OAuth issuer and configure grants for `tools:read` and `tools:write`. Deploy `cully-mcp` using `.mcp/servers.yaml`; gateway is disabled because Cully verifies and retains the bearer itself. Validate that the protected-resource metadata advertises the exact public resource even through proxy Host rewrites. Client setup is in the [client reference](https://github.com/mcp-runtime/cully/blob/main/clients/README.md).
 
 Reconnect supported agents under the new Cully name. Install the Cully CLI and shared skill; explicitly remove the old product's managed hooks/prompts/status/config blocks using its old uninstaller before installing the new names. Do not delete user-owned settings or unrelated MCP connections. No aliases are retained.
 

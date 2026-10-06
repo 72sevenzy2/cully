@@ -96,7 +96,7 @@ func removeOwnedFile(path, marker string) error {
 // upsertCodexStatusLine adds Codex's native status-line fields without
 // replacing a user's existing [tui].status_line selection. The managed markers
 // let later installs refresh this release's defaults and let uninstall remove
-// only what Flightdeck added.
+// only what Cully added.
 func upsertCodexStatusLine(path string) error {
 	existing, err := os.ReadFile(path)
 	if err != nil && !os.IsNotExist(err) {
