@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/mcp-runtime/cully/internal/memory"
+	cullymcp "github.com/mcp-runtime/cully/internal/transport/mcp"
 	sdk "github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
@@ -50,7 +51,8 @@ func TestContainerStack(t *testing.T) {
 		}
 		return result
 	}
-	logged := call("cully_log", memory.LogInput{Summary: "Disposable container end-to-end check", Assistant: "other", Section: "company"}).Entry
+	projectURL := "https://example.test/cully-e2e"
+	logged := call("cully_log", memory.LogInput{Summary: "Disposable container end-to-end check", Assistant: "other", Section: "company", ProjectURL: &projectURL}).Entry
 	if logged == nil || logged.ID == "" {
 		t.Fatal("MCP write did not reach PostgreSQL")
 	}
@@ -72,6 +74,26 @@ func TestContainerStack(t *testing.T) {
 	}
 	if !found(call("cully_recent", memory.RecentInput{Limit: 20}).Entries) {
 		t.Fatal("recent records did not include the written record")
+	}
+	projects := call("cully_projects", memory.ProjectsInput{Limit: 20}).Projects
+	projectFound := false
+	for _, project := range projects {
+		projectFound = projectFound || project.ProjectURL == projectURL
+	}
+	if !projectFound {
+		t.Fatal("project list did not include the written record")
+	}
+	preview, err := session.CallTool(ctx, &sdk.CallToolParams{Name: "cully_context", Arguments: cullymcp.ContextInput{ProjectURL: &projectURL, Mode: "recent"}})
+	if err != nil || preview.IsError {
+		t.Fatalf("context preview failed: %v, %+v", err, preview)
+	}
+	previewJSON, err := json.Marshal(preview.StructuredContent)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var contextResult cullymcp.ContextResult
+	if err := json.Unmarshal(previewJSON, &contextResult); err != nil || len(contextResult.Notes) == 0 || contextResult.Notes[0].ID != logged.ID {
+		t.Fatalf("context preview did not include the written record: %+v, %v", contextResult, err)
 	}
 	for {
 		if found(call("cully_recall", memory.SearchInput{Query: logged.Summary}).Entries) {
