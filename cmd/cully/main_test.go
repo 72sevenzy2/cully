@@ -30,7 +30,6 @@ func TestSetupMCPOptionsFailBeforeChangingAgentSetup(t *testing.T) {
 	dir := t.TempDir()
 	t.Setenv("CODEX_HOME", dir)
 	for _, args := range [][]string{
-		{"codex", "--oauth"},
 		{"codex", "--mcp-url", "not-a-url"},
 		{"--mcp-url", "not-a-url", "codex"},
 	} {

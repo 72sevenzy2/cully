@@ -104,3 +104,37 @@ func TestLinkStackConfigKeepsPrivateSettingsAcrossRuns(t *testing.T) {
 		t.Fatalf("configuration is not private: %v, %v", info, err)
 	}
 }
+
+func TestExtractStackSkipsGlobalPAXHeader(t *testing.T) {
+	var buffer bytes.Buffer
+	zipper := gzip.NewWriter(&buffer)
+	writer := tar.NewWriter(zipper)
+	if err := writer.WriteHeader(&tar.Header{
+		Name:       "pax_global_header",
+		Typeflag:   tar.TypeXGlobalHeader,
+		PAXRecords: map[string]string{"comment": "GitHub source archive"},
+	}); err != nil {
+		t.Fatal(err)
+	}
+	name := "cully-0.4.1/deploy/self-hosted/setup.sh"
+	content := []byte("#!/bin/sh\n")
+	if err := writer.WriteHeader(&tar.Header{Name: name, Mode: 0o755, Size: int64(len(content)), Typeflag: tar.TypeReg}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := writer.Write(content); err != nil {
+		t.Fatal(err)
+	}
+	if err := writer.Close(); err != nil {
+		t.Fatal(err)
+	}
+	if err := zipper.Close(); err != nil {
+		t.Fatal(err)
+	}
+	directory := t.TempDir()
+	if err := extractStack(bytes.NewReader(buffer.Bytes()), directory); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Stat(filepath.Join(directory, "deploy", "self-hosted", "setup.sh")); err != nil {
+		t.Fatal(err)
+	}
+}
