@@ -2,7 +2,7 @@
 
 Your personal Cully deployment has a separate release flow. A `v*` tag first runs GoReleaser. After that succeeds, `personal-deploy.yml` builds and publishes tagged Cully data and pinned self-hosted Mem0 images. If `CULLY_PERSONAL_DEPLOY_ENABLED=true`, the restricted VM controller starts two PostgreSQL databases, Mem0 and the data API, runs the Cully schema migration, and then the workflow updates Cully MCP on MCP Runtime. Website and docs changes do not trigger this release flow.
 
-The personal stack has **not yet been cut over** on the VM. Keep the deployment gate disabled until its network, secrets, OAuth and Caddy route are ready. Publishing release images does not change the VM or running services. This Compose project uses new named volumes: plain PostgreSQL for Cully's authoritative records and a separate pgvector database for Mem0. It does not mount or migrate an existing personal database. Historical record import is a separate operation that Cully does not provide.
+The personal stack has **not yet been cut over** on the VM. Keep the deployment gate disabled until its network, secrets, OAuth and Caddy route are ready. A release with the gate disabled fails its deployment job explicitly; it cannot appear fully deployed while the VM is untouched. This Compose project uses new named volumes: plain PostgreSQL for Cully's authoritative records and a separate pgvector database for Mem0. It does not mount or migrate an existing personal database. Historical record import is a separate operation that Cully does not provide.
 
 ## Prepare the VM once
 
@@ -21,7 +21,7 @@ Apply the [Caddy data route](https://github.com/mcp-runtime/cully/blob/main/depl
 | `CULLY_PERSONAL_SSH_USER` | Repository variable | `root`, restricted to the data controller |
 | `CULLY_PERSONAL_SSH_PORT` | Repository variable | SSH port |
 | `CULLY_PERSONAL_SSH_KEY` | Secret | Dedicated personal deployment private key |
-| `CULLY_PERSONAL_KNOWN_HOSTS` | Secret | Pinned SSH host key |
+| `CULLY_PERSONAL_KNOWN_HOSTS` | Secret | Pinned SSH host key; defaults to the existing `CULLY_WEB_KNOWN_HOSTS` secret for the same VM |
 | `MCP_PLATFORM_API_TOKEN` | Secret | MCP Runtime deployment token |
 
 The workflow uses the `personal-cully` GitHub environment. After cutover, set the gate and dispatch `personal-deploy.yml` with a release tag created after this workflow was added. Later releases deploy automatically after GoReleaser succeeds. The VM controller records current and previous image tags in `/opt/cully-personal-data/state.json`; it restores the prior service images if startup fails. If the MCP platform update fails, the workflow requests a service rollback. Compose never removes database volumes during rollback. Take a verified backup before any release that changes schema; image rollback does not reverse a database migration.
