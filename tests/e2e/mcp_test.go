@@ -51,8 +51,8 @@ func TestContainerStack(t *testing.T) {
 		}
 		return result
 	}
-	projectURL := "https://example.test/cully-e2e"
-	logged := call("cully_log", memory.LogInput{Summary: "Disposable container end-to-end check", Assistant: "other", Section: "company", ProjectURL: &projectURL}).Entry
+	projectURL := "https://github.com/mcp-runtime/cully"
+	logged := call("cully_log", memory.LogInput{Summary: "Disposable container end-to-end check", Assistant: "other", Section: "personal", ProjectURL: &projectURL}).Entry
 	if logged == nil || logged.ID == "" {
 		t.Fatal("MCP write did not reach PostgreSQL")
 	}
