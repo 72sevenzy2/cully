@@ -23,7 +23,7 @@ servers:
         - name: CULLY_AUTH_RESOURCE
           value: https://mcp.mcpruntime.org/cully/mcp
         - name: CULLY_JWKS_URL
-          value: https://auth.mcpruntime.org/.well-known/jwks.json
+          value: https://auth.mcpruntime.org/mcp-auth/.well-known/jwks.json
       secretEnvVars:
         - name: CULLY_DATA_API_TOKEN
           secretKeyRef:

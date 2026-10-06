@@ -23,6 +23,7 @@ env:
   MEM0_IMAGE: ghcr.io/mcp-runtime/cully-mem0:${{ inputs.tag }}
   MCP_RUNTIME_VERSION: v0.5.2
   MCP_RUNTIME_SHA256: 3b26aadb20690acf778a036f657d41c6ea86305c4e621527fd7f06628c137ca9
+  MCP_PLATFORM_API_URL: https://platform.mcpruntime.org
   SERVER_NAME: cully
   IMAGE_REGISTRY: registry.mcpruntime.org/org/cully-mcp
 jobs:
@@ -37,6 +38,8 @@ jobs:
           python3 -c 'import os,re; assert re.fullmatch(r"v[0-9]+\.[0-9]+\.[0-9]+(?:[-.][A-Za-z0-9.-]+)?", os.environ["RELEASE_TAG"])'
           python3 -m unittest discover -s deploy -p 'test_personal_data_controller.py' -v
           sh -n deploy/bootstrap-personal-data.sh
+      - name: Check live MCP Auth issuer, scopes and signing keys
+        run: python3 deploy/check_personal_oauth.py auth
       - name: Build data and pinned Mem0 images
         run: |
           docker build -f Dockerfile.data-api -t "$DATA_IMAGE" .
@@ -111,6 +114,11 @@ jobs:
             ssh -i "$HOME/.ssh/cully-personal" -p "$DEPLOY_PORT" -o BatchMode=yes -o StrictHostKeyChecking=yes -o ConnectTimeout=15 "$DEPLOY_USER@$DEPLOY_HOST" deploy
       - name: Deploy personal MCP service
         run: mcp-runtime server deploy "$SERVER_NAME" --metadata-dir .mcp --update
+      - name: Verify MCP Runtime placement and public OAuth route
+        run: |
+          mcp-runtime server get "$SERVER_NAME" --namespace mcp-servers
+          mcp-runtime server status --namespace mcp-servers
+          python3 deploy/check_personal_oauth.py resource
       - name: Roll back personal services if MCP deployment fails
         if: failure() && steps.data.outcome == 'success'
         run: |

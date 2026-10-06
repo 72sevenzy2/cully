@@ -14,7 +14,7 @@ Set these values in `deploy/self-hosted/.env`:
 CULLY_MCP_HOST=mcp.example.com
 CULLY_AUTH_ISSUER=https://auth.example.com/mcp-auth
 CULLY_AUTH_RESOURCE=https://mcp.example.com/mcp
-CULLY_JWKS_URL=https://auth.example.com/.well-known/jwks.json
+CULLY_JWKS_URL=https://auth.example.com/mcp-auth/.well-known/jwks.json
 CULLY_CADDYFILE=Caddyfile.existing-auth
 ```
 
@@ -46,7 +46,7 @@ cd deploy/self-hosted
 docker compose up -d db
 docker compose -f compose.yaml -f compose.oauth.yaml -f compose.mcp-auth.yaml --profile ops run --rm migrate
 docker compose -f compose.yaml -f compose.oauth.yaml -f compose.mcp-auth.yaml up -d --build data-api mcp mcp-auth caddy
-curl -fsS https://auth.example.com/.well-known/jwks.json
+curl -fsS https://auth.example.com/mcp-auth/.well-known/jwks.json
 curl -fsS https://mcp.example.com/.well-known/oauth-protected-resource/mcp
 ```
 
