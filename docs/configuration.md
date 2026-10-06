@@ -2,7 +2,7 @@
 
 ## MCP access mode
 
-`cully-mcp` defaults to no OAuth. Set `CULLY_MCP_OWNER` to a stable, single-user owner (1–512 bytes, without surrounding whitespace or control characters). Every tool call uses it; the caller cannot choose another owner. The listener defaults to `127.0.0.1` in this mode. Keep access on a loopback, private network or trusted tunnel. No issuer or JWKS request is made. Docker `setup.sh` generates this owner automatically.
+`cully-mcp` defaults to no OAuth. Set `CULLY_MCP_OWNER` to a stable, single-user owner (1–512 bytes, without surrounding whitespace or control characters). Every tool call uses it; the caller cannot choose another owner. The listener defaults to `127.0.0.1` in this mode. Keep access on a loopback or private network. No issuer or JWKS request is made. Docker setup generates this owner automatically.
 
 Set `CULLY_MCP_AUTH_MODE=oauth` or start `cully-mcp --oauth` for OAuth. In that mode, unset `CULLY_MCP_OWNER` and explicitly set issuer, exact public resource audience and JWKS URL. The server verifies RS256 signature, issuer, audience, expiration, subject and read/write scopes. The `--oauth` flag overrides `CULLY_MCP_AUTH_MODE=none`.
 
@@ -43,9 +43,9 @@ When MCP and the data API run on separate hosts, provision the same token on bot
 
 ## Docker Compose self-hosting
 
-The supported [Docker self-hosted stack](/hosting#one-command-full-stack) uses plain PostgreSQL for Cully records and a separate pgvector database for Mem0. `./setup.sh` generates the passwords and service tokens in `~/.cully/config.json` and exports them to Compose. PostgreSQL uses password authentication; its credentials are independent of MCP OAuth. The optional Caddy and MCP Auth services are selected by `--oauth existing|mcp-auth`.
+The [Docker self-hosted stack](/hosting#one-command-full-stack) uses plain PostgreSQL for Cully records and a separate pgvector database for Mem0. `cully setup codex` generates the passwords and service tokens in `~/.cully/config.json` and exports them to Compose. PostgreSQL uses password authentication; its credentials are independent of MCP OAuth. To run MCP Auth in the stack, prepare its connector and use `cully setup codex --oauth`.
 
-The [team OAuth example](/personal-deployment) adds MCP Auth and HTTPS to this stack. Mem0's local embedding model needs no provider key.
+The [team deployment guide](/team-deployment) explains MCP Auth and HTTPS. Mem0's local embedding model needs no provider key.
 
 ## Local CLI
 

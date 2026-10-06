@@ -11,7 +11,7 @@ cully status
 ```
 
 Use `--agent claude` or `--agent cursor` for another local integration. To add
-shared memory, run `cully setup codex --mcp-url URL`; see [agent setup](agents.md)
+shared memory, run `cully agent setup codex --mcp-url URL`; see [agent setup](agents.md)
 for sign-in when the server uses OAuth.
 
 | Agent | Local integration |
@@ -22,14 +22,14 @@ for sign-in when the server uses OAuth.
 
 The installer starts the advisor daemon. Claude supplies rich live hook payloads;
 Codex and Cursor use their available native surfaces. Starting the daemon does
-not create live hooks in clients that do not expose them. Re-run `cully setup`
+not create live hooks in clients that do not expose them. Re-run `cully agent setup`
 to restart a stopped advisor. Inspect its state using `cully status`.
 
 ## Commands
 
 | Command | Purpose |
 | --- | --- |
-| `cully setup [agent]` | Configure local integrations and start the advisor |
+| `cully agent setup [agent]` | Configure local integrations and start the advisor |
 | `cully uninstall [agent]` | Remove managed local integration settings |
 | `cully status [directory]` | Session warnings, agent setup and advisor state |
 | `cully suggestions` | Review numbered improvements and informational notes |

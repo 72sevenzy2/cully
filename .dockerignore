@@ -5,3 +5,6 @@
 dist
 build
 node_modules
+deploy/self-hosted/.env
+deploy/self-hosted/connectors.json
+deploy/self-hosted/.secrets

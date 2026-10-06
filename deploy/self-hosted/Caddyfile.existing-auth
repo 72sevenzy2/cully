@@ -1,3 +1,0 @@
-{$CULLY_MCP_HOST} {
-    reverse_proxy mcp:8080
-}

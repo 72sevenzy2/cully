@@ -61,10 +61,10 @@ export default withMermaid(defineConfig({
       {
         text: 'Operate Cully',
         items: [
-          { text: 'Docker self-hosting', link: '/hosting' },
+          { text: 'Self-hosting', link: '/hosting' },
           { text: 'MCP OAuth', link: '/oauth' },
           { text: 'Configuration', link: '/configuration' },
-          { text: 'Team OAuth example', link: '/personal-deployment' },
+          { text: 'Team deployment', link: '/team-deployment' },
           { text: 'Architecture', link: '/architecture' },
           { text: 'Website and docs hosting', link: '/website' },
           { text: 'Deploy on MCP Runtime ↗', link: 'https://docs.mcpruntime.org/publish-mcp-server/' },

@@ -122,7 +122,7 @@ services:
       CULLY_MCP_HOST: ${CULLY_MCP_HOST:-}
       CULLY_AUTH_HOST: ${CULLY_AUTH_HOST:-}
     volumes:
-      - ./${CULLY_CADDYFILE:-Caddyfile.existing-auth}:/etc/caddy/Caddyfile:ro
+      - ./Caddyfile.new-auth:/etc/caddy/Caddyfile:ro
       - caddy-data:/data
       - caddy-config:/config
     ports: ["80:80", "443:443"]

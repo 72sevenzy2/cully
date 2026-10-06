@@ -1,84 +1,27 @@
-> These are the planned Cully endpoints. Follow docs/migration.md before reconnecting existing clients; the repository rename does not activate them.
+# Connect a coding agent
 
-# Connect an agent to Cully
-
-Self-hosted `cully-mcp` defaults to a private single-owner server without OAuth. Register its private URL with `cully mcp add --agent codex --url http://127.0.0.1:8080/mcp` and connect directly. An operator can enable OAuth with `cully-mcp --oauth` or `CULLY_MCP_AUTH_MODE=oauth`; add `--oauth` to `cully mcp add` for sign-in instructions. See [hosting](../docs/hosting.md) and [OAuth deployment](../docs/oauth.md).
-
-The rest of this page describes the planned **personal public OAuth deployment**:
-
-Cully's Streamable HTTP endpoint is `https://mcp.mcpruntime.org/cully/mcp`, served
-by MCP Runtime. Clients use the MCP OAuth issuer
-`https://auth.mcpruntime.org/mcp-auth`. The OAuth resource identifier is the full
-endpoint URL above, and the issuer must allow it before clients can sign in.
-Cully's MCPServer uses `auth.mode: oauth`, so the Runtime operator routes both the
-MCP endpoint and its protected-resource metadata path. The data API is on the
-Cully VM at `https://workspace.mcpruntime.org/cully-data` and is used only by the
-MCP workload.
-
-Install the latest shared Cully skill in the current user's Codex, Claude Code,
-and Cursor directories by running `cully setup` from the
-Cully checkout.
-
-## Codex
-
-Add the remote MCP server in `~/.codex/config.toml`:
-
-```toml
-[mcp_servers.cully]
-url = "https://mcp.mcpruntime.org/cully/mcp"
-```
-
-Then run `codex mcp login cully` and complete the browser OAuth flow.
-
-## Claude Code
+Install Cully for the agent you use:
 
 ```sh
-claude mcp add --transport http cully https://mcp.mcpruntime.org/cully/mcp
-claude mcp get cully
+curl -fsSL https://cully.net/install.sh | sh -s -- --agent codex
 ```
 
-Open `/mcp` in Claude Code and complete OAuth when prompted. For Claude mobile,
-add the remote connector through Claude web first, then enable it in the mobile
-client if the account exposes that connector there.
+Use `claude` or `cursor` instead of `codex` as needed. This installs the local advisor and Cully skill. It does not require an MCP server.
 
-## Cursor
-
-Add this server to `~/.cursor/mcp.json` (or project `.cursor/mcp.json`):
-
-```json
-{
-  "mcpServers": {
-    "cully": {
-      "url": "https://mcp.mcpruntime.org/cully/mcp"
-    }
-  }
-}
-```
-
-Restart Cursor and complete OAuth for Cully when prompted.
-
-## OAuth resource registration
-
-The authorization service must issue tokens for exactly
-`https://mcp.mcpruntime.org/cully/mcp`. Register Cully's resource with the authorization issuer before cutover, and grant
-`tools:read` plus `tools:write` when mutation tools are needed. If the public Cully URL changes, update
-the issuer allowlist and service audience together. Keep PostgreSQL private;
-only expose the HTTPS MCP endpoint through Caddy.
-
-## Protected resource host mismatch
-
-If a client reports that Cully's protected resource uses
-`workspace.mcpruntime.org` while the configured endpoint uses
-`mcp.mcpruntime.org`, inspect the public metadata response:
+To run your own private MCP service and connect the agent, install Docker Compose and Python 3, then run:
 
 ```sh
-curl -fsS https://mcp.mcpruntime.org/.well-known/oauth-protected-resource/cully/mcp | jq -r .resource
+cully setup codex
 ```
 
-It should return `https://mcp.mcpruntime.org/cully/mcp`. Keep the server's
-`auth.audience` and the authorization server's resource registration set to that
-full endpoint. If the running MCPServer still advertises the workspace host,
-redeploy Cully from `.mcp/servers.yaml` so the stored `spec.auth.audience` is
-updated, then remove and add the Cully MCP connection again to refresh cached
-OAuth discovery. Keep `https://workspace.mcpruntime.org/cully-data` as the
-workload's data API URL; it is separate from the client-facing OAuth resource.
+This starts PostgreSQL, Mem0, the data API and Cully MCP. OAuth is off by default. The MCP endpoint binds to loopback. See [self-hosting](../docs/hosting.md).
+
+To connect an agent to a server that is already running, use its MCP URL:
+
+```sh
+cully agent setup codex --mcp-url https://mcp.example.com/mcp
+```
+
+Add `--oauth` if the server requires sign-in. A team can connect Cully to its identity provider through [MCP Auth](../docs/team-deployment.md). The agent receives only the MCP URL; private database and service credentials stay with the operator.
+
+For client-specific sign-in instructions, see the [agent guide](../docs/agents.md). For the MCP resource, scopes and authorization flow, see [MCP OAuth](../docs/oauth.md).

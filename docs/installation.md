@@ -14,23 +14,22 @@ Use `--agent claude` or `--agent cursor` instead. The installer installs the Cul
 curl -fsSL https://cully.net/install.sh | sh -s -- --agent codex --mcp-url https://mcp.example.com/mcp --oauth
 ```
 
-Omit `--oauth` when your MCP server does not require sign-in. The installer and `cully setup` configure the agent; they do not deploy the server. The agent needs only its MCP URL and whether OAuth is enabled. The operator keeps database and service credentials.
+Omit `--oauth` when your MCP server does not require sign-in. The agent needs only its MCP URL and whether OAuth is enabled. The operator keeps database and service credentials.
 
 If your shell cannot find `cully` afterward, use the binary path printed by the installer or add that directory to `PATH`.
 
 ## Start a self-hosted Cully server
 
-From a Cully checkout, run the Docker setup after installing the CLI:
+With Docker Compose and Python 3 installed, the Cully CLI can start the full stack and connect your agent:
 
 ```sh
-cd deploy/self-hosted
-./setup.sh codex
+cully setup codex
 ```
 
-This creates private service credentials, starts PostgreSQL, Mem0, the data API and MCP, then installs the skill and registers the new MCP URL for Codex. For OAuth with your organization's identity provider, prepare the [MCP Auth connector](/oauth#self-hosted-docker-with-mcp-auth), then run `./setup.sh --oauth mcp-auth codex`. The setup script derives the MCP URL from your configured hostname; no separate agent URL flag is needed. See [Docker self-hosting](/hosting) for prerequisites.
+Setup downloads the matching Cully release's Docker files into `~/.cully/self-hosted/releases/`, creates private service credentials, starts PostgreSQL, Mem0, the data API and MCP, and registers the MCP URL and Cully skill for Codex. No checkout is needed. It keeps editable deployment settings in `~/.cully/self-hosted/config/.env` and generated credentials in `~/.cully/config.json`. Use `claude` or `cursor` instead of `codex`, or omit the agent to start only the services. OAuth is off by default. For a team deployment, prepare the [MCP Auth connector and identity provider](/oauth), then run `cully setup --oauth`. See [self-hosting](/hosting) for prerequisites and configuration.
 
 ## After installation
 
-Use `cully status` to inspect the local integration. `cully setup codex --mcp-url URL` can add the skill and MCP connection together later. If the skill is already installed and you only need a new MCP connection, use `cully mcp add --agent codex --url URL` (and `--oauth` when needed). See [connect an agent](/agents) for sign-in steps.
+Use `cully status` to inspect the local integration. `cully agent setup codex --mcp-url URL` can add the skill and MCP connection together later. If the skill is already installed and you only need a new MCP connection, use `cully mcp add --agent codex --url URL` (and `--oauth` when needed). See [connect an agent](/agents) for sign-in steps.
 
 `CULLY_VERSION` selects a release tag when running the installer. Inspect the [installer source](https://github.com/mcp-runtime/cully/blob/main/install.sh) before running it.

@@ -16,8 +16,8 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  MCP_RUNTIME_VERSION: v0.5.2
-  MCP_RUNTIME_SHA256: 3b26aadb20690acf778a036f657d41c6ea86305c4e621527fd7f06628c137ca9
+  MCP_RUNTIME_VERSION: v0.6.1
+  MCP_RUNTIME_SHA256: 0f8ea74b54be043763fbf105245b8894b00b2bbe17beb3516b44ae0c43fb0165
   MCP_PLATFORM_API_URL: https://platform.mcpruntime.org
   SERVER_NAME: cully
   IMAGE_REGISTRY: registry.mcpruntime.org/org/cully-mcp

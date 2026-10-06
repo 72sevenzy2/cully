@@ -38,12 +38,12 @@ Local guidance is optional and advisory. Cully preserves unrelated, user-owned a
 
 ## Add shared memory when your server is ready
 
-For a self-hosted Docker deployment, run `./setup.sh codex` from `deploy/self-hosted`. It generates private credentials in `~/.cully/config.json`, starts MCP, the data API, PostgreSQL and Mem0, then uses the Cully CLI to install the skill and register the MCP URL. See [Docker self-hosting](/hosting#one-command-full-stack).
+For a self-hosted Docker deployment, run `cully setup codex`. It generates private credentials in `~/.cully/config.json`, starts MCP, the data API, PostgreSQL and Mem0, then registers the MCP URL and Cully skill. No checkout is needed. See [self-hosting](/hosting#one-command-full-stack).
 
 If your server is already running, connect it to the agent you set up:
 
 ```sh
-cully setup codex --mcp-url http://127.0.0.1:8080/mcp
+cully agent setup codex --mcp-url http://127.0.0.1:8080/mcp
 ```
 
 The default single-user server needs no login. If the operator enables OAuth, use a public HTTPS URL and add `--oauth` to the setup command; then run `codex mcp login cully`. See [agent setup](/agents) for Claude Code and Cursor. The local advisor also works without an MCP server.

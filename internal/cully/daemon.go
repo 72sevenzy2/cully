@@ -59,7 +59,7 @@ func RunDaemonStatus(w io.Writer) {
 		return
 	}
 	fmt.Fprintln(w, "cully advisor daemon not running")
-	fmt.Fprintln(w, "  run cully setup to start the advisor")
+	fmt.Fprintln(w, "  run cully agent setup to start the advisor")
 }
 
 // StartDaemonDetached launches the long-running advisor daemon in the background.

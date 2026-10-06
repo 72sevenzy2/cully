@@ -58,7 +58,7 @@ func InstallWithMCP(endpoint string, oauth bool, targets ...string) error {
 		}
 	}
 	if err := StartDaemonDetached(); err != nil {
-		fmt.Println("Advisor unavailable; rerun cully setup to retry:", err)
+		fmt.Println("Advisor unavailable; rerun cully agent setup to retry:", err)
 	} else {
 		fmt.Println("Advisor started; inspect with cully status")
 	}

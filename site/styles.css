@@ -121,6 +121,19 @@ h1 em { color: #54926b; }
 .codex-symbol { font-size: 24px; }
 .cursor-symbol { font-size: 19px; transform: rotate(-25deg); display: inline-block; }
 
+.paths-section { padding-top: 105px; padding-bottom: 105px; border-bottom: 1px solid var(--line); }
+.paths-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
+.path-card { min-height: 310px; padding: 34px; border: 1px solid #d7e1d4; border-radius: 16px; background: #fffefa; display: flex; flex-direction: column; }
+.path-card-team { background: #e7f1e4; border-color: #d0dfcd; }
+.path-number { color: #5b8866; font-size: 11px; font-weight: 800; letter-spacing: .13em; }
+.path-card h3 { margin: 29px 0 11px; font-size: 25px; line-height: 1.25; letter-spacing: -.05em; }
+.path-card p { max-width: 475px; color: #5e7465; font-size: 14px; line-height: 1.7; }
+.path-card p code { color: var(--forest); font-size: .92em; font-weight: 700; }
+.path-links { display: flex; flex-wrap: wrap; gap: 12px 25px; margin-top: auto; padding-top: 20px; }
+.path-links a { color: var(--forest); font-size: 12px; font-weight: 800; }
+.path-links a:hover { text-decoration: underline; text-underline-offset: 4px; }
+.path-links span { margin-left: 5px; }
+
 .product-section, .architecture-section { padding-top: 112px; padding-bottom: 122px; }
 .section-intro { display: flex; justify-content: space-between; align-items: end; gap: 60px; margin-bottom: 50px; }
 .section-intro h2, .workflow-heading h2 { font-size: clamp(38px, 4.1vw, 57px); line-height: 1.14; letter-spacing: -.07em; margin: 20px 0 0; }
@@ -216,6 +229,9 @@ h1 em { color: #54926b; }
   .agent-strip-inner { flex-wrap: wrap; justify-content: center; padding-block: 20px; gap: 18px 28px; }
   .agent-strip-inner > span { width: 100%; text-align: center; }
   .agent-strip-inner > div { font-size: 14px; }
+  .paths-section { padding-top: 78px; padding-bottom: 78px; }
+  .paths-grid { grid-template-columns: 1fr; }
+  .path-card { min-height: 285px; }
   .product-section, .architecture-section { padding-top: 78px; padding-bottom: 85px; }
   .section-intro { display: block; }
   .section-intro > p { margin-top: 24px; max-width: 530px; }
@@ -242,6 +258,7 @@ h1 em { color: #54926b; }
   .mock-body { padding: 20px; }
   .floating-note { bottom: 20px; left: 3%; }
   .agent-strip-inner > div { font-size: 12px; }
+  .path-card { padding: 25px; }
   .section-intro h2, .workflow-heading h2 { font-size: 39px; }
   .footer-bottom { flex-direction: column; gap: 7px; }
 }

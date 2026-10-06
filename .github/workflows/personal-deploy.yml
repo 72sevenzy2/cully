@@ -19,10 +19,11 @@ concurrency:
   cancel-in-progress: false
 env:
   RELEASE_TAG: ${{ inputs.tag }}
+  MCP_IMAGE: ghcr.io/mcp-runtime/cully-mcp:${{ inputs.tag }}
   DATA_IMAGE: ghcr.io/mcp-runtime/cully-data:${{ inputs.tag }}
   MEM0_IMAGE: ghcr.io/mcp-runtime/cully-mem0:${{ inputs.tag }}
-  MCP_RUNTIME_VERSION: v0.5.2
-  MCP_RUNTIME_SHA256: 3b26aadb20690acf778a036f657d41c6ea86305c4e621527fd7f06628c137ca9
+  MCP_RUNTIME_VERSION: v0.6.1
+  MCP_RUNTIME_SHA256: 0f8ea74b54be043763fbf105245b8894b00b2bbe17beb3516b44ae0c43fb0165
   MCP_PLATFORM_API_URL: https://platform.mcpruntime.org
   SERVER_NAME: cully
   IMAGE_REGISTRY: registry.mcpruntime.org/org/cully-mcp
@@ -40,8 +41,9 @@ jobs:
           sh -n deploy/bootstrap-personal-data.sh
       - name: Check live MCP Auth issuer and signing keys
         run: python3 deploy/check_personal_oauth.py issuer
-      - name: Build data and local-model Mem0 images
+      - name: Build MCP, data and local-model Mem0 images
         run: |
+          docker build -f Dockerfile --build-arg VERSION="$RELEASE_TAG" -t "$MCP_IMAGE" .
           docker build -f Dockerfile.data-api -t "$DATA_IMAGE" .
           docker build -f Dockerfile.mem0 -t "$MEM0_IMAGE" .
       - name: Scan pinned Mem0 image
@@ -59,6 +61,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
       - name: Publish release service images
         run: |
+          docker push "$MCP_IMAGE"
           docker push "$DATA_IMAGE"
           docker push "$MEM0_IMAGE"
   deploy:

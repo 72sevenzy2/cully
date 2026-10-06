@@ -16,7 +16,8 @@ var version = "dev"
 const help = `Cully — your companion for better work and everyday life.
 
 Usage:
-  cully setup [claude|codex|cursor|all] [--mcp-url URL] [--oauth]
+  cully agent setup [claude|codex|cursor|all] [--mcp-url URL] [--oauth]
+  cully setup [claude|codex|cursor] [--oauth] [--prepare]
   cully uninstall [claude|codex|cursor|all] Remove managed agent setup
   cully status [directory]                Show session and agent status
   cully suggestions                       Review suggested improvements
@@ -45,6 +46,11 @@ func run(args []string) error {
 		fmt.Print(help)
 	case "setup":
 		return runSetup(args[1:])
+	case "agent":
+		if len(args) < 2 || args[1] != "setup" {
+			return fmt.Errorf("usage: cully agent setup [claude|codex|cursor|all] [--mcp-url URL] [--oauth]")
+		}
+		return runAgentSetup(args[2:])
 	case "uninstall":
 		return cully.Uninstall(args[1:]...)
 	case "status":
@@ -101,19 +107,42 @@ func runSetup(args []string) error {
 		target, args = args[0], args[1:]
 	}
 	fs := flag.NewFlagSet("setup", flag.ContinueOnError)
+	oauth := fs.Bool("oauth", false, "server uses OAuth; print sign-in instructions")
+	prepare := fs.Bool("prepare", false, "download the self-hosted stack and create editable configuration without starting services")
+	if err := fs.Parse(args); err != nil {
+		return err
+	}
+	if len(fs.Args()) > 1 || (target != "" && len(fs.Args()) != 0) {
+		return fmt.Errorf("usage: cully setup [claude|codex|cursor] [--oauth] [--prepare]")
+	}
+	if target == "" && len(fs.Args()) == 1 {
+		target = fs.Args()[0]
+	}
+	if target == "all" {
+		return fmt.Errorf("server setup accepts one agent at a time")
+	}
+	return runSelfHost(target, *oauth, *prepare)
+}
+
+func runAgentSetup(args []string) error {
+	target := ""
+	if len(args) > 0 && !strings.HasPrefix(args[0], "-") {
+		target, args = args[0], args[1:]
+	}
+	fs := flag.NewFlagSet("agent setup", flag.ContinueOnError)
 	endpoint := fs.String("mcp-url", "", "register this MCP URL while installing the agent integration")
 	oauth := fs.Bool("oauth", false, "server uses OAuth; print sign-in instructions")
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
 	if len(fs.Args()) > 1 || (target != "" && len(fs.Args()) != 0) {
-		return fmt.Errorf("usage: cully setup [claude|codex|cursor|all] [--mcp-url URL] [--oauth]")
+		return fmt.Errorf("usage: cully agent setup [claude|codex|cursor|all] [--mcp-url URL] [--oauth]")
 	}
 	if target == "" && len(fs.Args()) == 1 {
 		target = fs.Args()[0]
 	}
 	if *oauth && *endpoint == "" {
-		return fmt.Errorf("--oauth requires --mcp-url")
+		return fmt.Errorf("--oauth requires --mcp-url for agent setup")
 	}
 	if *endpoint != "" {
 		if target != "" {

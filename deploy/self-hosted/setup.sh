@@ -10,20 +10,17 @@ endpoint=""
 while [ "$#" -gt 0 ]; do
   case "$1" in
     --oauth)
-      [ "$#" -ge 2 ] || { echo '--oauth requires existing or mcp-auth' >&2; exit 2; }
+      [ "$#" -ge 2 ] || { echo '--oauth requires mcp-auth' >&2; exit 2; }
       mode="$2"; shift 2 ;;
-    --mcp-url)
-      [ "$#" -ge 2 ] || { echo '--mcp-url requires a URL' >&2; exit 2; }
-      endpoint="$2"; shift 2 ;;
     claude|codex|cursor)
       [ -z "$agent" ] || { echo 'Choose one agent.' >&2; exit 2; }
       agent="$1"; shift ;;
-    *) echo 'Usage: ./setup.sh [--oauth existing|mcp-auth] [--mcp-url URL] [claude|codex|cursor]' >&2; exit 2 ;;
+    *) echo 'Usage: ./setup.sh [--oauth mcp-auth] [claude|codex|cursor]' >&2; exit 2 ;;
   esac
 done
 case "$mode" in
-  none|existing|mcp-auth) ;;
-  *) echo 'Choose --oauth existing or --oauth mcp-auth.' >&2; exit 2 ;;
+  none|mcp-auth) ;;
+  *) echo 'Choose --oauth mcp-auth.' >&2; exit 2 ;;
 esac
 command -v python3 >/dev/null 2>&1 || { echo 'Python 3 is required for local credential setup.' >&2; exit 1; }
 command -v docker >/dev/null 2>&1 || { echo 'Docker Compose is required for self-hosting.' >&2; exit 1; }
@@ -40,9 +37,9 @@ if [ "$mode" = mcp-auth ]; then
   [ -f .secrets/signing-key.pem ] || { echo 'Create .secrets/signing-key.pem first.' >&2; exit 2; }
 fi
 if [ "$mode" != none ]; then
-  oauth_exports=$(python3 ./credentials.py oauth-env "$mode" "$endpoint")
+  oauth_exports=$(python3 ./credentials.py oauth-env "$mode")
   eval "$oauth_exports"
-  if [ -z "$endpoint" ]; then endpoint=$CULLY_AUTH_RESOURCE; fi
+  endpoint=$CULLY_AUTH_RESOURCE
 fi
 if [ -n "$agent" ]; then
   cli=cully
@@ -61,8 +58,7 @@ fi
 compose() {
   case "$mode" in
     none) CULLY_MCP_AUTH_MODE=none docker compose --env-file .env -f compose.yaml "$@" ;;
-    existing) CULLY_MCP_AUTH_MODE=oauth CULLY_MCP_OWNER='' CULLY_CADDYFILE=Caddyfile.existing-auth docker compose --env-file .env -f compose.yaml --profile oauth "$@" ;;
-    mcp-auth) CULLY_MCP_AUTH_MODE=oauth CULLY_MCP_OWNER='' CULLY_CADDYFILE=Caddyfile.new-auth docker compose --env-file .env -f compose.yaml --profile oauth --profile mcp-auth "$@" ;;
+    mcp-auth) CULLY_MCP_AUTH_MODE=oauth CULLY_MCP_OWNER='' docker compose --env-file .env -f compose.yaml --profile oauth --profile mcp-auth "$@" ;;
   esac
 }
 
@@ -71,7 +67,6 @@ compose up -d --wait db mem0-db
 compose --profile ops run --rm migrate
 case "$mode" in
   none) compose up -d --build --wait data-api mem0 mcp ;;
-  existing) compose up -d --build --wait data-api mem0 mcp caddy ;;
   mcp-auth) compose up -d --build --wait data-api mem0 mcp mcp-auth caddy ;;
 esac
 
@@ -81,11 +76,11 @@ fi
 echo "Cully MCP is configured at $endpoint"
 if [ -n "$agent" ]; then
   if [ "$mode" = none ]; then
-    "$cli" setup "$agent" --mcp-url "$endpoint"
+    "$cli" agent setup "$agent" --mcp-url "$endpoint"
   else
-    "$cli" setup "$agent" --mcp-url "$endpoint" --oauth
+    "$cli" agent setup "$agent" --mcp-url "$endpoint" --oauth
   fi
   echo "Restart $agent to load the Cully skill and MCP tools."
 else
-  echo 'Run cully setup <agent> --mcp-url URL (add --oauth if enabled) to connect an agent.'
+  echo 'Run cully agent setup <agent> --mcp-url URL (add --oauth if enabled) to connect an agent.'
 fi
