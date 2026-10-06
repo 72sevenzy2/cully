@@ -30,6 +30,20 @@ document.querySelectorAll('.copy-button').forEach(button => button.addEventListe
 document.getElementById('year').textContent = String(new Date().getFullYear())
 
 const testimonialTrack = document.getElementById('testimonial-track')
+const testimonialDialog = document.getElementById('testimonial-dialog')
+document.querySelectorAll('[data-open-testimonial]').forEach(button => button.addEventListener('click', () => {
+  testimonialDialog.showModal()
+  document.documentElement.style.overflow = 'hidden'
+}))
+document.querySelector('.testimonial-close')?.addEventListener('click', () => testimonialDialog.close())
+testimonialDialog?.addEventListener('click', event => {
+  if (event.target !== testimonialDialog) return
+  const bounds = testimonialDialog.getBoundingClientRect()
+  if (event.clientX < bounds.left || event.clientX > bounds.right || event.clientY < bounds.top || event.clientY > bounds.bottom) {
+    testimonialDialog.close()
+  }
+})
+testimonialDialog?.addEventListener('close', () => { document.documentElement.style.overflow = '' })
 const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)')
 const testimonialButtons = document.querySelectorAll('[data-testimonial-direction]')
 
@@ -108,10 +122,11 @@ async function loadTestimonials() {
       return card
     })
     testimonialTrack.replaceChildren(...cards)
+    document.getElementById('testimonial-gallery').hidden = false
     document.getElementById('testimonial-caption').textContent = 'Experiences shared by the Cully community.'
     updateTestimonialControls()
   } catch {
-    // Keep the invitation cards available if the content cannot be loaded.
+    // The invitation to contribute stays available when content cannot load.
   }
 }
 loadTestimonials()
@@ -144,7 +159,7 @@ photoInput?.addEventListener('change', () => {
   placeholder.hidden = false
   photoInput.setCustomValidity('')
   document.querySelector('input[name=importedPhoto]').value = ''
-  status.textContent = 'Add a photo to put a face to your story.'
+  status.textContent = 'JPG, PNG, or WebP · up to 5 MB'
   if (!photo) return
   if (!['image/jpeg', 'image/png', 'image/webp'].includes(photo.type) || photo.size > 5 * 1024 * 1024) {
     photoInput.setCustomValidity('Choose a JPG, PNG, or WebP image up to 5 MB.')
@@ -156,7 +171,7 @@ photoInput?.addEventListener('change', () => {
   preview.src = photoPreviewURL
   preview.hidden = false
   placeholder.hidden = true
-  status.textContent = `${photo.name} selected. Your photo will be uploaded with your testimonial.`
+  status.textContent = photo.name
 })
 
 const linkedinInput = document.querySelector('#share-testimonial input[name=linkedin]')
@@ -195,7 +210,7 @@ document.getElementById('import-linkedin')?.addEventListener('click', async even
       preview.src = photoURL.href
       preview.hidden = false
       document.getElementById('testimonial-photo-placeholder').hidden = true
-      document.getElementById('testimonial-photo-status').textContent = 'Public LinkedIn photo selected. You can upload a different photo instead.'
+      document.getElementById('testimonial-photo-status').textContent = 'LinkedIn photo selected'
     }
     status.textContent = 'Public details imported. Please check and edit them before submitting.'
   } catch (error) {

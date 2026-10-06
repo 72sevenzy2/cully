@@ -53,7 +53,7 @@ The website domains do not change an operator's MCP resource URL. See the [team 
 
 ## Community testimonials
 
-The homepage has a horizontal testimonial carousel with floating cards and left/right controls. Its form accepts a name, role, workplace, photo, LinkedIn profile URL, and testimonial. Visitors submit directly to `POST /api/testimonials`; no GitHub account is needed. Publication consent is required. Photos are limited to 5 MB and JPG, PNG, or WebP; PNG and JPG dimensions are checked against a 4096-pixel limit.
+The homepage shows a horizontal carousel with floating cards and left/right controls when approved testimonials are available. A single “Share your experience” button opens a compact submission dialog; optional photo, LinkedIn, and role fields are grouped under an expandable row. Visitors submit directly to `POST /api/testimonials`; no GitHub account is needed. Publication consent is required. Photos are limited to 5 MB and JPG, PNG, or WebP; PNG and JPG dimensions are checked against a 4096-pixel limit.
 
 The Go website service stores pending records and photos in `/var/lib/cully-web`, mounted from the named `cully-web_testimonials` Docker volume. The read-only container can be replaced without losing submissions. Back up this volume separately from images and Git. Submissions contain personal information and must never be committed to the repository.
 
@@ -65,7 +65,7 @@ docker compose --project-name cully-web --file /opt/cully-web/compose.yaml exec 
 docker compose --project-name cully-web --file /opt/cully-web/compose.yaml exec cully-web cully-web reject SUBMISSION_ID
 ```
 
-Approval publishes the record and photo on the next page load, with no rebuild needed. Rejection deletes the pending record and photo. There is no public moderation endpoint. `/testimonials.json` and `/testimonial-photos/ID` expose only approved submissions. The page renders text safely and shows contribution invitations until real testimonials are approved. Previously curated entries in `site/testimonials.json` remain supported.
+Approval publishes the record and photo on the next page load, with no rebuild needed. Rejection deletes the pending record and photo. There is no public moderation endpoint. `/testimonials.json` and `/testimonial-photos/ID` expose only approved submissions. The page renders text safely. Until real testimonials are approved, it shows a compact invitation without placeholder quote cards. Previously curated entries in `site/testimonials.json` remain supported.
 
 The form's LinkedIn import calls `POST /api/linkedin-profile` to read metadata a profile exposes publicly. It can fill available name, role, workplace, and photo fields; visitors review and edit those values before submitting. Fetches are restricted to LinkedIn profile URLs and photos from `media.licdn.com`, with bounded responses and timeouts. Restricted profiles, sign-in pages, and blocked requests fall back to manual entry. It does not bypass LinkedIn sign-in or use the restricted Profile API. LinkedIn's [Profile API](https://learn.microsoft.com/en-us/linkedin/shared/integrations/people/profile-api) requires approved access and member authorization for richer imports.
 

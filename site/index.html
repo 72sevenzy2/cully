@@ -108,35 +108,44 @@
 
       <section id="testimonials" class="testimonials-section" aria-labelledby="testimonials-title">
         <div class="section-wrap">
-          <div class="section-intro"><div><div class="kicker">04 / FROM THE COMMUNITY</div><h2 id="testimonials-title">Your workflow.<br><em>Your words.</em></h2></div><p>Using Cully? Tell us what changed in your day-to-day work. Community testimonials will appear here after review.</p></div>
-          <div class="testimonial-toolbar"><span id="testimonial-caption">Be among the first to share your experience.</span><div class="testimonial-controls"><button type="button" data-testimonial-direction="-1" aria-label="Scroll testimonials left" aria-controls="testimonial-track">←</button><button type="button" data-testimonial-direction="1" aria-label="Scroll testimonials right" aria-controls="testimonial-track">→</button></div></div>
-          <div id="testimonial-track" class="testimonial-track" tabindex="0" role="region" aria-label="Community testimonials. Scroll left or right.">
-            <article class="testimonial-card testimonial-invitation"><span class="quote-mark" aria-hidden="true">“</span><span class="testimonial-label">YOUR STORY GOES HERE</span><h3>A better coding session?</h3><p>Tell us how Cully's background advisor, status, or suggestions fit into your workflow.</p><a href="#share-testimonial">Share your experience ↗</a></article>
-            <article class="testimonial-card testimonial-invitation"><span class="quote-mark" aria-hidden="true">“</span><span class="testimonial-label">YOUR STORY GOES HERE</span><h3>Less starting over?</h3><p>Has shared memory helped your next agent find a decision or lesson from an earlier session?</p><a href="#share-testimonial">Tell us what worked ↗</a></article>
-            <article class="testimonial-card testimonial-invitation"><span class="quote-mark" aria-hidden="true">“</span><span class="testimonial-label">YOUR STORY GOES HERE</span><h3>Cully with your team?</h3><p>Share how skills, agent integrations, and your own memory service work together for your team.</p><a href="#share-testimonial">Add your perspective ↗</a></article>
-            <article class="testimonial-card testimonial-invitation"><span class="quote-mark" aria-hidden="true">“</span><span class="testimonial-label">YOUR STORY GOES HERE</span><h3>Something we can improve?</h3><p>Useful feedback matters too. Tell us what could make Cully a better companion for your agents.</p><a href="#share-testimonial">Help shape Cully ↗</a></article>
+          <div class="community-heading">
+            <div><div class="kicker">04 / COMMUNITY</div><h2 id="testimonials-title">Better work.<br><em>Shared experiences.</em></h2><p>How does Cully fit into your workflow? We'd love to hear.</p></div>
+            <button class="button button-primary" type="button" data-open-testimonial>Share your experience <span aria-hidden="true">↗</span></button>
           </div>
-          <form id="share-testimonial" class="testimonial-form" aria-labelledby="testimonial-form-title">
-            <div class="testimonial-form-intro"><div class="kicker">ADD YOUR VOICE</div><h3 id="testimonial-form-title">How has Cully worked for you?</h3><p>Share your experience right here. Your name, workplace, photo, and testimonial may appear after review. Leave out private project details.</p><div class="testimonial-photo-preview"><img id="testimonial-photo-preview" alt="Your selected profile photo" hidden><span id="testimonial-photo-placeholder" aria-hidden="true">☺</span></div><p id="testimonial-photo-status" aria-live="polite">Add a photo to put a face to your story.</p></div>
-            <div class="testimonial-fields">
-              <div class="testimonial-identity"><label>Your name<input name="name" autocomplete="name" required maxlength="80" placeholder="Name to display"></label><label>Where you work <span>(optional)</span><input name="workplace" autocomplete="organization" maxlength="100" placeholder="Company, team, or independent"></label></div>
-              <label>Your role <span>(optional)</span><input name="context" autocomplete="organization-title" maxlength="100" placeholder="Software engineer"></label>
-              <label>Profile photo <span>(optional · JPG, PNG, or WebP · up to 5 MB)</span><input id="testimonial-photo" type="file" name="photo" accept="image/jpeg,image/png,image/webp" aria-describedby="testimonial-photo-help"></label>
-              <p id="testimonial-photo-help" class="testimonial-field-help">Your photo is uploaded with your testimonial and published only after review.</p>
-              <label>LinkedIn profile <span>(optional)</span><input name="linkedin" type="url" maxlength="300" placeholder="https://www.linkedin.com/in/your-name" aria-describedby="testimonial-linkedin-help"></label>
-              <div class="linkedin-import"><button id="import-linkedin" class="profile-import-button" type="button">Import public profile details <span aria-hidden="true">↗</span></button><span id="linkedin-import-status" role="status"></span></div>
-              <p id="testimonial-linkedin-help" class="testimonial-field-help">Import a publicly available name, workplace, and photo, then check the details. If LinkedIn restricts access, fill them in yourself.</p>
-              <input name="importedPhoto" type="hidden">
-              <label class="testimonial-honeypot" aria-hidden="true">Website<input name="website" tabindex="-1" autocomplete="off"></label>
-              <label>Your experience<textarea name="quote" required minlength="20" maxlength="1000" rows="4" placeholder="What did Cully help you do? What could be better?"></textarea></label>
-              <label class="testimonial-consent"><input type="checkbox" name="consent" required><span>I agree to have my submitted name, workplace, photo, profile link, and testimonial published on cully.net after review.</span></label>
-              <button class="button button-primary" type="submit">Share your testimonial <span aria-hidden="true">↗</span></button>
-              <p id="testimonial-submit-status" role="status" aria-live="polite"></p>
-              <noscript><p>Enable JavaScript to upload your photo and submit this form.</p></noscript>
-            </div>
-          </form>
+          <div id="testimonial-gallery" hidden>
+            <div class="testimonial-toolbar"><span id="testimonial-caption">From the Cully community</span><div class="testimonial-controls"><button type="button" data-testimonial-direction="-1" aria-label="Scroll testimonials left" aria-controls="testimonial-track">←</button><button type="button" data-testimonial-direction="1" aria-label="Scroll testimonials right" aria-controls="testimonial-track">→</button></div></div>
+            <div id="testimonial-track" class="testimonial-track" tabindex="0" role="region" aria-label="Community testimonials. Scroll left or right."></div>
+          </div>
+          <noscript><p>Enable JavaScript to read testimonials and share your experience.</p></noscript>
         </div>
       </section>
+      <dialog id="testimonial-dialog" class="testimonial-dialog" aria-labelledby="testimonial-form-title">
+        <div class="testimonial-dialog-header"><div><div class="kicker">YOUR EXPERIENCE</div><h3 id="testimonial-form-title">Tell us about Cully.</h3><p>A few words about what worked for you.</p></div><button type="button" class="testimonial-close" aria-label="Close testimonial form">×</button></div>
+        <form id="share-testimonial" class="testimonial-form">
+          <div class="testimonial-fields">
+            <label><span>Your experience</span><textarea name="quote" required minlength="20" maxlength="1000" rows="3" placeholder="What has Cully helped you do?"></textarea></label>
+            <div class="testimonial-identity"><label><span>Your name</span><input name="name" autocomplete="name" required maxlength="80" placeholder="Name to display"></label><label><span>Where you work <small>Optional</small></span><input name="workplace" autocomplete="organization" maxlength="100" placeholder="Company or independent"></label></div>
+            <details class="testimonial-extras">
+              <summary>Add a photo or LinkedIn profile <span aria-hidden="true">+</span></summary>
+              <div class="testimonial-extra-fields">
+                <div class="testimonial-photo-row">
+                  <div class="testimonial-photo-preview"><img id="testimonial-photo-preview" alt="Your selected profile photo" hidden><span id="testimonial-photo-placeholder" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="8" r="3.5"/><path d="M5 21v-2a7 7 0 0 1 14 0v2"/></svg></span></div>
+                  <div><label class="testimonial-upload" for="testimonial-photo">Choose a photo<input id="testimonial-photo" type="file" name="photo" accept="image/jpeg,image/png,image/webp" aria-describedby="testimonial-photo-status"></label><p id="testimonial-photo-status" aria-live="polite">JPG, PNG, or WebP · up to 5 MB</p></div>
+                </div>
+                <label><span>LinkedIn profile <small>Optional</small></span><div class="linkedin-import-row"><input name="linkedin" type="url" maxlength="300" placeholder="https://linkedin.com/in/your-name" aria-describedby="testimonial-linkedin-help"><button id="import-linkedin" class="profile-import-button" type="button">Import</button></div></label>
+                <p id="testimonial-linkedin-help" class="testimonial-field-help">Import available public details, then review them.</p>
+                <span id="linkedin-import-status" role="status"></span>
+                <label><span>Your role <small>Optional</small></span><input name="context" autocomplete="organization-title" maxlength="100" placeholder="Software engineer"></label>
+              </div>
+            </details>
+            <input name="importedPhoto" type="hidden">
+            <input name="website" type="text" hidden tabindex="-1" autocomplete="off" aria-hidden="true">
+            <label class="testimonial-consent"><input type="checkbox" name="consent" required><span>You may publish my submitted details and testimonial after review.</span></label>
+            <div class="testimonial-form-footer"><span>Reviewed before it appears here.</span><button class="button button-primary" type="submit">Send testimonial <span aria-hidden="true">↗</span></button></div>
+            <p id="testimonial-submit-status" role="status" aria-live="polite"></p>
+          </div>
+        </form>
+      </dialog>
     </main>
 
     <footer class="site-footer section-wrap"><div><a class="brand" href="/" aria-label="Cully home"><span class="brand-mark" aria-hidden="true"><span></span></span><span>cully<span class="brand-dot">.</span></span></a><p>Your companion for better work<br>with AI agents.</p></div><div class="footer-links"><div><strong>Explore</strong><a href="#product">Product</a><a href="#how-it-works">How it works</a><a href="https://docs.cully.net/quickstart">Get started</a></div><div><strong>Resources</strong><a href="https://docs.cully.net/">Documentation</a><a href="https://github.com/mcp-runtime/cully">GitHub</a><a href="https://github.com/mcp-runtime/cully/releases">Releases</a></div></div><div class="footer-bottom"><span>© <span id="year">2026</span> Cully. Built in the open.</span><span>Make the next session a little better.</span></div></footer>
