@@ -1,0 +1,28 @@
+name: Personal VM access check
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  access:
+    runs-on: ubuntu-latest
+    env:
+      DEPLOY_HOST: ${{ vars.CULLY_WEB_HOST }}
+      DEPLOY_USER: ${{ vars.CULLY_WEB_SSH_USER }}
+      DEPLOY_PORT: ${{ vars.CULLY_WEB_SSH_PORT }}
+    steps:
+      - name: Check existing pinned website SSH credential
+        env:
+          DEPLOY_KEY: ${{ secrets.CULLY_WEB_SSH_KEY }}
+          DEPLOY_KNOWN_HOSTS: ${{ secrets.CULLY_WEB_KNOWN_HOSTS }}
+        run: |
+          test -n "$DEPLOY_KEY" && test -n "$DEPLOY_KNOWN_HOSTS"
+          test -n "$DEPLOY_HOST" && test -n "$DEPLOY_USER" && test -n "$DEPLOY_PORT"
+          install -d -m 700 "$RUNNER_TEMP/cully-ssh"
+          umask 077
+          printf '%s\n' "$DEPLOY_KEY" > "$RUNNER_TEMP/cully-ssh/key"
+          printf '%s\n' "$DEPLOY_KNOWN_HOSTS" > "$RUNNER_TEMP/cully-ssh/known_hosts"
+          ssh -i "$RUNNER_TEMP/cully-ssh/key" -p "$DEPLOY_PORT" \
+            -o UserKnownHostsFile="$RUNNER_TEMP/cully-ssh/known_hosts" \
+            -o BatchMode=yes -o StrictHostKeyChecking=yes -o ConnectTimeout=15 \
+            "$DEPLOY_USER@$DEPLOY_HOST" hostname
