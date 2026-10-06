@@ -2,8 +2,6 @@ package cully
 
 import (
 	"encoding/json"
-	"fmt"
-	"io"
 	"os"
 	"regexp"
 	"sort"
@@ -257,52 +255,6 @@ func countApplyable(hints []classifiedSuggestion) int {
 	return n
 }
 
-// ChecklistSteps returns ECAM-style corrective actions for a warning topic.
-func ChecklistSteps(topic string) []string {
-	switch strings.ToLower(topic) {
-	case "context", "ctx", "compact":
-		return []string{
-			"Run /context to see what is filling the window",
-			"Run /compact to summarize older turns",
-			"Run /clear if you are switching to unrelated work",
-		}
-	case "budget", "rate", "model", "cost":
-		return []string{
-			"Run /model to switch to a cheaper tier (Haiku/Sonnet)",
-			"Delegate broad reads to an Explore subagent",
-			"Pause non-essential tool loops until rate cools",
-		}
-	case "search", "graphify", "grep":
-		return []string{
-			"Run graphify query for architecture questions",
-			"Stop repeated grep/find on the same paths",
-			"Build graph with /graphify . if graphify-out is missing",
-		}
-	case "faults", "fault", "errors":
-		return []string{
-			"Verify paths with Glob/ls before Read/Edit — most faults are not-found",
-			"Locate symbols with graphify query or LSP instead of guessing file paths",
-			"Read a file before editing it; retry Edit with exact current text",
-			"If one tool dominates errors, change approach rather than re-running it",
-		}
-	default:
-		return []string{
-			"Run cully list to see numbered suggestions",
-			"Run cully checklist <topic> for a focused procedure",
-			"Run cully systems to inspect integrations",
-		}
-	}
-}
-
-// RunChecklist prints an ECAM-style procedure.
-func RunChecklist(w io.Writer, topic string) {
-	steps := ChecklistSteps(topic)
-	fmt.Fprintf(w, "Cully checklist — %s\n\n", fallback(topic, "general"))
-	for i, s := range steps {
-		fmt.Fprintf(w, "  %d. %s\n", i+1, s)
-	}
-}
-
 // ruleBasedSuggestions is reversionary mode: deterministic hints when the advisor fails.
 func ruleBasedSuggestions(sig string) []classifiedSuggestion {
 	var out []classifiedSuggestion
@@ -368,7 +320,7 @@ func parseSignalInt(sig, key string) int {
 }
 
 // suggestionReport is the per-session suggestion store. The session/cwd stamp
-// is what lets `cully list`/`apply` in a terminal find the right session, and
+// is what lets `cully suggestions`/`apply` in a terminal find the right session, and
 // what keeps one session's advice out of another session's status bar.
 type suggestionReport struct {
 	sessionStamp

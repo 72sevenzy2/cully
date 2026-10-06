@@ -8,7 +8,7 @@ Cully remembers what you do and how you work. It helps you guide coding agents, 
 
 | Component | What it does |
 | --- | --- |
-| `cully` | Local status line, session controls, suggestions and compact session memory |
+| `cully` | Local advisor, agent setup, session status and suggestions |
 | `cully-mcp` | OAuth-protected shared memory tools |
 | `cully-data` | Private PostgreSQL/pgvector API and self-hosted Mem0 indexing |
 
@@ -21,7 +21,8 @@ From this checkout, with Go 1.25 or newer:
 ```sh
 go build -o ./build/cully ./cmd/cully
 ./build/cully install
-./build/cully systems
+./build/cully status
+./build/cully mcp add --agent codex
 ```
 
 Configure shared memory separately using the [installation guide](docs/installation.md). The future deployment target is the existing Buddy VM; repository changes do not activate the new service endpoint.
@@ -34,6 +35,7 @@ Configure shared memory separately using the [installation guide](docs/installat
 - [Architecture](docs/architecture.md)
 - [Configuration](docs/configuration.md)
 - [Self-hosted Mem0](docs/mem0.md)
+- [Hosted and self-hosted setup](docs/hosting.md)
 - [VM migration](docs/migration.md)
 - [Website, docs and DNS](docs/website.md)
 - [Development and tests](docs/development.md)

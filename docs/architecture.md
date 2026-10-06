@@ -5,7 +5,7 @@ Cully has one Go module and three executable entry points. Domain validation is 
 ```mermaid
 flowchart LR
   A[Claude / Codex / Cursor] --> L[Cully CLI and daemon]
-  L --> S[Local session state and compact memory]
+  L --> S[Local diagnostics and suggestions]
   A -->|OAuth| M[Cully MCP]
   M -->|Private authenticated HTTPS| D[Cully data API]
   D --> P[(PostgreSQL + pgvector)]
@@ -16,9 +16,9 @@ flowchart LR
 
 ## Local session companion
 
-`cmd/cully` uses the imported session-control implementation in `internal/cully`. It renders instruments, discovers capabilities, runs advisory analysis, manages suggestions and records compact session summaries. Claude has the rich command-backed status line and hooks. Codex and Cursor use their available native integrations.
+`cmd/cully` uses the imported session-control implementation in `internal/cully`. It renders instruments, discovers capabilities, runs advisory analysis, manages suggestions and records diagnostic session counters. Claude has the rich command-backed status line and hooks. Codex and Cursor use their available native integrations.
 
-The local daemon and memory work offline. A local transcript summary is not automatically a shared-memory write. Agents use the combined Cully skill to log substantive work through MCP; automatic daemon-to-remote upload is a roadmap item.
+The local advisor works offline. It does not run a background transcript scanner or maintain a second personal/project memory store. Local snapshots and diagnostic logs support session controls; agents use the Cully MCP tools for durable memory. Automatic session upload is not implemented.
 
 ## Public memory boundary
 

@@ -18,26 +18,26 @@ const (
 const codexStatusLineItems = `["model-with-reasoning", "current-dir", "git-branch", "context-remaining", "five-hour-limit", "weekly-limit", "fast-mode"]`
 
 const codexCullyPrompt = `---
-description: Run Cully cully controls
-argument-hint: "[systems | status | list | checklist <topic> | plan | debrief | daemon status]"
+description: Run Cully controls
+argument-hint: "[status | suggestions | apply <n>]"
 # cully:codex-command:start
 # cully:codex-command:end
 ---
 
-Use the Cully cully executable for this request.
+Use the Cully executable for this request.
 
-- With no arguments, run cully systems.
+- With no arguments, run cully status.
 - If arguments were provided after /prompts:cully, run cully $ARGUMENTS.
 - Treat the output as advisory. Do not run cully apply unless the user explicitly requested it.
 - Summarize warnings and deferred items first, then explain the useful controls plainly.
 `
 
 const cursorCullyCommand = `<!-- cully:cursor-command:start -->
-# Cully cully
+# Cully
 
-Run the Cully cully executable for this request.
+Run the Cully executable for this request.
 
-- With no arguments, run cully systems.
+- With no arguments, run cully status.
 - If the user supplied arguments after /cully, pass them to cully (for example, /cully status runs cully status).
 - Treat the output as advisory. Do not run cully apply unless the user explicitly requested it.
 - Summarize warnings and deferred items first, then explain the useful controls plainly.

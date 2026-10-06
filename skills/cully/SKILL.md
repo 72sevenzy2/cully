@@ -12,10 +12,9 @@ Use the local `cully` command for session instruments and controls. Use the conf
 
 ## Session controls
 
-1. Run `cully systems` to inspect agents, skills, MCP servers and graphify state.
-2. Run `cully status`, `cully plan` or `cully checklist <topic>` for session guidance.
-3. Run `cully list` to inspect suggestions and `cully apply <n> --dry-run` to preview a change. Apply only when requested; suggestions remain advisory.
-4. Run `cully debrief` to review the session. `cully memory --json` reads compact local session memory; a local record is not confirmation of a shared-memory write.
+1. Run `cully status` to inspect the current session, agent setup and advisor.
+2. Run `cully suggestions` to review improvements and `cully apply <n> --dry-run` to preview a change. Apply only when requested; suggestions remain advisory.
+3. Use Cully MCP tools for durable memory. Local session diagnostics are not shared-memory records; Cully does not scan all agent transcripts into a second memory store.
 
 Claude uses the Cully status line and hooks. Codex uses its native status fields and `/prompts:cully`. Cursor uses its project `/cully` command. Do not promise hooks or custom status rendering that a client does not expose.
 

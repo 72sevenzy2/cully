@@ -111,9 +111,9 @@ func applyableReportIndex(session string, n int) (int, error) {
 		}
 	}
 	if applyN == 0 {
-		return 0, fmt.Errorf("no applyable fixes available; run: cully list")
+		return 0, fmt.Errorf("no applyable fixes available; run: cully suggestions")
 	}
-	return 0, fmt.Errorf("fix #%d not found: only %d available; run: cully list", n, applyN)
+	return 0, fmt.Errorf("fix #%d not found: only %d available; run: cully suggestions", n, applyN)
 }
 
 // RunApply applies applyable fix n (1-based) from the session resolved for cwd.
@@ -132,7 +132,7 @@ func RunApply(n int, cwd string, yes, dryRun bool) error {
 		if len(applyable) == 0 {
 			return fmt.Errorf("no applyable fixes for this session (notes and slash-command reminders are not wired via apply)")
 		}
-		return fmt.Errorf("fix #%d not found: only %d available; run: cully list", n, len(applyable))
+		return fmt.Errorf("fix #%d not found: only %d available; run: cully suggestions", n, len(applyable))
 	}
 	reportIdx, err := applyableReportIndex(session, n)
 	if err != nil {

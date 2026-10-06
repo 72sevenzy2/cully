@@ -9,15 +9,27 @@ go build -o ./build/cully ./cmd/cully
 ./build/cully install
 ```
 
-The installer detects configured agents, adds their supported session integrations and installs the combined Cully skill. Target an agent explicitly with `cully install claude`, `cully install codex`, `cully install cursor`, or `cully install all`. Restart the agent after configuration changes.
+The installer detects configured agents, adds their supported session integrations and installs the combined Cully skill. The installer starts the local advisor daemon. Target an agent explicitly with `cully install claude`, `cully install codex`, `cully install cursor`, or `cully install all`. Restart the agent after configuration changes.
 
-Use `cully systems` to inspect integrations, `cully list` to review suggestions and `cully apply 1 --dry-run` to preview a change. The full command list is in [session controls](flightdeck/README.md).
+Use `cully status` to inspect integrations, `cully suggestions` to review suggestions and `cully apply 1 --dry-run` to preview a change. The full command list is in [session controls](flightdeck/README.md).
 
 When the first Cully binary release is published, the repository's `install.sh` will download the matching macOS/Linux CLI archive. Historical Flightdeck and Buddy releases are not Cully CLI builds; until then, use the source build above.
 
 ## Shared memory connection
 
-The planned endpoint is `https://mcp.mcpruntime.org/cully/mcp`. It becomes available after the future deployment and OAuth resource registration. Configure the remote server and complete OAuth using the [per-agent client instructions](../clients/README.md).
+The planned endpoint is `https://mcp.mcpruntime.org/cully/mcp`. It becomes available after the future deployment and OAuth resource registration. Configure one coding agent at a time:
+
+```sh
+cully mcp add --agent codex
+cully mcp add --agent claude
+cully mcp add --agent cursor --url https://my-server.example/mcp
+```
+
+With no `--agent`, setup proceeds only if exactly one agent is detected. There is no `--agent all`. `--url` selects a self-hosted or other operator-managed endpoint; the default selects the planned Cully hosted service. Setup adds a user-level connection and preserves unrelated client settings. An existing Cully entry with a different endpoint is preserved: edit that entry explicitly before switching.
+
+For Codex, complete sign-in with `codex mcp login cully`. For Claude Code, restart and sign in through `/mcp`; for Cursor, restart and use its MCP settings. See the [per-agent client instructions](../clients/README.md).
+
+`cully install` configures the local advisor, hooks, commands and skill. `cully mcp add` configures the remote connection. Neither command deploys `cully-mcp`, `cully-data`, PostgreSQL or Mem0. [Server operators](hosting.md) configure those components.
 
 Read tools require `tools:read`; logging, editing and deletion require `tools:write`. The issuer must grant those scopes for the new resource.
 

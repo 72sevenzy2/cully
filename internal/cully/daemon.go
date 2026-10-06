@@ -56,13 +56,10 @@ func RunDaemonStatus(w io.Writer) {
 		if len(pending) > 0 {
 			fmt.Fprintf(w, "  queued jobs: %d\n", len(pending))
 		}
-		if info, err := os.Stat(memoryFile()); err == nil {
-			fmt.Fprintf(w, "  memory: %s (%d bytes)\n", memoryFile(), info.Size())
-		}
 		return
 	}
 	fmt.Fprintln(w, "cully advisor daemon not running")
-	fmt.Fprintln(w, "  start with: cully daemon start")
+	fmt.Fprintln(w, "  run cully install to start the advisor")
 }
 
 // StartDaemonDetached launches the long-running advisor daemon in the background.
@@ -74,7 +71,7 @@ func StartDaemonDetached() error {
 	if err != nil {
 		return err
 	}
-	cmd := exec.Command(exe, "daemon", "run")
+	cmd := exec.Command(exe, "_internal", "daemon")
 	cmd.Env = append(os.Environ(), "MODEL_HINT_GUARD=1")
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
 	null, err := os.OpenFile(os.DevNull, os.O_RDWR, 0)
@@ -117,7 +114,7 @@ func StopDaemon() error {
 	return nil
 }
 
-// RunDaemon runs the foreground advisor daemon (internal: cully daemon run).
+// RunDaemon runs the foreground advisor daemon (internal: cully _internal daemon).
 func RunDaemon() {
 	if os.Getenv("CULLY_ANALYZE_DISABLE") == "1" {
 		fmt.Fprintln(os.Stderr, "daemon: CULLY_ANALYZE_DISABLE is set")
@@ -143,7 +140,6 @@ func RunDaemon() {
 	defer cancel()
 	go acquisitionLoop(ctx)
 	go advisorLoop(ctx)
-	go memoryLoop(ctx)
 
 	sigc := make(chan os.Signal, 1)
 	signal.Notify(sigc, syscall.SIGINT, syscall.SIGTERM)
@@ -299,7 +295,7 @@ func spawnOneShotWorker(sigPath, session, cwd string) {
 		logf(session, "spawnWorker: executable: %v", err)
 		return
 	}
-	cmd := exec.Command(exe, "worker", sigPath, session, cwd)
+	cmd := exec.Command(exe, "_internal", "worker", sigPath, session, cwd)
 	cmd.Env = append(os.Environ(), "MODEL_HINT_GUARD=1")
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
 	if null, err := os.OpenFile(os.DevNull, os.O_RDWR, 0); err == nil {
