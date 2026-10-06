@@ -32,7 +32,7 @@ Keep the data API token identical on both sides. The MCP workload does not recei
 
 `.env.example` lists `CULLY_DB_NAME`, `CULLY_DB_USER`, `CULLY_DB_PASSWORD` and `CULLY_DB_VOLUME` for the existing database. These values describe actual storage assets; changing their names does not migrate their contents. `CULLY_DB_VOLUME` must identify the existing external volume. Construct a correctly escaped database URL separately.
 
-The root Compose workspace network is external and must already exist. The [fresh self-hosted Compose example](/hosting#fresh-single-user-compose-installation) creates its own network and volume. Self-hosted Mem0 must be reachable from the data service's network. Configuration alone does not start or reconfigure an existing Mem0 instance.
+The root Compose workspace network is external and must already exist. The [fresh self-hosted Compose example](/hosting#minimal-single-user-compose-installation) creates its own network and volume. The [full-stack command](/hosting#one-command-full-stack) also starts a private Mem0 service and its persistent database. A separately operated Mem0 service must be reachable from the data service's network.
 
 ## Local CLI
 

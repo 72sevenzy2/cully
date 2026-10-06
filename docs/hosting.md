@@ -18,7 +18,21 @@ Cully's local advisor runs on your machine. The optional MCP service talks to a 
 
 No-OAuth mode makes no identity-provider or JWKS requests. Cully never accepts an owner from a tool input. Keep a stable `CULLY_MCP_OWNER` to access the same records over time. Do not expose no-OAuth mode on an untrusted public route. OAuth is provider-neutral: MCP Auth with a connector is one option, while another compatible authorization server can work too. See [OAuth deployment](/oauth).
 
-## Fresh single-user Compose installation
+## One-command full stack
+
+For a fresh self-hosted instance, copy [`deploy/self-hosted/.env.example`](https://github.com/mcp-runtime/cully/blob/main/deploy/self-hosted/.env.example) to `.env` and fill in the database password and URL, private API token, stable `CULLY_MCP_OWNER`, Mem0 database password, JWT secret, API key, and embedding-provider key. Keep `.env` private. From `deploy/self-hosted`, run:
+
+```sh
+./start.sh codex
+```
+
+The script starts Cully's PostgreSQL database, a separate persistent Mem0 database, the self-hosted Mem0 REST server, Cully's data API, and Cully MCP. It runs the Cully schema migration first. If the Cully CLI is already installed, the `codex` argument also installs its local integration and shared Cully skill and registers the loopback MCP URL. Use `claude` or `cursor` instead, or omit the argument to start services only. Restart the agent after setup. This is a fresh-install stack; do not point it at an existing personal database volume.
+
+For OAuth, also fill in `CULLY_AUTH_ISSUER`, `CULLY_AUTH_RESOURCE`, `CULLY_JWKS_URL`, `CULLY_MCP_HOST`, and the HTTPS routing values in `.env`. The server cannot infer an issuer or signing keys from the client flag. With an existing authorization server, run `./start.sh --oauth existing`; with a new MCP Auth broker and Keycloak connector, prepare its connector JSON, signing key, and Keycloak client secret as described in [OAuth deployment](/oauth), then run `./start.sh --oauth mcp-auth`. To register an agent in that same command, append `--mcp-url https://mcp.example.com/mcp codex`; the URL must equal `CULLY_AUTH_RESOURCE` in `.env`.
+
+The full stack builds Mem0 from a [pinned upstream source commit](https://github.com/mem0ai/mem0/tree/c93420c49a6b14c3d446bdb156d96811908fd90a/server) because its published image is stale. It uses an OpenAI embedding key by default; authored memory text is sent to that embedding provider. Mem0 fact extraction is disabled. You can configure another Mem0 embedder separately. The Mem0 API and both databases stay on private Compose networks. The only published MCP port binds to loopback.
+
+## Minimal single-user Compose installation
 
 The files in [`deploy/self-hosted`](https://github.com/mcp-runtime/cully/tree/main/deploy/self-hosted) build the MCP and data binaries, create a PostgreSQL volume and bind MCP to `127.0.0.1:8080`. From the repository root:
 
@@ -34,7 +48,7 @@ docker compose up -d --build data-api mcp
 curl -fsS http://127.0.0.1:8080/healthz
 ```
 
-Connect a local agent with `cully mcp add --agent codex --url http://127.0.0.1:8080/mcp`. A remote agent needs a private tunnel or trusted network route. The example does not ship a Mem0 server: set `CULLY_MEM0_URL` and `CULLY_MEM0_API_KEY` only after provisioning the [self-hosted Mem0 REST service](/mem0). `cully_recall` requires Mem0; logging, text search and recent records work without it.
+Connect a local agent with `cully install codex --mcp-url http://127.0.0.1:8080/mcp`, which installs the skill and registers MCP together. A remote agent needs a private tunnel or trusted network route. This minimal example does not start Mem0: set `CULLY_MEM0_URL` and `CULLY_MEM0_API_KEY` only after provisioning the [self-hosted Mem0 REST service](/mem0), or use `./start.sh` for the full stack. `cully_recall` requires Mem0; logging, text search and recent records work without it.
 
 ## OAuth installation
 

@@ -2,15 +2,36 @@
 # cully installer — downloads a prebuilt, dependency-free binary and
 # self-registers it for detected coding agents. No Go, no jq, no runtime required.
 #
-#   curl -fsSL https://raw.githubusercontent.com/mcp-runtime/cully/main/install.sh | bash
+#   curl -fsSL https://raw.githubusercontent.com/mcp-runtime/cully/main/install.sh | bash -s -- --agent codex --mcp-url http://127.0.0.1:8080/mcp
 #
 # Env overrides: CULLY_VERSION (e.g. v0.1.0), CLAUDE_CONFIG_DIR, CODEX_HOME,
-# CURSOR_CONFIG_DIR.
+# CURSOR_CONFIG_DIR. Add --oauth only when the MCP server requires OAuth.
 set -euo pipefail
 
 REPO="mcp-runtime/cully"
 CLAUDE_DIR="${CLAUDE_CONFIG_DIR:-$HOME/.claude}"
 BIN_DIR="$CLAUDE_DIR/bin"
+
+agent=""
+mcp_url=""
+oauth=false
+while [ "$#" -gt 0 ]; do
+  case "$1" in
+    --agent)
+      [ "$#" -ge 2 ] || { echo '--agent requires a value' >&2; exit 2; }
+      agent="$2"; shift 2 ;;
+    --mcp-url)
+      [ "$#" -ge 2 ] || { echo '--mcp-url requires a value' >&2; exit 2; }
+      mcp_url="$2"; shift 2 ;;
+    --oauth) oauth=true; shift ;;
+    *) echo "unknown installer option: $1" >&2; exit 2 ;;
+  esac
+done
+[ "$oauth" = false ] || [ -n "$mcp_url" ] || { echo '--oauth requires --mcp-url' >&2; exit 2; }
+case "$agent" in
+  ""|claude|codex|cursor|all) ;;
+  *) echo 'choose --agent claude, codex, cursor, or all' >&2; exit 2 ;;
+esac
 
 die() { printf '\033[31mx\033[0m %s\n' "$1" >&2; exit 1; }
 say() { printf '\033[36m==>\033[0m %s\n' "$1"; }
@@ -88,5 +109,9 @@ install -m 0755 "$tmp_bin" "$BIN_DIR/cully"
 [ "$os" = "darwin" ] && xattr -d com.apple.quarantine "$BIN_DIR/cully" 2>/dev/null || true
 
 say "Installed binary -> $BIN_DIR/cully ($("$BIN_DIR/cully" version 2>/dev/null || echo "$ver"))"
-say "Registering detected coding agents"
-"$BIN_DIR/cully" install
+install_args=()
+[ -z "$agent" ] || install_args+=("$agent")
+[ -z "$mcp_url" ] || install_args+=(--mcp-url "$mcp_url")
+[ "$oauth" = false ] || install_args+=(--oauth)
+say "Registering coding agents${mcp_url:+ and MCP endpoint}"
+"$BIN_DIR/cully" install "${install_args[@]}"

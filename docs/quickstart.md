@@ -41,10 +41,12 @@ Local guidance is optional and advisory. Cully preserves unrelated, user-owned a
 
 ## Add shared memory when your server is ready
 
-If you run a Cully MCP service, connect one agent to it:
+For a fresh full-stack self-hosted deployment, configure `deploy/self-hosted/.env` and run `./start.sh codex` from that directory. This starts Cully MCP, its data API, PostgreSQL and self-hosted Mem0. With the Cully CLI installed, it also installs the shared skill and registers the local MCP URL. See [hosting](/hosting#one-command-full-stack).
+
+If your server is already running, connect one agent and install the shared skill together:
 
 ```sh
-./build/cully mcp add --agent codex --url http://127.0.0.1:8080/mcp
+./build/cully install codex --mcp-url http://127.0.0.1:8080/mcp
 ```
 
 The default single-user server needs no login. If the operator enables OAuth, use a public HTTPS URL and add `--oauth` to the setup command; then run `codex mcp login cully`. See [agent setup](/agents) for Claude Code and Cursor. The default hosted MCP endpoint is planned and is not yet available for new connections. The local advisor works without it.

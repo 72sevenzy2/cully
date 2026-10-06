@@ -6,7 +6,9 @@ Deploy Mem0 separately on the existing memory VM, or connect Cully to an existin
 
 Set `CULLY_MEM0_URL` and `CULLY_MEM0_API_KEY` on `cully-data`. Both are required to enable indexing. These values are never needed in the public MCP workload or coding-agent configuration. The base URL must omit a trailing endpoint path such as `/search`; a reverse-proxy base prefix is supported.
 
-The VM Compose file deliberately does not invent a Mem0 image or change an existing Mem0 deployment. Attach the self-hosted Mem0 service to a network reachable from `data-api`, configure the actual URL, and verify the documented API contract with that pinned upstream version. Mem0 maintains its own runtime and dependency requirements; the Cully CLI, MCP server and data API have no Python runtime dependency.
+The existing-VM root Compose file deliberately does not replace an existing Mem0 deployment. The fresh-install [`deploy/self-hosted/compose.mem0.yaml`](https://github.com/mcp-runtime/cully/blob/main/deploy/self-hosted/compose.mem0.yaml) builds the pinned upstream Mem0 server, provisions its own persistent PostgreSQL database and history volume, and keeps its REST endpoint private. `./start.sh` brings it up with Cully's other services. Mem0 maintains its own Python runtime inside its container; the Cully CLI, MCP server and data API have no Python runtime dependency.
+
+The full-stack example uses OpenAI embeddings by default, so authored summaries leave the host for that provider. `infer=false` skips Mem0 fact extraction. Operators can configure a different embedder in their Mem0 build/configuration; a separate Mem0 instance can still be used through `CULLY_MEM0_URL` and `CULLY_MEM0_API_KEY`.
 
 Each source entry gets an owner-scoped Mem0 projection. The Mem0 user ID is a SHA-256 namespace derived from the Cully owner (fixed single-user owner or verified OAuth subject), and `run_id` is the Cully entry UUID. The projection carries section/project/category and source-update provenance. This is a service-mediated owner boundary; agents never receive the Mem0 service key.
 

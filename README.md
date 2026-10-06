@@ -41,6 +41,7 @@ Configure shared memory separately using the [installation guide](docs/installat
 - [Architecture](docs/architecture.md)
 - [Configuration](docs/configuration.md)
 - [Self-hosted Mem0](docs/mem0.md)
+- [One-command self-hosted stack](docs/hosting.md#one-command-full-stack)
 - [Hosted and self-hosted setup](docs/hosting.md)
 - [VM migration](docs/migration.md)
 - [Website, docs and DNS](docs/website.md)

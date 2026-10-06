@@ -7,6 +7,8 @@ description: Set up Cully's local advisor and optional shared memory in Claude C
 
 Cully has two setup commands. `cully install` adds the local advisor integration. `cully mcp add` adds one remote shared-memory connection. You can use the local advisor on its own.
 
+You can do both setup steps together with `cully install codex --mcp-url URL`, or pass `--agent codex --mcp-url URL` to the [release installer](/installation#release-installer). Add `--oauth` only if that endpoint uses OAuth. The Cully skill then guides session checks and calls the configured `cully_*` memory tools when useful.
+
 ## Claude Code
 
 ```sh

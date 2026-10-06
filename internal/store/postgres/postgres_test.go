@@ -47,7 +47,7 @@ func TestEndToEndMCPDatabase(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	server := httptest.NewServer(mcpt.Handler(memory.Service{Store: httpStore}, verify, issuer, resource, "/mcp", "test"))
+	server := httptest.NewServer(mcpt.Handler(memory.Service{Store: httpStore}, mcpt.AuthConfig{Mode: "oauth", Verifier: verify, Issuer: issuer, Resource: resource}, "/mcp", "test"))
 	defer server.Close()
 	connect := func(owner, scope string) *sdk.ClientSession {
 		t.Helper()

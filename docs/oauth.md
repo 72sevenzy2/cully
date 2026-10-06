@@ -2,7 +2,9 @@
 
 OAuth is optional. `cully-mcp` starts without it by default; use `cully-mcp --oauth` or `CULLY_MCP_AUTH_MODE=oauth` to enable bearer validation. Cully accepts a compatible authorization server that issues RS256 JWTs with an exact issuer, MCP resource audience, subject, expiration and `tools:read` or `tools:write` scopes. Your authorization server and identity provider determine login, users and grants.
 
-The Compose examples reuse the [single-user stack](/hosting#fresh-single-user-compose-installation). They add Caddy for HTTPS and replace the fixed owner with token subjects. Set public DNS and allow ports 80/443 to reach the host before starting Caddy. Keep the data API and PostgreSQL private.
+The Compose examples reuse the [single-user stack](/hosting#minimal-single-user-compose-installation). They add Caddy for HTTPS and replace the fixed owner with token subjects. Set public DNS and allow ports 80/443 to reach the host before starting Caddy. Keep the data API and PostgreSQL private.
+
+The **agent** only needs the MCP URL and `--oauth` at installation. The **operator** needs the issuer, exact resource URL, JWKS URL and HTTPS routing before starting the server. A new MCP Auth broker additionally needs a selected upstream connector, signing key, persistent state and upstream client secret. The full-stack `./start.sh` script can start Mem0 and both databases in either OAuth option after these values are configured.
 
 ## Existing authorization server
 
@@ -28,6 +30,8 @@ curl -fsS https://mcp.example.com/.well-known/oauth-protected-resource/mcp
 
 `Caddyfile.existing-auth` routes only the MCP host. The existing authorization server and its TLS route remain independently operated. The base Compose file also binds port 8080 on loopback for local diagnostics; public traffic enters through Caddy.
 
+For the complete fresh stack including Mem0, fill in the Mem0 values in `.env` and use `./start.sh --oauth existing`. With an installed Cully CLI, `./start.sh --oauth existing --mcp-url https://mcp.example.com/mcp codex` also installs the Cully skill and registers the agent. Pass the exact `CULLY_AUTH_RESOURCE` value as `--mcp-url`.
+
 ## New MCP Auth with a Keycloak connector
 
 [MCP Auth](https://github.com/mcp-runtime/mcp-auth/blob/main/docs/auth-server.md) can broker authorization for Cully. It is an authorization server in front of an upstream identity provider; it does not replace your identity management. Keycloak is one connector example. You can select another provider using MCP Auth's connector configuration, or choose a different authorization server.
@@ -47,6 +51,8 @@ curl -fsS https://mcp.example.com/.well-known/oauth-protected-resource/mcp
 ```
 
 The example pins `princekrroshan01/mcp-auth-server:0.3.0`, persists its SQLite state and signing key, enables dynamic client registration for Claude Code and Cursor, and enables trusted proxy TLS because Caddy is its only ingress. If you change the proxy or provider, adjust these settings. Preserve the signing key and state across upgrades: existing tokens, registrations and sessions depend on them.
+
+For the complete fresh stack including Mem0, fill in its values in `.env` and use `./start.sh --oauth mcp-auth`. With the CLI installed, append `--mcp-url https://mcp.example.com/mcp codex` for agent setup in the same command. `start.sh` checks that the connector JSON and signing-key file exist before starting this mode.
 
 ## Connect an agent
 

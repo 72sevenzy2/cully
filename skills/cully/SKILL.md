@@ -1,34 +1,31 @@
 ---
 name: cully
-description: Help the user guide coding agents, improve project workflows and recall how they work; remember personal context when asked and use it to help with everyday life.
+description: Use Cully to inspect coding sessions, improve agent workflows, and save or recall useful work and personal context through a configured Cully MCP server.
 ---
 
 <!-- cully:skill:managed -->
 # Cully
 
-Your companion for better work and everyday life. Use remembered work, approaches, decisions and lessons to understand the user's workflow and suggest practical improvements. Focus on software engineering, coding-agent orchestration and project management; remember personal context when the user asks and use it to support their goals and routines.
+Use the installed `cully` CLI for local session guidance and the configured Cully MCP tools for durable records. These are independent: local guidance works without a server, and the MCP connection may use a private single-owner endpoint or OAuth. Do not assume a particular URL, login flow, or Mem0 setup.
 
-Use the local `cully` command for session instruments and controls. Use the configured Cully MCP server for shared memory across agents and devices. PostgreSQL holds source records; self-hosted Mem0 supplies optional semantic recall.
+## Guide the current work
 
-## Session controls
+- Use `cully status` when session state, context pressure, route drift, tool faults, or agent integration matters. It also reports configured agents, MCP servers, skills, and graphify state.
+- Use `cully suggestions` to find improvements to project instructions, MCP setup, or skills. Preview a numbered suggestion with `cully apply <n> --dry-run` before changing files or agent settings. Apply a suggestion only when the user requests it or approves the concrete change.
+- Explain advice in terms of the user's current task. Avoid interrupting unrelated work with routine status checks.
 
-1. Run `cully status` to inspect the current session, agent setup and advisor.
-2. Run `cully suggestions` to review improvements and `cully apply <n> --dry-run` to preview a change. Apply only when requested; suggestions remain advisory.
-3. Use Cully MCP tools for durable memory. Local session diagnostics are not shared-memory records; Cully does not scan all agent transcripts into a second memory store.
+## Find useful context
 
-Claude uses the Cully status line and hooks. Codex uses its native status fields and `/prompts:cully`. Cursor uses its project `/cully` command. Do not promise hooks or custom status rendering that a client does not expose.
+- Before answering a question about earlier work, search the configured Cully MCP server with `cully_search`. Filter by project, section, or date when known; broaden a search if a narrow query misses relevant records.
+- Use `cully_recall` when semantic similarity would help and Mem0 is configured. It may lag a recent write. `cully_recent` helps when chronology matters; `cully_projects` helps discover active project records; `cully_get` retrieves a specific record.
+- Ground claims about past work in the returned records. Include dates or record IDs when they help the user verify the answer, and say when no matching record was found.
 
-## Shared memory
+## Preserve what matters
 
-- Derive project identity from the current Git remote and normalize to `https://github.com/OWNER/REPO`. Do not guess repository identity from a local directory name.
-- Choose `personal` or `company`. Personal categories include career, fitness, relationship, finance, food, water, reading, mood, check-in and other. Company is an owner's section, not organization-wide sharing.
-- Save personal context when the user asks to remember it. Use existing personal memory when relevant to their request; do not infer or log private details from unrelated coding sessions.
-- After substantive work, call `cully_log` with the assistant name, a concise summary and useful approach, outcome, issue, learning or next steps. Choose work, issue, learning or decision as entry type. Do not log each command or trivial edit.
-- Before answering history questions, use `cully_search`, scoped to the relevant project and section. Use `cully_recall` for semantic recall through self-hosted Mem0 when configured. Cite dates and source record IDs. Say when no matching memory exists.
-- Use `cully_get` before correcting a record with `cully_update`. Empty optional text clears a field. Use `cully_delete` only for records the user asked to remove.
-- Do not save tokens, credentials, private keys or raw transcripts. Keep personal notes relevant to the user's requested memory.
-- A shared write succeeds only when the MCP tool returns success. If the service is unavailable, report it and continue independent work. Mem0 indexing is asynchronous and may lag a confirmed PostgreSQL write.
+- Use `cully_log` after substantive work to keep a concise decision, outcome, lesson, or unresolved issue that is likely to help later. Record personal context when the user asks or it directly supports their request. Do not log every command, transient detail, or full transcript.
+- Set `assistant` to the agent in use and `section` to `personal` or `company`. Ask when the section is material and unclear. `company` is still scoped to the configured owner; it is not automatically shared with an organization. Set `entry_type` to `work`, `issue`, `learning`, or `decision` when useful.
+- For a GitHub project, derive `project_url` from the Git remote and normalize it to `https://github.com/OWNER/REPO`. Omit it when the repository identity is unknown; do not guess from a directory name. Use a personal category only when it adds useful context.
+- Use `cully_get` before correcting a record with `cully_update`. Use `cully_delete` only when the user asks to remove that record.
+- Never save credentials, private keys, raw transcripts, or unrelated personal details. Report a write only after the tool confirms it. If MCP is unavailable, explain that the shared record was not saved and continue the user's task.
 
-## Connection
-
-The planned OAuth endpoint is `https://mcp.mcpruntime.org/cully/mcp`. Register its exact resource identifier with the issuer and grant `tools:read` and `tools:write` as appropriate. The private data API and Mem0 service are not agent-facing endpoints. The repository rename does not deploy this endpoint; follow the migration runbook before reconnecting clients.
+PostgreSQL holds source records. When enabled, self-hosted Mem0 performs semantic indexing and recall; a successful write can appear there after a short delay. The private data API and Mem0 key are operator settings, never agent configuration.

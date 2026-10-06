@@ -1,6 +1,10 @@
 package main
 
-import "testing"
+import (
+	"os"
+	"path/filepath"
+	"testing"
+)
 
 func TestApplyFlagsAfterNumber(t *testing.T) {
 	n, yes, dry, cwd, err := parseApply([]string{"2", "--dry-run", "--yes", "--cwd", "/tmp/my project"})
@@ -18,6 +22,23 @@ func TestRemovedCommands(t *testing.T) {
 	for _, name := range []string{"memory", "list", "systems", "plan", "checklist", "debrief", "daemon", "worker", "statusline", "analyze", "cleanup"} {
 		if err := run([]string{name}); err == nil {
 			t.Fatalf("old public command %s still exists", name)
+		}
+	}
+}
+
+func TestInstallMCPOptionsFailBeforeChangingAgentSetup(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv("CODEX_HOME", dir)
+	for _, args := range [][]string{
+		{"codex", "--oauth"},
+		{"codex", "--mcp-url", "not-a-url"},
+		{"--mcp-url", "not-a-url", "codex"},
+	} {
+		if err := runInstall(args); err == nil {
+			t.Fatalf("accepted invalid install options: %v", args)
+		}
+		if _, err := os.Stat(filepath.Join(dir, "config.toml")); !os.IsNotExist(err) {
+			t.Fatalf("modified agent config for invalid options: %v", err)
 		}
 	}
 }

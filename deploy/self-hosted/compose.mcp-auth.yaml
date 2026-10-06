@@ -1,5 +1,8 @@
 # Add to compose.yaml and compose.oauth.yaml when running a new MCP Auth broker.
 services:
+  caddy:
+    environment:
+      CULLY_AUTH_HOST: ${CULLY_AUTH_HOST:?set public auth host}
   mcp-auth:
     image: princekrroshan01/mcp-auth-server:0.3.0
     restart: unless-stopped

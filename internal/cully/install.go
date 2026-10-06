@@ -16,6 +16,17 @@ import (
 // auto-detects coding agents present on this machine/project and installs those
 // integrations.
 func Install(targets ...string) error {
+	return InstallWithMCP("", false, targets...)
+}
+
+// InstallWithMCP installs local guidance and optionally registers one MCP URL
+// for each selected agent. The operator deploys the server separately.
+func InstallWithMCP(endpoint string, oauth bool, targets ...string) error {
+	if endpoint != "" {
+		if err := validateMCPURL(endpoint); err != nil {
+			return err
+		}
+	}
 	cwd, _ := os.Getwd()
 	if len(targets) == 0 {
 		targets = detectedInstallTargets(cwd)
@@ -40,13 +51,20 @@ func Install(targets ...string) error {
 		if err := installMemorySkill(target); err != nil {
 			return err
 		}
+		if endpoint != "" {
+			if err := AddMCP(os.Stdout, target, endpoint, oauth); err != nil {
+				return err
+			}
+		}
 	}
 	if err := StartDaemonDetached(); err != nil {
 		fmt.Println("Advisor unavailable; rerun cully install to retry:", err)
 	} else {
 		fmt.Println("Advisor started; inspect with cully status")
 	}
-	fmt.Println("Connect shared memory with: cully mcp add")
+	if endpoint == "" {
+		fmt.Println("Connect shared memory with: cully mcp add")
+	}
 	return nil
 }
 
