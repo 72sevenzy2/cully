@@ -101,7 +101,7 @@ func RunWorker(sigPath, session, cwd string) {
 			} else {
 				researchState = advisorSourceState(out2, "RESEARCH", false)
 				logf(session, "worker: phase2 search completed")
-				if tool := emojiLines(out2, 1); len(tool) > 0 {
+				if tool := emojiLines(out2, 1); researchState == "checked" && len(tool) > 0 {
 					// a tool audit is an advisory, not an instrument warning.
 					lines = append(lines, "ADV|"+tool[0])
 					if len(lines) > 4 {
