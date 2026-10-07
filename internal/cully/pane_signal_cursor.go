@@ -17,8 +17,8 @@ import (
 //
 // Assumptions: tool_input / result_json may arrive as a JSON string or an
 // object, so both are decoded defensively; a shell command carries no exit
-// status, so it is never marked failed; file paths, edits and output are never
-// retained. hooks.json has no async option, so the handler stays fast.
+// status, so it is never marked failed; only project-relative file paths and command
+// labels are recorded (see journal.go); edits and output are never retained. hooks.json has no async option, so the handler stays fast.
 type cursorHookPayload struct {
 	HookEvent      string          `json:"hook_event_name"`
 	ConversationID string          `json:"conversation_id"`
@@ -68,6 +68,7 @@ func cursorToolEvent(data []byte) (codexToolEvent, bool) {
 		event.ToolInput, _ = json.Marshal(map[string]string{"command": p.Command})
 	case "afterFileEdit":
 		event.ToolName = "Edit"
+		event.ToolInput, _ = json.Marshal(map[string]string{"file_path": p.FilePath})
 	case "afterMCPExecution":
 		if p.ToolName == "" {
 			return codexToolEvent{}, false
@@ -79,6 +80,9 @@ func cursorToolEvent(data []byte) (codexToolEvent, bool) {
 			return codexToolEvent{}, false
 		}
 		event.ToolName = cursorNormalToolName(p.ToolName)
+		if strings.EqualFold(p.ToolName, "delete") {
+			event.ToolName = "Delete"
+		}
 		event.ToolInput, event.ToolResponse = cursorRawJSON(p.ToolInput), cursorRawJSON(p.ToolOutput)
 		if p.HookEvent == "postToolUseFailure" || p.ErrorMessage != "" || p.FailureType != "" {
 			event.ToolResponse = json.RawMessage(`{"is_error":true}`)
@@ -95,8 +99,10 @@ func cursorNormalToolName(name string) string {
 	switch strings.ToLower(name) {
 	case "shell":
 		return "Bash"
-	case "write", "edit", "strreplace", "str_replace", "delete":
+	case "edit", "strreplace", "str_replace":
 		return "Edit"
+	case "write":
+		return "Write"
 	}
 	return name
 }

@@ -30,6 +30,8 @@ Usage:
   cully claude|codex|cursor [ARGS...]     Shortcuts for cully run claude, codex and cursor-agent
   cully timeline [--all] [--session ID] [--cwd DIR]
                                          Show what happened in a coding session
+  cully replay [--session ID] [--cwd DIR] [--steps] [--files] [--speed N|--instant] [--json] [--html [FILE]]
+                                         Replay what the agent did: stages, files, commands, checks
   cully handoff [AGENT] [--print] [--cwd DIR]
                                          Hand the session to another coding agent
   cully apply <n> [--dry-run] [--yes] [--cwd DIR]
@@ -85,6 +87,8 @@ func run(args []string) error {
 		return cully.RunPane(args[0], args[1:], os.Stdin, os.Stdout)
 	case "timeline":
 		return cully.RunTimeline(os.Stdout, args[1:])
+	case "replay":
+		return cully.RunReplay(os.Stdout, args[1:])
 	case "handoff":
 		return cully.RunHandoff(args[1:], os.Stdin, os.Stdout)
 	case "apply":

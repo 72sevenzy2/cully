@@ -212,7 +212,7 @@ func codexToolClass(event codexToolEvent) byte {
 	if i := strings.LastIndex(name, "__"); i >= 0 {
 		name = name[i+2:]
 	}
-	if name == "apply_patch" || name == "edit" || name == "write" {
+	if name == "apply_patch" || name == "edit" || name == "write" || name == "delete" {
 		return 'E'
 	}
 	if name == "bash" || name == "exec_command" {
@@ -345,14 +345,30 @@ func codexToolCommand(event codexToolEvent) string {
 	return input.Cmd
 }
 
-// recordJournalTool adds one hook event to the session journal. Only the tool
-// class, success, tool name and a one-way command hash are stored.
+// recordJournalTool adds one hook event to the session journal. It stores the
+// tool class, success, tool name, a one-way command hash and, unless
+// CULLY_JOURNAL_PATHS=0, the project-relative file operations and command
+// label described in journal.go. Contents, arguments and output are never read.
 func recordJournalTool(agent, session string, event codexToolEvent, class byte, failed bool) {
-	entry := journalEvent{Agent: agent, Class: string(class), Failed: failed}
+	entry := journalEvent{Time: time.Now().UTC(), Agent: agent, Class: string(class), Failed: failed}
+	var extra []fileOp
 	if codexCullyTool(event.ToolName) != "" {
 		entry.Class, entry.Tool = journalMemory, codexCullyTool(event.ToolName)
-	} else if class == 'T' || failed {
-		entry.Sig = commandSig(codexToolCommand(event))
+	} else {
+		if class == 'T' || failed {
+			entry.Sig = commandSig(codexToolCommand(event))
+		}
+		if journalPathsEnabled() {
+			ops, cmd := extractToolActivity(event)
+			entry.Cmd = cmd
+			if len(ops) > 0 {
+				entry.Path, entry.Op, entry.To = ops[0].Path, ops[0].Op, ops[0].To
+				extra = ops[1:]
+			}
+		}
 	}
 	appendJournal(event.Cwd, session, entry)
+	for _, o := range extra {
+		appendJournal(event.Cwd, session, journalEvent{Time: entry.Time, Agent: agent, Class: journalFileOp, Failed: failed, Path: o.Path, Op: o.Op, To: o.To})
+	}
 }
