@@ -169,6 +169,7 @@ func installClaude() error {
 	setEventHook(m, "SessionStart", quote(exe)+" _internal continuity claude start", "continuity claude start")
 	setEventHook(m, "Stop", quote(exe)+" _internal continuity claude stop", "continuity claude stop")
 	setEventHook(m, "SessionEnd", quote(exe)+" _internal cleanup", "cleanup")
+	setClaudePaneSignalHook(m, exe)
 
 	if err := writeSettings(settingsPath, m); err != nil {
 		return err
@@ -179,7 +180,7 @@ func installClaude() error {
 		fmt.Println("Registered /cully (status · suggestions · apply).")
 	}
 	fmt.Printf("\033[32mInstalled.\033[0m Registered cully in %s\n", settingsPath)
-	fmt.Println("Restart Claude Code (or run /hooks) so advisor and continuity hooks load. The status bar is live immediately.")
+	fmt.Println("Restart Claude Code (or run /hooks) so advisor and continuity hooks load. The status bar is live immediately.\nFor the terminal with live signals, start Claude with: cully run claude")
 	fmt.Println("Accept a suggestion: cully apply <n>  (updates agent instructions, MCP, skills after you confirm)")
 	return nil
 }
@@ -210,7 +211,7 @@ func installCodex(cwd string) error {
 	fmt.Printf("\033[32mInstalled.\033[0m Registered Cully for Codex in %s\n", cwd)
 	fmt.Printf("Codex continuity hooks configured in %s; review them with /hooks.\n", codexHooksPath())
 	fmt.Printf("Codex cully prompt available as /prompts:cully -> %s\n", codexPromptPath())
-	fmt.Println("For the live status view, start Codex with: cully codex")
+	fmt.Println("For the live status view, start Codex with: cully run codex")
 	return nil
 }
 
@@ -232,6 +233,7 @@ func installCursor(cwd string) error {
 	fmt.Printf("\033[32mInstalled.\033[0m Registered shared Cully skill for Cursor in %s\n", sharedSkillPath(cwd, "cully"))
 	fmt.Printf("Cursor continuity hooks configured in %s\n", cursorHooksPath())
 	fmt.Printf("Cursor cully command available as /cully -> %s\n", cursorCommandPath(cwd))
+	fmt.Println("For the live status view, start Cursor with: cully run cursor")
 	return nil
 }
 
@@ -306,6 +308,7 @@ func uninstallClaude() error {
 		removeEventHook(m, "SessionStart", quote(exe)+" _internal continuity claude start", "continuity claude start")
 		removeEventHook(m, "Stop", quote(exe)+" _internal continuity claude stop", "continuity claude stop")
 		removeEventHook(m, "SessionEnd", quote(exe)+" _internal cleanup", "cleanup")
+		removeEventHook(m, "PostToolUse", "", "pane-signal claude")
 		if err := writeSettings(settingsPath, m); err != nil {
 			return err
 		}
@@ -456,6 +459,16 @@ func setEventHook(m map[string]any, event, cmd, sub string) {
 	})
 	hooks[event] = list
 	m["hooks"] = hooks
+}
+
+// setClaudePaneSignalHook registers the asynchronous PostToolUse hook that
+// feeds the Cully terminal panel.
+func setClaudePaneSignalHook(m map[string]any, exe string) {
+	setEventHook(m, "PostToolUse", quote(exe)+" _internal pane-signal claude", "pane-signal claude")
+	groups := toList(m["hooks"].(map[string]any)["PostToolUse"])
+	handler := toList(groups[len(groups)-1].(map[string]any)["hooks"])[0].(map[string]any)
+	handler["async"] = true
+	handler["timeout"] = 5
 }
 
 func removeEventHook(m map[string]any, event, cmd, sub string) {

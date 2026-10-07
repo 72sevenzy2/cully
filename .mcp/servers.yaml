@@ -1,7 +1,7 @@
 version: v1
 servers:
     - name: cully
-      description: Your companion for better work and everyday life
+      description: Intelligence around your coding agents
       image: registry.mcpruntime.org/org/cully-mcp/cully
       imageTag: dev
       route: /cully/mcp

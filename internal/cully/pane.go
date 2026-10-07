@@ -21,19 +21,24 @@ import (
 	"golang.org/x/term"
 )
 
-// RunCodexPane owns the physical terminal and gives Codex a smaller virtual
-// terminal. Codex never writes directly to the parent screen, so its clear and
-// cursor sequences cannot erase the status area.
-func RunCodexPane(args []string, input, output *os.File) error {
+// RunPane owns the physical terminal and gives a coding agent a smaller
+// virtual terminal. The agent never writes directly to the parent screen, so its
+// clear and cursor sequences cannot erase the status area. Every agent uses this
+// same terminal; only its launch command and native footer differ.
+func RunPane(agentName string, args []string, input, output *os.File) error {
+	agent, err := lookupPaneAgent(agentName)
+	if err != nil {
+		return err
+	}
 	if !term.IsTerminal(int(input.Fd())) || !term.IsTerminal(int(output.Fd())) {
-		return fmt.Errorf("cully codex requires an interactive terminal")
+		return fmt.Errorf("cully %s requires an interactive terminal", agent.Name)
 	}
 	cols, rows, err := term.GetSize(int(output.Fd()))
 	if err != nil {
 		return err
 	}
 	if cols < 20 || rows < 8 {
-		return fmt.Errorf("terminal is too small for cully codex")
+		return fmt.Errorf("terminal is too small for cully %s", agent.Name)
 	}
 	state, err := term.MakeRaw(int(input.Fd()))
 	if err != nil {
@@ -59,12 +64,18 @@ func RunCodexPane(args []string, input, output *os.File) error {
 	defer os.Remove(sessionSignalsFile(session))        //nolint:errcheck
 	defer os.Remove(sessionSeenFile(session))           //nolint:errcheck
 	defer clearCodexCullyStats(session)
-	if id := codexExplicitResumeID(args); id != "" {
+	if id := agent.resumeID(args); id != "" {
 		bindCodexPane(currentDir(), id)
 	}
-	cmd := exec.Command("codex", append([]string{"-c", codexStatusConfig}, args...)...)
-	cmd.Env = append(os.Environ(), "CULLY_PANE_SESSION="+session, "CULLY_SESSION="+session, "CULLY_AGENT=codex")
-	view := codexStatusView{Project: currentDir(), Branch: gitBranch(currentDir()), Started: time.Now(), Daemon: isDaemonRunning()}
+	if _, err := exec.LookPath(agent.Binary); err != nil {
+		return fmt.Errorf("%s is not installed or not on PATH", agent.Binary)
+	}
+	appendJournal(currentDir(), session, journalEvent{Agent: agent.Name, Class: journalStart})
+	defer appendJournal(currentDir(), session, journalEvent{Agent: agent.Name, Class: journalEnd})
+	defer pruneJournals()
+	cmd := exec.Command(agent.Binary, agent.args(args)...)
+	cmd.Env = append(os.Environ(), "CULLY_PANE_SESSION="+session, "CULLY_SESSION="+session, "CULLY_AGENT="+agent.Name)
+	view := codexStatusView{Agent: agent.Name, Project: currentDir(), Branch: gitBranch(currentDir()), Started: time.Now(), Daemon: isDaemonRunning()}
 	view.Terminal = detectTerminalProfile()
 	restoredSession := false
 	lastSessionSave := time.Time{}
@@ -83,6 +94,7 @@ func RunCodexPane(args []string, input, output *os.File) error {
 	refreshSession()
 	readCodexGitChanges(&view)
 	stats := readCodexToolStats(session)
+	view.Loops, _ = sessionLoops(currentDir(), session)
 	advice := codexCombinedAdvice(session, stats, view)
 	panelBudget := func() int { return rows - codexPaneTop(rows, rows) }
 	statusRows := func() []string { return codexCompactStatusRows(cols, panelBudget(), advice, stats, view) }
@@ -90,7 +102,7 @@ func RunCodexPane(args []string, input, output *os.File) error {
 	top := codexPaneTop(rows, len(content))
 	child, err := pty.StartWithSize(cmd, &pty.Winsize{Rows: uint16(top), Cols: uint16(cols)})
 	if err != nil {
-		return fmt.Errorf("start codex: %w", err)
+		return fmt.Errorf("start %s: %w", agent.Name, err)
 	}
 	// Wait for the process itself, not PTY EOF: a descendant can retain the
 	// terminal after Codex exits. The wrapper must still release its session.
@@ -102,6 +114,11 @@ func RunCodexPane(args []string, input, output *os.File) error {
 	}()
 	readerDone := make(chan struct{})
 	emulator := vt.NewEmulator(cols, top)
+	readFooter := func() {
+		if agent.NativeFooter {
+			readCodexFooter(emulator, &view)
+		}
+	}
 	repliesDone := make(chan struct{})
 	defer func() {
 		close(readerDone)
@@ -196,7 +213,7 @@ func RunCodexPane(args []string, input, output *os.File) error {
 		if drawer.Open {
 			return drawer.render(cols, rows, stats, view)
 		}
-		return renderCodexPane(emulator, cols, rows, content)
+		return renderCodexPane(emulator, cols, rows, content, agent.NativeFooter, paneHUD(cols, stats, view, time.Now()))
 	}
 	preview := func() {
 		if drawer.Busy || drawer.Details || len(drawer.Items) == 0 {
@@ -245,7 +262,7 @@ func RunCodexPane(args []string, input, output *os.File) error {
 		previewCtx = withCodexMCPScope(previewCtx, session, "advisor")
 		cancelPreview = cancel
 		go func() {
-			review, err := prepareAdvisorReviewContext(previewCtx, "codex", project, line)
+			review, err := prepareAdvisorReviewContext(previewCtx, agent.Name, project, line)
 			select {
 			case reviews <- reviewResult{generation, review, err}:
 			case <-reviewContext.Done():
@@ -332,9 +349,10 @@ func RunCodexPane(args []string, input, output *os.File) error {
 	var shutdown <-chan time.Time
 	paintFinal := func() {
 		refreshSession()
-		readCodexFooter(emulator, &view)
+		readFooter()
 		persistSession()
 		stats = readCodexToolStats(session)
+		view.Loops, _ = sessionLoops(currentDir(), session)
 		advice = codexCombinedAdvice(session, stats, view)
 		content = statusRows()
 		_, _ = io.WriteString(output, paint())
@@ -381,8 +399,9 @@ func RunCodexPane(args []string, input, output *os.File) error {
 		case chunk, ok := <-chunks:
 			if !ok {
 				if dirty {
-					readCodexFooter(emulator, &view)
+					readFooter()
 					stats = readCodexToolStats(session)
+					view.Loops, _ = sessionLoops(currentDir(), session)
 					advice = codexCombinedAdvice(session, stats, view)
 					content = statusRows()
 					_, _ = io.WriteString(output, paint())
@@ -422,7 +441,10 @@ func RunCodexPane(args []string, input, output *os.File) error {
 				lastBeat = time.Now()
 			}
 			stats = readCodexToolStats(session)
-			readCodexFooter(emulator, &view)
+			readFooter()
+			if agent.Name == "claude" {
+				readClaudeContext(session, &view)
+			}
 			if time.Since(lastSessionSave) >= time.Second {
 				persistSession()
 			}
@@ -437,6 +459,7 @@ func RunCodexPane(args []string, input, output *os.File) error {
 				dispatchAdvisor(codexAdvisorSignals(stats, view), session, view.Project)
 				lastAnalysis, lastAnalysisTools = time.Now(), stats.Tools
 			}
+			view.Loops, _ = sessionLoops(currentDir(), session)
 			advice = codexCombinedAdvice(session, stats, view)
 			joined := strings.Join(advice, "\n")
 			if joined != lastAdvice {
@@ -473,12 +496,15 @@ func currentDir() string {
 	return cwd
 }
 
-func renderCodexPane(emulator *vt.Emulator, cols, rows int, content []string) string {
+func renderCodexPane(emulator *vt.Emulator, cols, rows int, content []string, nativeFooter bool, hud string) string {
 	var out strings.Builder
 	limit := max(0, cols-1) // avoid triggering automatic terminal wrap
 	top := min(emulator.Height(), rows)
 	var native codexStatusView
-	footerRow := readCodexFooter(emulator, &native)
+	footerRow := -1
+	if nativeFooter {
+		footerRow = readCodexFooter(emulator, &native)
+	}
 	out.WriteString("\x1b[?25l")
 	for y := 0; y < top; y++ {
 		fmt.Fprintf(&out, "\x1b[%d;1H\x1b[0m\x1b[2K", y+1)
@@ -494,7 +520,7 @@ func renderCodexPane(emulator *vt.Emulator, cols, rows int, content []string) st
 		out.WriteString(line.Render())
 	}
 	if top < rows {
-		panel := codexPanelLines(cols, rows-top, content)
+		panel := codexPanelLines(cols, rows-top, content, hud)
 		for i, line := range panel {
 			fmt.Fprintf(&out, "\x1b[%d;1H\x1b[0m\x1b[2K%s\x1b[0m", top+i+1, line)
 		}

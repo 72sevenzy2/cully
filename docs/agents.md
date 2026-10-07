@@ -1,6 +1,6 @@
 ---
 title: Connect an agent
-description: Connect Claude Code, Codex or Cursor to Cully and its memory tools.
+description: Connect Claude Code, Codex or Cursor to Cully, then run any agent in the Cully terminal.
 ---
 
 # Connect an agent
@@ -11,39 +11,62 @@ The [quickstart](/quickstart) starts Cully and connects your first agent. To con
 
 Pick your agent and use the URL printed by your server. Restart your agent after setup. In Codex, review and trust the Cully hooks in `/hooks` when prompted. For an OAuth-enabled HTTPS server, append `--oauth` and sign in using the steps below.
 
-| Agent | Local Cully controls | OAuth sign-in, when enabled |
+Setup connects **memory and hooks**. To get the **health bar, advisor panel, loop detection, replay and handoff**, start the agent through the [Cully terminal](/terminal):
+
+```sh
+cully run claude
+cully run codex
+cully run cursor     # starts cursor-agent
+cully run my-agent   # any other agent on your PATH
+```
+
+| Agent | Run it in the Cully terminal | OAuth sign-in, when enabled |
 | --- | --- | --- |
-| Claude Code | Status line and `/cully suggestions` | Use `/mcp`. |
-| Codex | Run `cully codex` for a live status view, or use `/prompts:cully suggestions`. | Run `codex mcp login cully`. |
-| Cursor | Project `/cully suggestions` or ask Cursor to check suggestions | Use Cursor's MCP settings. |
+| Claude Code | `cully run claude` | Use `/mcp`. |
+| Codex | `cully run codex` | Run `codex mcp login cully`. |
+| Cursor | `cully run cursor` (the `cursor-agent` CLI) | Use Cursor's MCP settings. |
 
-The [local advisor guide](/advisor) shows what each integration can display. The [memory guide](/memory) explains what the MCP tools save and retrieve.
+The Cursor editor itself is not a terminal program, so the Cully terminal wraps the `cursor-agent` CLI. The editor keeps Cully's hooks, command and MCP tools.
 
-### Claude Code
+## What setup installs
 
-Run `cully setup --agent claude --mcp-url URL`, using the URL printed by your private stack or supplied by your team. Restart Claude Code. Cully installs a status line, session and stop hooks, a `/cully` command and a skill. If the server uses OAuth, add `--oauth` to setup and use `/mcp` to sign in.
+| Agent | Installed by `cully setup` |
+| --- | --- |
+| Claude Code | Session and stop hooks, an asynchronous tool-event hook for the terminal, a status line that feeds the terminal panel (and shows itself when you run Claude outside the terminal), a `/cully` command and the Cully skill. |
+| Codex | A session-start hook, an asynchronous tool-event hook, a `/prompts:cully` prompt, managed `AGENTS.md` guidance and the skill. Codex's native footer settings stay yours. |
+| Cursor | Continuity hooks, asynchronous shell, file-edit and MCP hooks for the terminal, a project `/cully` command and the skill. |
 
-Claude analysis jobs use the shared background worker through the Claude CLI. The worker consults configured Cully memory read-only and can research a concrete tool/documentation gap; the foreground session owns durable handoff writes.
+The tool-event hooks send one small event per tool call to the local [session journal](/privacy), and only while the agent runs inside the Cully terminal. They store no prompts, commands or tool output. See [privacy](/privacy).
 
-### Codex
+If the server uses OAuth, add `--oauth` to setup and sign in as shown in the table.
 
-Run `cully setup --agent codex --mcp-url URL`, then restart Codex. Cully installs a session-start hook, an asynchronous tool-count hook, a `/prompts:cully` prompt, managed `AGENTS.md` guidance and the skill. Codex's native footer settings remain yours. Review Cully's hooks in `/hooks` when Codex asks you to trust them. With an OAuth server, add `--oauth` and run `codex mcp login cully`.
+## Claude Code
 
-For the single live Cully display in Codex, start `cully codex` (pass any normal Codex options after `codex`). The default pane groups Model & activity, Project & usage and Cully MCP in three aligned columns at 120 columns or wider; narrower screens stack the groups. Two prioritized advisor comments and an Open advisor control follow the instruments. Open the full advisor and press Tab for all session instruments. The panel uses the terminal's native background, semantic colors and sparse icons; wrapped advice has a badge and hanging indent. The compact panel grows only enough for its bounded preview while leaving at least 12 Codex rows on normal screens and eight on short screens; terminals shorter than 12 rows give Codex the whole screen. Its reserved height is retained until a terminal resize, avoiding repeated conversation reflow as advice clears. The panel shows phase, project/branch, native model and reasoning effort, a context gauge with used/remaining percentages, input/output tokens, quota/fast-mode instruments, tool/search/edit/check/error counts, verification state, elapsed time, daemon health and controls. The preview wraps each of two comments across at most two rows; short panels prioritize context and the first comment. Press Ctrl+] / F6 to open all advice, select by mouse or Up/Down, and use Enter to preview an action. Exiting the wrapper stops its Codex child; the launcher does not create a detached tmux session.
+Run `cully setup --agent claude --mcp-url URL`, using the URL printed by your private stack or supplied by your team. Restart Claude Code, then start it with `cully run claude`. Analysis jobs use the shared background worker through the Claude CLI. The worker consults configured Cully memory read-only and can research a concrete tool or documentation gap. The foreground session owns durable handoff writes.
 
-The launcher requests native Codex footer instruments for that child process and displays them in Cully's status view. It reads only the rendered footer, without opening a transcript or saving screen text. Your Codex configuration file stays unchanged. Missing model/context values show waiting for the native footer; missing token/quota values show unavailable. Cost and cache usage are explicitly unavailable from Codex. Working-tree additions/deletions and tracked-file counts come from Git and include staged and unstaged tracked changes against HEAD, rather than Claude session change counters. Short panels prioritize context and the first recommendation, and show an enlarge-terminal hint when space permits. Setup installs an asynchronous `PostToolUse` hook that saves only bounded recent tool counters, not prompts, commands or tool output. Codex advice cautions at 25% context remaining or less and warns at 10% or less. It also flags repeated explicitly observed failures, broad searching and edits awaiting a check. Direct Bash commands and Codex `exec_command` calls support search/check classification; formatting alone does not satisfy verification. Orchestrated calls such as `functions.exec` remain generic unless their inner events are supplied separately, and arbitrary output text does not establish a tool failure. Missing tool signals show awaiting signals rather than implying a healthy workflow. See [advisor controls](/advisor) for the other agent surfaces.
+Inside the terminal Claude Code's own status line stays silent so there is one display. The terminal panel reads Claude's context pressure from the same data.
 
-The Codex wrapper also dispatches bounded session signals to the shared worker using an ephemeral Codex CLI process. Its findings are combined with immediate context/tool warnings; worker availability does not replace those local checks. The worker uses configured Cully read-only tools and a targeted web step only when evidence calls for research. Its availability/source status is separate from verification that live tools succeeded.
+## Codex
 
-### Cursor
+Run `cully setup --agent codex --mcp-url URL`, then restart Codex and start it with `cully run codex`. Review Cully's hooks in `/hooks` when Codex asks you to trust them.
 
-Run `cully setup --agent cursor --mcp-url URL`, then restart Cursor. Cully installs local continuity hooks, a project `/cully` command and the skill. With an OAuth server, add `--oauth` and sign in from Cursor's MCP settings. User-level hooks installed on your laptop do not run in Cursor cloud agents; connected cloud agents can still use the Cully MCP tools.
+The terminal reads Codex's native footer from the rendered screen in memory, never a transcript, and shows its model, reasoning effort, context, tokens and quota in the Cully panel. Your Codex configuration file stays unchanged. Cost and cache usage are unavailable from Codex and are shown as such. Exiting the wrapper stops its Codex child. `cully run codex resume` restores a thread's saved metrics.
 
-Cursor's continuity stop hook can dispatch coarse session metadata to the same shared worker through `cursor-agent` print/ask mode. It does not read transcripts or assume Claude/Codex context or quota instruments. The worker is instructed to recall relevant Cully notes read-only and research concrete gaps; durable handoff notes remain the foreground session's responsibility.
+The Codex wrapper also dispatches bounded session signals to the shared worker through an ephemeral Codex CLI process. Its findings are combined with immediate context and tool warnings. Worker availability never replaces those local checks.
+
+## Cursor
+
+Run `cully setup --agent cursor --mcp-url URL`, then restart Cursor. Start the CLI agent with `cully run cursor`. With an OAuth server, sign in from Cursor's MCP settings. User-level hooks on your laptop do not run in Cursor cloud agents. Connected cloud agents can still use the Cully MCP tools.
+
+Cursor's shell hook reports no exit code, so a failed Cursor command is not marked failed, and loop detection is weaker for Cursor. The continuity stop hook can dispatch coarse session metadata to the shared worker through `cursor-agent` print and ask mode. It does not read transcripts.
+
+## Any other agent
+
+`cully run NAME` starts any executable on your PATH in the same terminal. It gets the health bar, Git state and the advisor panel. It gets tool counts, loops, replay and handoff only if the agent can run Cully's hook, because those come from tool events.
 
 ## If you already installed the advisor
 
-Use `cully mcp add --agent codex --url URL` to add only the MCP connection. Add `--oauth` when the server requires sign-in. If you installed Cully before continuity hooks were available, rerun `cully setup --agent codex` (with your agent name and `--mcp-url URL` if using an existing server) to refresh the skill and hooks. Setup preserves unrelated agent configuration and does not replace a Cully connection that points at another URL. Run `cully status` to inspect the local integration.
+Use `cully mcp add --agent codex --url URL` to add only the MCP connection. Add `--oauth` when the server requires sign-in. If you installed Cully before the terminal hooks were available, rerun `cully setup --agent claude` (with your agent name, and `--mcp-url URL` if you use an existing server) to refresh the skill and hooks. Setup preserves unrelated agent configuration and does not replace a Cully connection that points at another URL. Run `cully status` to inspect the local integration.
 
 Running `cully setup` starts the standard local memory stack and advisor, and installs integrations for detected agents. Use `--agent AGENT` to select one or `--agent all` for all supported agents. With `--mcp-url URL`, setup connects to that existing server and starts the local advisor without starting Docker services. Setup does not sign you into an OAuth server automatically. For server requirements, see [self-hosting](/hosting) and [team deployment](/team-deployment).
 

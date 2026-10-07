@@ -2,6 +2,18 @@
 
 ## Unreleased
 
+- Keep free-form command arguments out of session journal labels, count `create_file` and `notebookedit` as edits, and reconcile individual untracked files and rename destinations in replay.
+- Reposition Cully as the intelligent workspace around coding agents ("Your coding agents need a copilot too"): rewrite the README, homepage, docs introduction, agents guide and Cully skill, and add how-it-works, terminal, session intelligence, privacy, capabilities and product-direction pages. Remove the "better work and everyday life" tagline from the CLI help, MCP instructions and skill metadata.
+- Add `cully run AGENT [ARGS...]`, which starts Claude Code, Codex, `cursor-agent` or any executable in the same Cully terminal that `cully codex` used. `cully claude`, `cully codex` and `cully cursor` are shortcuts. Cully still needs macOS or Linux for the terminal.
+- Add an Agent Health bar to the terminal: agent, project and branch, session time, context, loops and unchecked edits. Segments with no data are omitted.
+- Add a local session journal fed by asynchronous tool-event hooks for Claude Code, Codex and Cursor. It records time, agent, kind of tool, pass or fail and a one-way command hash, and never prompts, file contents, command arguments or output. Run `cully setup` again to install the new Claude Code and Cursor hooks.
+- Add loop detection (the same command failing three times, or three edit and failed-check cycles) and a project workflow hint when edits have not been checked.
+- Add `cully replay`: a step player, file activity with hotspots, a reconcile check against `git status`, `--json` output and a self-contained offline `--html` export. File paths come from structured file tools. A shell command records its program and recognized subcommand only. Set `CULLY_JOURNAL_PATHS=0` to stop recording paths and command labels.
+- Keep session risk on a loop that is still happening. A resolved loop stays in the count and no longer marks the session HIGH. Journal pruning keeps the newest sessions per project, and journal writes lock the file.
+- Add `cully timeline`, `cully handoff` and `cully rescue`, and a measured session health block with a rule-based risk label in `cully status`.
+- Add a [use cases](docs/use-cases.md) page positioning the shipped primitives as a flight recorder for agent sessions, audit-grade session review and replayable playbooks, with a matching section on the homepage.
+- Claude Code's status line stays silent inside the Cully terminal and feeds the panel instead. It behaves as before outside the terminal.
+
 ## 0.9.1
 
 - Run a single end-to-end CI check that follows the documented path: install, `cully setup`, MCP use and uninstall, replacing the separate compose-only job.

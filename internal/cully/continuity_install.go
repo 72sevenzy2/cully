@@ -6,6 +6,11 @@ import (
 	"path/filepath"
 )
 
+// Cursor post-tool events that feed the Cully terminal panel.
+var cursorSignalEvents = []string{"afterShellExecution", "afterFileEdit", "afterMCPExecution"}
+
+const cursorSignalSub = "pane-signal cursor"
+
 func continuityCommand(exe, agent, event string) string {
 	return quote(exe) + " _internal continuity " + agent + " " + event
 }
@@ -76,6 +81,12 @@ func installCursorContinuityHooks() error {
 	setCursorHook(m, "afterAgentResponse", continuityCommand(exe, "cursor", "response"), "continuity cursor response")
 	setCursorHook(m, "stop", continuityCommand(exe, "cursor", "stop"), "continuity cursor stop")
 	setCursorHook(m, "sessionEnd", continuityCommand(exe, "cursor", "end"), "continuity cursor end")
+	for _, event := range cursorSignalEvents {
+		setCursorHook(m, event, quote(exe)+" _internal pane-signal cursor", cursorSignalSub)
+		hooks := m["hooks"].(map[string]any)
+		list := toList(hooks[event])
+		list[len(list)-1].(map[string]any)["timeout"] = 5
+	}
 	return writeSettings(path, m)
 }
 
@@ -92,6 +103,9 @@ func uninstallCursorContinuityHooks() error {
 	removeCursorHook(m, "afterAgentResponse", "continuity cursor response")
 	removeCursorHook(m, "stop", "continuity cursor stop")
 	removeCursorHook(m, "sessionEnd", "continuity cursor end")
+	for _, event := range cursorSignalEvents {
+		removeCursorHook(m, event, cursorSignalSub)
+	}
 	return writeSettings(path, m)
 }
 

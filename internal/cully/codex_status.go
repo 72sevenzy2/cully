@@ -31,6 +31,8 @@ type codexStatusView struct {
 	AdvisorScroll                                                 int
 	AdvisorFocused                                                bool
 	Terminal                                                      terminalProfile
+	Loops                                                         loopReport
+	Agent                                                         string
 }
 
 var codexContextLeft = regexp.MustCompile(`^Context ([0-9]{1,3})% left$`)
@@ -194,6 +196,9 @@ func codexStatusContent(cols int, advice []string, stats codexToolStats, view co
 		verification = yellow + fmt.Sprintf("%d edits awaiting a successful check", stats.EditsSinceCheck) + rst
 	}
 	metric(&right, "Verification", verification)
+	if view.Loops.Active() {
+		metric(&right, "Loops", yellow+view.Loops.Summary()+rst)
+	}
 	grid(left, right)
 	rows = append(rows, "")
 	for _, line := range codexCullyInstrumentRows(stats, max(1, cols-5)) {
@@ -570,6 +575,11 @@ func codexCompactInstrumentRows(cols int, stats codexToolStats, view codexStatus
 		verification = yellow + fmt.Sprintf("%d edits need check", stats.EditsSinceCheck) + rst
 	}
 	activity := []string{bold + "Model & activity" + rst, "", "Model " + model, fmt.Sprintf("Tools %d · Searches %d", stats.Tools, stats.Searches), fmt.Sprintf("Edits %d · Checks %d · Errors %s", stats.Edits, stats.Checks, errors), "Verification " + verification}
+	loopRow := ""
+	if view.Loops.Active() {
+		loopRow = "Loops " + yellow + view.Loops.Summary() + rst
+		activity = append(activity, loopRow)
+	}
 	location := dim + "Project unavailable" + rst
 	if view.Project != "" {
 		location = "Project " + cyan + filepath.Base(view.Project) + rst
@@ -636,7 +646,7 @@ func codexCompactInstrumentRows(cols int, stats codexToolStats, view codexStatus
 		// normal narrow terminal still leaves most rows to the conversation.
 		rows = rows[:len(rows)-1] // title and first group belong to one section
 		groups = [][]string{
-			{activity[0], "Model " + model, fmt.Sprintf("Tools %d · Searches %d · Edits %d · Checks %d · Errors %s", stats.Tools, stats.Searches, stats.Edits, stats.Checks, errors), "Verification " + verification},
+			{activity[0], "Model " + model, fmt.Sprintf("Tools %d · Searches %d · Edits %d · Checks %d · Errors %s", stats.Tools, stats.Searches, stats.Edits, stats.Checks, errors), "Verification " + verification, loopRow},
 			{usage[0], location, "Context " + context, tokens + " · " + quota, work},
 			{cully[0], fmt.Sprintf("Calls %d observed", stats.Cully.Calls) + " · Auth " + codexObservedState(stats.Cully.Auth, true), fmt.Sprintf("Log %d · Context %d · Recall %d · Search %d · Get %d · Other %d", stats.Cully.Log, stats.Cully.Context, stats.Cully.Recall, stats.Cully.Search, stats.Cully.Get, stats.Cully.Other)},
 		}
@@ -774,13 +784,13 @@ func codexPaneTop(rows, statusRows int) int {
 	return rows - min(max(0, statusRows)+1, budget)
 }
 
-func codexPanelLines(cols, height int, content []string) []string {
+func codexPanelLines(cols, height int, content []string, hud string) []string {
 	lines := make([]string, max(0, height))
 	if height <= 0 {
 		return lines
 	}
 	width := max(0, cols-1)
-	lines[0] = dim + strings.Repeat("─", width) + rst
+	lines[0] = hudRule(width, hud)
 	capacity := height - 1
 	if len(content) > capacity {
 		// Keep advice visible on shorter terminals. Drop secondary instruments

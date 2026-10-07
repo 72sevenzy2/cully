@@ -141,12 +141,24 @@ func activeCodexPaneSession(cwd, codexSessionID string) string {
 	return pane.Session
 }
 
-// RunCodexSignalHook is installed as an asynchronous PostToolUse hook. It is
-// inactive outside the opt-in pane, so ordinary Codex sessions have no local
-// advisor artifacts.
-func RunCodexSignalHook(r io.Reader) {
+// RunCodexSignalHook keeps hooks installed by earlier versions working.
+func RunCodexSignalHook(r io.Reader) { RunPaneSignalHook("codex", r) }
+
+// RunPaneSignalHook is installed as an asynchronous PostToolUse hook. It is
+// inactive outside the opt-in terminal, so ordinary agent sessions have no
+// local advisor artifacts.
+func RunPaneSignalHook(agent string, r io.Reader) {
 	var event codexToolEvent
-	if json.NewDecoder(io.LimitReader(r, 1<<20)).Decode(&event) != nil || event.ToolName == "" {
+	data, _ := io.ReadAll(io.LimitReader(r, 1<<20))
+	if agent == "cursor" {
+		var ok bool
+		if event, ok = cursorToolEvent(data); !ok {
+			return
+		}
+	} else if json.Unmarshal(data, &event) != nil {
+		return
+	}
+	if event.ToolName == "" {
 		return
 	}
 	if os.Getenv("MODEL_HINT_GUARD") != "" {
@@ -181,6 +193,7 @@ func RunCodexSignalHook(r io.Reader) {
 		recordCodexCullyOriginCall(session, tool, health, auth, "foreground", codexCullySemantic(event.ToolInput))
 	}
 	recordCodexSessionTool(session, class, failure)
+	recordJournalTool(agent, session, event, class, failure == '!')
 	f, err := os.OpenFile(codexSignalFile(session), os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o600)
 	if err != nil {
 		return
@@ -190,34 +203,25 @@ func RunCodexSignalHook(r io.Reader) {
 }
 
 func codexToolClass(event codexToolEvent) byte {
-	name := strings.ToLower(event.ToolName)
-	// Tool names can include transport namespaces. Recognize the actual shell
-	// tool rather than guessing commands embedded in orchestration source text.
-	if i := strings.LastIndex(name, "."); i >= 0 {
-		name = name[i+1:]
-	}
-	if i := strings.LastIndex(name, "__"); i >= 0 {
-		name = name[i+2:]
-	}
-	if name == "apply_patch" || name == "edit" || name == "write" {
+	// Tool names can include transport namespaces. Recognize the actual tool
+	// rather than guessing commands embedded in orchestration source text.
+	name := toolBaseName(event.ToolName)
+	if name == "apply_patch" || name == "edit" || name == "write" || name == "create_file" || name == "notebookedit" || name == "delete" || name == "str_replace" || name == "strreplace" || name == "multiedit" {
 		return 'E'
 	}
-	if name == "bash" || name == "exec_command" {
-		var input struct {
-			Command string `json:"command"`
-			Cmd     string `json:"cmd"`
-		}
-		_ = json.Unmarshal(event.ToolInput, &input)
-		command := input.Command
-		if name == "exec_command" {
-			command = input.Cmd
-		}
+	if name == "bash" || name == "exec_command" || name == "shell" {
+		command := shellCommandOf(event.ToolInput)
 		if codexCheckCommand.MatchString(command) {
 			return 'T'
 		}
 		if codexSearchCommand.MatchString(command) {
 			return 'S'
 		}
+		return 'O'
+	}
+	switch name {
+	case "read", "read_file", "readfile", "view", "grep", "glob":
+		return 'S'
 	}
 	if strings.Contains(name, "search") || strings.Contains(name, "read_file") {
 		return 'S'
@@ -307,4 +311,42 @@ func codexAdvice(stats codexToolStats) []string {
 		return []string{"MEMO|No workflow warning in the observed tool signals."}
 	}
 	return lines
+}
+
+// codexToolCommand returns the shell command of a shell tool call, or "".
+// An argv-style command is joined so the hash matches the string form.
+func codexToolCommand(event codexToolEvent) string {
+	name := toolBaseName(event.ToolName)
+	if name != "bash" && name != "exec_command" && name != "shell" {
+		return ""
+	}
+	return shellCommandOf(event.ToolInput)
+}
+
+// recordJournalTool adds one hook event to the session journal. It stores the
+// tool class, success, a one-way hash of a shell command, and, unless
+// CULLY_JOURNAL_PATHS=0, structured file operations and a command label.
+// The hash input is the command text; the command itself is not stored.
+func recordJournalTool(agent, session string, event codexToolEvent, class byte, failed bool) {
+	entry := journalEvent{Time: time.Now().UTC(), Agent: agent, Class: string(class), Failed: failed}
+	var extra []fileOp
+	if codexCullyTool(event.ToolName) != "" {
+		entry.Class, entry.Tool = journalMemory, codexCullyTool(event.ToolName)
+	} else {
+		if class == 'T' || failed {
+			entry.Sig = commandSig(codexToolCommand(event))
+		}
+		if journalPathsEnabled() {
+			ops, cmd := extractToolActivity(event)
+			entry.Cmd = cmd
+			if len(ops) > 0 {
+				entry.Path, entry.Op, entry.To = ops[0].Path, ops[0].Op, ops[0].To
+				extra = ops[1:]
+			}
+		}
+	}
+	appendJournal(event.Cwd, session, entry)
+	for _, o := range extra {
+		appendJournal(event.Cwd, session, journalEvent{Time: entry.Time, Agent: agent, Class: journalFileOp, Failed: failed, Path: o.Path, Op: o.Op, To: o.To})
+	}
 }

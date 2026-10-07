@@ -24,7 +24,7 @@ func TestCodexNativeFooter(t *testing.T) {
 		t.Fatalf("incorrect native instruments: %+v", view)
 	}
 	content := codexStatusRows(180, nil, codexToolStats{}, view)
-	frame := ansi.Strip(renderCodexPane(emulator, 180, 32, content))
+	frame := ansi.Strip(renderCodexPane(emulator, 180, 32, content, true, ""))
 	if strings.Contains(frame, "Context 73% left · 1.2K in") {
 		t.Fatal("duplicate native footer still shown above Cully")
 	}
@@ -63,7 +63,7 @@ func TestCodexStatusReadableAndExpandable(t *testing.T) {
 			t.Fatalf("status clutter remains: %q", unwanted)
 		}
 	}
-	clipped := codexPanelLines(42, 4, narrow)
+	clipped := codexPanelLines(42, 4, narrow, "")
 	if len(clipped) != 4 || !strings.Contains(ansi.Strip(clipped[2]), "Advisor") || !strings.Contains(ansi.Strip(clipped[3]), "Run a focused") {
 		t.Fatal("short terminals must preserve the advisor and recommendation")
 	}
@@ -179,13 +179,13 @@ func TestCodexPanelShowsRichInstrumentsAndOverflow(t *testing.T) {
 	stats := codexToolStats{Tools: 14, Searches: 3, Edits: 2, Checks: 1}
 	content := codexStatusRows(149, []string{"ADV|Run a focused check before finishing."}, stats, view)
 	height := 55 - codexPaneTop(55, len(content))
-	plain := normalizedCodexPanel(strings.Join(codexPanelLines(149, height, content), "\n"))
+	plain := normalizedCodexPanel(strings.Join(codexPanelLines(149, height, content, ""), "\n"))
 	for _, want := range []string{"GPT-6.1-Sol high", "27% used", "73% left", "Input 1.2K", "Output 240", "5h limit 82% left", "Weekly 91% left", "Fast off", "+42 / -7", "3 tracked files", "Errors 0", "Verification no pending edits", "daemon online", "Run a focused check", "/prompts:cully"} {
 		if !strings.Contains(plain, normalizedCodexPanel(want)) {
 			t.Fatalf("normal terminal lost instrument %q", want)
 		}
 	}
-	clipped := normalizedCodexPanel(strings.Join(codexPanelLines(149, 12, content), "\n"))
+	clipped := normalizedCodexPanel(strings.Join(codexPanelLines(149, 12, content, ""), "\n"))
 	for _, want := range []string{"73% left", "Tools 14", "Advisor", "Run a focused check", "enlarge terminal for all fields"} {
 		if !strings.Contains(clipped, want) {
 			t.Fatalf("constrained panel lost priority instrument or overflow control %q", want)
@@ -242,7 +242,7 @@ func TestCodexAdviceCompleteWhenRoomPermits(t *testing.T) {
 	}
 	content := codexStatusRows(60, advice, codexToolStats{}, codexStatusView{Project: "/work/cully"})
 	top := codexPaneTop(90, len(content))
-	panel := ansi.Strip(strings.Join(codexPanelLines(60, 90-top, content), "\n"))
+	panel := ansi.Strip(strings.Join(codexPanelLines(60, 90-top, content, ""), "\n"))
 	for _, suggestion := range advice {
 		_, text, _ := strings.Cut(suggestion, "|")
 		// Wrapped text must still contain every word in its original order.

@@ -1,39 +1,51 @@
 ---
 name: cully
-description: Use Cully to inspect advisor status and suggestions, improve agent workflows, and save or recall useful project and personal context through its configured MCP server.
+description: Use Cully to check session health, find and fix a stuck coding session, replay or hand off work, and save or recall project context through its MCP server. Works with Claude Code, Codex, Cursor and other coding agents.
 ---
 
 <!-- cully:skill:managed -->
 # Cully
 
-Use the installed `cully` CLI for local session guidance and the configured Cully MCP tools for durable records. `cully setup` installs integrations and starts the advisor alongside the local memory services; use `--mcp-url URL` for an existing server. The connected agent makes memory calls with its own MCP identity; the local advisor does not hold OAuth credentials. Local guidance works without a server. Do not assume a particular URL or login flow.
+Cully is the intelligent workspace around coding agents. It observes a session, keeps a private journal of what the agent did, detects problems such as loops, and keeps durable project memory through MCP. Use the installed `cully` CLI for session guidance and the configured Cully MCP tools for durable records. The connected agent makes memory calls with its own MCP identity; the local advisor does not hold OAuth credentials. Local guidance works without a server. Do not assume a particular URL or login flow.
 
-## Guide the current work
+## Know where you are running
 
-- Use `cully status` when session state, context pressure, route drift, tool faults, or agent integration matters. It also reports configured agents, MCP servers, skills, and graphify state. A running daemon confirms the background process is alive; it does not prove a particular agent's signals are arriving.
-- Use `cully suggestions` to find improvements to project instructions, MCP setup, or skills. Preview a numbered suggestion with `cully apply <n> --dry-run` before changing files or agent settings. Apply a suggestion only when the user requests it or approves the concrete change.
-- Explain the suggestions that actually appear for the current session. An empty list can mean no issue has been detected or that the agent has not supplied enough signals. Avoid interrupting unrelated work with routine status checks.
+Cully's session features need the agent to run inside the Cully terminal, started by the user with `cully run claude`, `cully run codex`, `cully run cursor` or `cully run AGENT`. There the user sees a health bar and an advisor panel, and Cully records the session journal. Outside it, memory and the CLI commands below still work, but there is no journal for the current session.
 
-## Match advice to the agent
+Never start `cully run` or `cully handoff AGENT` yourself. Both open an interactive terminal and will hang a tool call.
 
-The background worker shares one analysis/recall/research workflow across Claude Code, Codex and Cursor, using the originating host's CLI adapter and configured MCP connection. Claude uses print mode, Codex uses an ephemeral read-only exec process, and Cursor uses print/ask mode. Codex supplies bounded context/tool signals; Cursor supplies coarse continuity-stop metadata without reading transcripts. The shared prompt requests focused owner/project-scoped Cully recall and targeted public research only for an evidenced gap. Missing tools or source-status claims do not prove that live recall/research succeeded. Claude/Codex restrict Cully tools read-only; Cursor relies on ask mode and shared no-edit/no-memory-write instructions. Foreground agents own durable writes.
+## Drive Cully yourself
 
-- Claude Code has Cully's native status line and richer live signals for context, repeated tool failures, search effort, and verification gaps.
-- Codex shows an expandable Cully status panel when launched with `cully codex`: phase, project/branch, native model and reasoning effort, a context gauge with used/remaining percentages, input/output tokens, quota/fast-mode instruments, recent tool/search/edit/check/error counts, verification state, elapsed time, daemon health, controls and advice. The default pane groups Model & activity, Project & usage and Cully MCP in three aligned columns at 120 columns or wider; narrower screens stack the groups. Two prioritized advisor comments and an Open advisor control follow the instruments. Open the full advisor and press Tab for all session instruments. The panel uses the terminal's native background, semantic colors and sparse icons; wrapped advice has a badge and hanging indent. Missing native values show waiting or unavailable; Codex cost is omitted when billable-cost data is unavailable. Working-tree additions/deletions and tracked-file counts come from Git, separately from Claude session change counters. The compact panel grows only enough for its bounded preview while leaving at least 12 Codex rows on normal screens and eight on short screens; terminals shorter than 12 rows give Codex the whole screen. Its reserved height is retained until a terminal resize, avoiding repeated conversation reflow as advice clears. Codex advice cautions at 25% context remaining or less and warns at 10% or less. It also flags repeated explicitly observed failures, broad searching and edits awaiting a check. Direct Bash commands and Codex `exec_command` calls support search/check classification; formatting alone does not satisfy verification. Orchestrated calls such as `functions.exec` remain generic unless their inner events are supplied separately, and arbitrary output text does not establish a tool failure. Missing tool signals show awaiting signals rather than implying a healthy workflow. Only rendered footer rows are read in memory, never transcripts. Saved user configuration stays unchanged. Exiting the wrapper stops its Codex child; the launcher does not create a detached tmux session. Plain `codex` has Cully prompts and continuity hooks but no Cully status panel. The panel's tool advice and background daemon have distinct signal paths; check the panel after an actual tool call when troubleshooting.
-- Cursor uses its Cully command and continuity integration. Check its configured surface rather than assuming Claude's status line or Codex's pane exists there.
-- When asked whether the advisor works, verify `cully version`, `cully status`, and the relevant agent surface. For Codex, check that the PostToolUse hook is active and that a real tool call changes the pane counter. If a hook needs trust review, review its command before enabling it. Describe any untested part plainly.
+Run these on your own when the situation fits. They are read-only and local.
 
-Codex shows two prioritized advisor comments in its compact status pane. Click the pane or press Ctrl+] / F6 to open the full advisor (macOS may require Fn+F6); Alt+A works when Option sends Meta. Click a suggestion or use Up/Down to select it; Page Up/Down and Home/End navigate the list. Enter opens a preview, and a second Enter accepts the displayed action. Small shared project instruction/skill changes can apply locally after an exact preview; commands, integrations and task actions are handed to the current coding input for review and submission, preserving the existing draft. Informational tips have no Apply action. Tab shows all session instruments, arrows scroll details, and Esc returns from preview/details or closes the list. The advisor overlays the conversation without resizing its PTY. Reports retain up to 12 recommendations while Claude's native status line displays four. The drawer includes last-analysis age and agent-reported recall/research states; daemon health alone does not prove either tool ran. Apply labels identify concrete configuration/skill changes alongside Next, Watch, Warn and Tip. Messy is red when explicit failure density is high, or Codex has many unchecked edits plus failures; busy activity alone is not evidence of disorder.
+| Situation | Run | Why |
+| --- | --- | --- |
+| The user asks how the session is going, or you are unsure of verification state | `cully status` | Measured health: duration, checks passed and failed, loops, uncommitted files, risk and why |
+| The user says you or another agent is stuck, or the same command has failed repeatedly | `cully rescue --no-ai` | Evidence and recovery steps from recorded data. Without `--no-ai` it also starts a headless advisor run, so use that only when the user asks for a diagnosis. |
+| The user asks what happened, what files changed, or what a previous agent did | `cully timeline`, or `cully replay --instant` for the step-by-step transcript with file activity | Never guess from memory when the journal can answer |
+| You are about to finish substantive work, or the user wants another agent to continue | `cully handoff --print` | A structured summary of state, verification, open problems and next steps |
+| The user wants suggested workflow improvements | `cully suggestions` | Preview a numbered suggestion with `cully apply <n> --dry-run` before changing files or agent settings. Apply only when the user requests or approves the concrete change. |
 
-The Codex panel detects terminal program/type, SSH and login-shell metadata, and supplies the execution OS to the advisor so command suggestions match the remote host rather than an inferred client OS. Warp's Option key requires Meta forwarding for Alt+A; use Ctrl+] or F6 instead. A failed worker startup marks memory as not run and reports a safe failure category; it does not establish that the connected memory service is unavailable.
+Do not run status checks routinely or interrupt unrelated work. When the journal is empty, say so; do not infer a session. A missing signal means unknown, not healthy.
+
+## Read the advisor honestly
+
+The advisor combines immediate local rules with an optional background worker that uses the originating agent's own CLI and Cully connection read-only. Explain only the suggestions that actually appear. An empty list can mean no issue was detected or that the agent supplied too few signals. A running daemon proves the background process is alive, not that a particular agent's signals arrive.
+
+What the terminal can know differs by agent:
+
+- Codex supplies model, context, tokens and quota through its native footer.
+- Claude Code supplies context pressure through a hook-fed snapshot; its own status line stays silent inside the terminal.
+- Cursor supplies shell, file-edit and MCP events. Its shell hook reports no exit code, so a failed Cursor command is not marked failed.
+- Other agents get the health bar and Git state, and tool events only if they can run Cully's hook.
+
+Loop detection reports what repeated, for example that the same command failed three times after edits. It never states a cause. When it fires, read the first failure before editing again.
+
+The journal records tool kind, success, project-relative file paths with the operation, and the program and subcommand of a command. It never records prompts, file contents, command arguments or output.
+
+When asked whether Cully works, verify `cully version` and `cully status`, and for the terminal check that a real tool call changes the health bar. Describe any untested part plainly.
 
 ## Continue work across sessions
-
-The Cully MCP session total includes actual Cully tool calls from the foreground agent, linked advisor and startup checks, with each source shown separately. Every Cully tool has a saved named count in the advisor's Tab details. Unrelated MCP servers and worker text claims do not count. Semantic context uses Mem0 recall; its tool count remains Context and also contributes to Semantic recall. Background Cully calls do not alter foreground coding activity counts.
-
-Use `cully codex resume` to load the same coding thread's saved metrics automatically. An explicit native thread ID can restore the first panel frame; the interactive picker restores its selection on SessionStart. A bounded read-only background check uses Codex's configured Cully MCP connection to refresh health/authentication through actual response hooks, without increasing foreground call counts. Metric rows remain adjacent, with blank rows after headings and between major sections.
-
-The Codex pane saves reduced native instruments and cumulative tool/MCP counters in private local files keyed by the hashed coding thread. Resuming that thread restores model/context/token/quota values, pending verification, counts and last-observed MCP health/authentication when SessionStart supplies its identity. Different threads remain isolated. Fresh native totals replace saved totals without double counting; missing clipped fields keep their last observed value. Branch, Git changes and daemon status refresh live, and advice is analyzed again. New threads await actual MCP response evidence. These local aggregates contain no prompts, tool responses, retrieved notes or credentials; durable handoffs still belong in Cully MCP.
 
 - At the start of a substantive task, automatically call `cully_context` with the current project and a focused task query, using its default three-note limit. This returns concise previews; call `cully_get` only for a record whose full details matter. If the server is older and lacks `cully_context`, use one `cully_search` or `cully_recent` call with `limit: 3`.
 - If text search misses, try `cully_context` with `mode: semantic` or use `cully_recall` with `limit: 3`. Mem0 recall may lag a recent write. `cully_projects` helps discover active project records. Search again when the task or project changes; avoid repeated broad lookups. Do not ask the user to request memory manually.
@@ -51,6 +63,4 @@ The Codex pane saves reduced native instruments and cumulative tool/MCP counters
 - Use `cully_delete` only when the user asks to remove that record.
 - Never save credentials, private keys, raw transcripts, or unrelated personal details. Report a write only after the tool confirms it. If MCP is unavailable, explain that the shared record was not saved and continue the user's task.
 
-Durable project handoffs and reusable optimization lessons belong in authenticated Cully MCP records: PostgreSQL holds the source notes and Mem0 indexes them for semantic recall. Foreground agents save the durable summaries; background workers recall notes read-only. Transient local counters and snapshots support offline live warnings; they are not a second durable memory store. The local daemon does not receive the agent's OAuth credentials or call Mem0 as the agent.
-
-PostgreSQL holds source records. Mem0 is part of Cully's standard memory stack and performs semantic indexing and recall; a successful write can appear there after a short delay. The private data API and Mem0 key are operator settings, never agent configuration.
+Durable project handoffs and reusable lessons belong in authenticated Cully MCP records: PostgreSQL holds the source notes and Mem0 indexes them for semantic recall. Foreground agents save the durable summaries; background workers recall notes read-only. The local journal and counters support live warnings and review; they are not a second durable memory store. The local daemon does not receive the agent's OAuth credentials or call Mem0 as the agent. The private data API and Mem0 key are operator settings, never agent configuration.

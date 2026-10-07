@@ -68,12 +68,21 @@ func RunStatusline(r io.Reader, w io.Writer) {
 	data, _ := io.ReadAll(r)
 	var in slInput
 	_ = json.Unmarshal(data, &in)
+	pane := os.Getenv("CULLY_PANE_SESSION")
 	if !hasStatuslinePayload(data, in) {
-		RunGenericStatusline(w, statuslineAgent())
+		if pane == "" {
+			RunGenericStatusline(w, statuslineAgent())
+		}
 		return
 	}
 	writeState(in)
 	session := in.SessionID
+	if pane != "" {
+		// Inside the Cully terminal this command is a data feed for the panel:
+		// record the snapshot under the pane session and print nothing.
+		patchSnapshotFromStatusline(in, pane)
+		return
+	}
 	patchSnapshotFromStatusline(in, session)
 	chime := maybeChime(session, int(in.ContextWindow.UsedPercentage))
 	snap := readSnapshot(session)
@@ -578,4 +587,33 @@ func gitBranch(dir string) string {
 		return ""
 	}
 	return strings.TrimSpace(string(out))
+}
+
+// readClaudeContext fills the panel's context gauge from the snapshot written
+// by Claude's statusline data feed. It leaves the view unchanged until Claude
+// has reported a context window.
+func readClaudeContext(session string, view *codexStatusView) {
+	snap := readSnapshot(session)
+	if snap.CtxSize <= 0 {
+		return
+	}
+	view.ContextKnown = true
+	view.ContextLeft = min(100, max(0, 100-snap.ContextUsedPct))
+}
+
+// sessionContextUsed returns the percent of the context window a terminal
+// session has used, or -1 when the agent has not reported a window size.
+func sessionContextUsed(session string) int {
+	if session == "" {
+		return -1
+	}
+	if snap := readSnapshot(session); snap.CtxSize > 0 {
+		return min(100, max(0, snap.ContextUsedPct))
+	}
+	if path := codexSessionStateFile(session); path != "" {
+		if state := readCodexSessionState(path); state.ContextKnown {
+			return min(100, max(0, 100-state.ContextLeft))
+		}
+	}
+	return -1
 }

@@ -56,7 +56,7 @@ Ask the new agent which Cully note supports its answer; it should give you a dat
 
 ## 5. Check the local advisor
 
-The memory hooks handle continuity. Separately, the advisor watches session signals your agent makes available. Claude Code exposes richer live signals; Codex and Cursor expose fewer. Cully does not compact a session or run tests for you. See the [agent-specific controls](/session-optimization#use-the-agent-s-native-controls).
+The memory hooks handle continuity. Separately, the advisor watches session signals your agent makes available. Run your agent through the [Cully terminal](/terminal) for one health bar and advisor panel on every agent. Cully does not compact a session or run tests for you. See the [agent-specific controls](/session-optimization#use-the-agent-s-native-controls).
 
 In a terminal, run:
 
@@ -69,9 +69,9 @@ You can also use Cully inside your agent:
 
 | Agent | In-session control |
 | --- | --- |
-| Claude Code | Look at the Cully status line or run `/cully suggestions`. |
-| Codex | Start `cully codex` for the live advisor pane, or run `/prompts:cully suggestions`. |
-| Cursor | Run the project `/cully suggestions` command or ask Cursor to check suggestions. |
+| Claude Code | Start `cully run claude` for the health bar and advisor panel, or run `/cully suggestions`. |
+| Codex | Start `cully run codex` for the health bar and advisor panel, or run `/prompts:cully suggestions`. |
+| Cursor | Start `cully run cursor` for the health bar and advisor panel, or run the project `/cully suggestions` command. |
 
 If Cully lists a numbered improvement, use its number with `cully apply 1 --dry-run` to inspect the proposed change. Review it before applying. `cully status` also shows whether the advisor daemon is running; if startup failed, run `cully setup --agent codex` with your agent name to retry. See the [advisor commands](/advisor#commands) for the rest.
 
