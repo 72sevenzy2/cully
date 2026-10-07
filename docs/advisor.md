@@ -11,9 +11,9 @@ Cully checks the session signals your coding agent makes available and suggests 
 
 | Agent | In the agent |
 | --- | --- |
-| Claude Code | Watch the Cully status line or run `/cully suggestions`. |
-| Codex | Start `cully codex` for an expandable status panel, or run `/prompts:cully suggestions`. |
-| Cursor | Run the project `/cully suggestions` command or ask Cursor to check Cully suggestions. |
+| Claude Code | Start `cully run claude` for the health bar and advisor panel, or run `/cully suggestions`. |
+| Codex | Start `cully run codex` for the health bar and an expandable advisor panel, or run `/prompts:cully suggestions`. |
+| Cursor | Start `cully run cursor` for the health bar and advisor panel, or run the project `/cully suggestions` command. |
 
 You can always run these in a terminal:
 
@@ -22,20 +22,20 @@ cully status
 cully suggestions
 ```
 
-`cully status` shows whether the daemon is running. If startup failed, resolve the reported error and rerun `cully setup` with the same options. For an existing server, keep the `--mcp-url URL` option. Claude Code provides live hook signals and a Cully status line. Codex shows session instruments and advice in the optional `cully codex` status view; Cursor uses its supported command and status surfaces. The available advice may differ between agents.
+`cully status` shows whether the daemon is running. If startup failed, resolve the reported error and rerun `cully setup` with the same options. For an existing server, keep the `--mcp-url URL` option. Every agent can run in the [Cully terminal](/terminal), which gives all of them the same health bar and advisor panel. Claude Code also keeps its Cully status line when you run it outside the terminal; inside the terminal that status line stays silent and only feeds the panel. The available advice may differ between agents.
 
 | Agent | Installed local integration |
 | --- | --- |
-| Claude Code | Live Cully status line, session and stop hooks, `/cully` command and skill. |
-| Codex | Optional `cully codex` status view, session-start and asynchronous tool-count hooks, `/prompts:cully`, managed `AGENTS.md` pointer and skill. Setup leaves Codex's saved footer settings to the user. |
-| Cursor | Session and response hooks, project `/cully` command and skill. |
+| Claude Code | Session and stop hooks, an asynchronous tool-event hook for the terminal, a status line that feeds the terminal panel (and displays itself outside it), `/cully` command and skill. |
+| Codex | `cully run codex` terminal, session-start and asynchronous tool-event hooks, `/prompts:cully`, managed `AGENTS.md` pointer and skill. Setup leaves Codex's saved footer settings to the user. |
+| Cursor | Session and response hooks, asynchronous shell, file-edit and MCP hooks for the terminal, project `/cully` command and skill. |
 
 The background advisor uses one shared analysis workflow with adapters for Claude Code, Codex and Cursor. The originating agent selects its own CLI adapter and configured MCP connection; it does not resume or take over the foreground conversation. Claude supplies its richer hook-derived signals, the Codex wrapper supplies bounded context/tool counters, and Cursor supplies coarse metadata through its continuity stop hook. Missing instruments remain unknown.
 
 | Agent | Background worker | Live input |
 | --- | --- | --- |
 | Claude Code | `claude` print mode | Existing analysis-hook signals and session instruments. |
-| Codex | An ephemeral `codex exec` process with a read-only workspace | Native context and bounded tool counters from `cully codex`. |
+| Codex | An ephemeral `codex exec` process with a read-only workspace | Native context and bounded tool counters from `cully run codex`. |
 | Cursor | `cursor-agent` print/ask mode | Coarse continuity-stop metadata, without transcript reads. |
 
 The shared instructions ask the worker to consult a few relevant owner/project-scoped Cully records before advising. If a concrete signal identifies a missing capability or a need for current documentation, a separate targeted research step uses that adapter's available web tools. The worker reports whether recall was checked, unavailable, skipped or unconfirmed; missing tools, login or model access do not imply that research succeeded. CLI adapters and their source-reporting behavior are distinct from verification that live MCP/web tools actually worked on a particular machine.
@@ -64,7 +64,7 @@ Codex saves reduced instruments in owner-readable `codex-session-<opaque-key>.js
 
 MCP health/authentication describe the **last observed response**, separately from daemon health: a successful owner-scoped tool marks healthy/authenticated, a failed response marks unhealthy, and an explicit authentication failure marks unauthenticated. Missing response evidence remains unknown. This is not a continuous server probe. Codex cost is omitted because the current native instruments do not provide billable cost; model and input/output tokens remain visible, and Claude keeps its reported cost.
 
-Opening a Codex thread also requests one read-only connection check through an ephemeral coding-agent process using its configured Cully MCP identity. The check runs in the background with a 45-second limit; actual MCP response hooks update the saved health/authentication and Startup call total, without changing foreground activity. Worker text alone cannot mark the connection healthy. Saved metrics load automatically through `cully codex resume`: explicit native thread IDs can hydrate the first panel frame, while the interactive picker loads the selected thread on SessionStart. Metric rows remain adjacent, with one blank row after section titles and between major sections; column gaps stay unchanged.
+Opening a Codex thread also requests one read-only connection check through an ephemeral coding-agent process using its configured Cully MCP identity. The check runs in the background with a 45-second limit; actual MCP response hooks update the saved health/authentication and Startup call total, without changing foreground activity. Worker text alone cannot mark the connection healthy. Saved metrics load automatically through `cully run codex resume`: explicit native thread IDs can hydrate the first panel frame, while the interactive picker loads the selected thread on SessionStart. Metric rows remain adjacent, with one blank row after section titles and between major sections; column gaps stay unchanged.
 
 The Codex panel shows the last completed analysis time and memory/research source states. These states are reported by the agent, rather than independently verified tool telemetry. Claude workers use an isolated temporary Cully-only MCP configuration; Codex workers disable unrelated configured MCP servers for their invocation. Saved agent configurations remain unchanged.
 
