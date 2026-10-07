@@ -186,7 +186,7 @@ func codexStatusContent(cols int, advice []string, stats codexToolStats, view co
 	for _, counter := range []struct {
 		label string
 		value int
-	}{{"Tools", stats.Tools}, {"Searches", stats.Searches}, {"Edits", stats.Edits}, {"Checks", stats.Checks}, {"Errors", stats.Errors}} {
+	}{{"Tools", stats.Tools}, {"Searches", stats.Searches}, {"Edits", stats.Edits}, {"Checks", stats.Checks}, {"Commits", stats.Commits}, {"Subagents", stats.Agents}, {"Web", stats.Web}, {"Errors", stats.Errors}} {
 		value := fmt.Sprint(counter.value)
 		if counter.label == "Errors" && counter.value > 0 {
 			value = yellow + bold + value + rst
@@ -576,7 +576,7 @@ func codexCompactInstrumentRows(cols int, stats codexToolStats, view codexStatus
 	if stats.EditsSinceCheck > 0 {
 		verification = yellow + fmt.Sprintf("%d edits need check", stats.EditsSinceCheck) + rst
 	}
-	activity := []string{bold + "Model & activity" + rst, "", "Model " + model, fmt.Sprintf("Tools %d · Searches %d", stats.Tools, stats.Searches), fmt.Sprintf("Edits %d · Checks %d · Errors %s", stats.Edits, stats.Checks, errors), "Verification " + verification}
+	activity := []string{bold + "Model & activity" + rst, "", "Model " + model, fmt.Sprintf("Tools %d · Searches %d · Subagents %d · Web %d", stats.Tools, stats.Searches, stats.Agents, stats.Web), fmt.Sprintf("Edits %d · Checks %d · Commits %d · Errors %s", stats.Edits, stats.Checks, stats.Commits, errors), "Verification " + verification}
 	loopRow := ""
 	if view.Loops.Active() {
 		loopRow = "Loops " + yellow + view.Loops.Summary() + rst
@@ -613,9 +613,16 @@ func codexCompactInstrumentRows(cols int, stats codexToolStats, view codexStatus
 	if view.ChangesKnown {
 		changes = green + fmt.Sprintf("+%d", view.LinesAdded) + rst + "/" + red + fmt.Sprintf("-%d", view.LinesRemoved) + rst + fmt.Sprintf(" (%d tracked)", view.ChangedFiles)
 	}
-	work := "Fast " + codexInstrument(strings.TrimPrefix(view.Fast, "Fast ")) + " · Git " + changes
-	if view.Fast == "" && !view.ChangesKnown {
-		work = dim + "Fast / Git unavailable" + rst
+	showFast := view.Agent == "" || view.Agent == "codex"
+	work := "Git " + changes
+	if showFast {
+		work = "Fast " + codexInstrument(strings.TrimPrefix(view.Fast, "Fast ")) + " · " + work
+	}
+	if !view.ChangesKnown && (!showFast || view.Fast == "") {
+		work = dim + "Git unavailable" + rst
+		if showFast {
+			work = dim + "Fast / Git unavailable" + rst
+		}
 	}
 	usage := []string{bold + "Project & usage" + rst, "", location, "Context " + context, tokens, quota, work}
 	cully := codexCullyInstrumentRows(stats, width)
@@ -648,7 +655,7 @@ func codexCompactInstrumentRows(cols int, stats codexToolStats, view codexStatus
 		// normal narrow terminal still leaves most rows to the conversation.
 		rows = rows[:len(rows)-1] // title and first group belong to one section
 		groups = [][]string{
-			{activity[0], "Model " + model, fmt.Sprintf("Tools %d · Searches %d · Edits %d · Checks %d · Errors %s", stats.Tools, stats.Searches, stats.Edits, stats.Checks, errors), "Verification " + verification, loopRow},
+			{activity[0], "Model " + model, fmt.Sprintf("Tools %d · Searches %d · Subagents %d · Web %d", stats.Tools, stats.Searches, stats.Agents, stats.Web), fmt.Sprintf("Edits %d · Checks %d · Commits %d · Errors %s", stats.Edits, stats.Checks, stats.Commits, errors), "Verification " + verification, loopRow},
 			{usage[0], location, "Context " + context, tokens + " · " + quota, work},
 			{cully[0], fmt.Sprintf("Calls %d observed", stats.Cully.Calls) + " · Auth " + codexObservedState(stats.Cully.Auth, true), fmt.Sprintf("Log %d · Context %d · Recall %d · Search %d · Get %d · Other %d", stats.Cully.Log, stats.Cully.Context, stats.Cully.Recall, stats.Cully.Search, stats.Cully.Get, stats.Cully.Other)},
 		}

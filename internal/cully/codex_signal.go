@@ -25,11 +25,13 @@ type codexToolEvent struct {
 
 type codexToolStats struct {
 	Tools, Errors, Searches, Edits, Checks, EditsSinceCheck int
+	Agents, Web, Commits                                    int
 	Cully                                                   codexCullyStats
 }
 
 var (
 	codexSearchCommand = regexp.MustCompile(`(?i)(^|[;&|[:space:]])(rg|grep|find|ls)([[:space:]]|$)`)
+	codexCommitCommand = regexp.MustCompile(`(?i)(^|[;&|[:space:]])git[[:space:]]+commit([[:space:]]|$)`)
 	codexCheckCommand  = regexp.MustCompile(`(?i)(^|[;&|[:space:]])(go test|go vet|npm test|npm run test|cargo test|pytest)([[:space:]]|$)`)
 )
 
@@ -211,6 +213,9 @@ func codexToolClass(event codexToolEvent) byte {
 	}
 	if name == "bash" || name == "exec_command" || name == "shell" {
 		command := shellCommandOf(event.ToolInput)
+		if codexCommitCommand.MatchString(command) {
+			return 'G'
+		}
 		if codexCheckCommand.MatchString(command) {
 			return 'T'
 		}
@@ -222,6 +227,10 @@ func codexToolClass(event codexToolEvent) byte {
 	switch name {
 	case "read", "read_file", "readfile", "view", "grep", "glob":
 		return 'S'
+	case "task", "agent":
+		return 'A'
+	case "webfetch", "websearch", "web_search":
+		return 'W'
 	}
 	if strings.Contains(name, "search") || strings.Contains(name, "read_file") {
 		return 'S'
@@ -277,6 +286,12 @@ func readCodexToolStats(session string) codexToolStats {
 		switch line[0] {
 		case 'S':
 			stats.Searches++
+		case 'A':
+			stats.Agents++
+		case 'W':
+			stats.Web++
+		case 'G':
+			stats.Commits++
 		case 'E':
 			stats.Edits++
 			stats.EditsSinceCheck++

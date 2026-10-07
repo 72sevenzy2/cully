@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Fix the compact panel in Claude and other non-Codex agents: it no longer shows a Fast row, and a Cully MCP result sent as a string of JSON text now counts as healthy and authenticated.
+- Add Subagents, Web and Commits counters to the panel's activity rows. Subagent (`Task`/`Agent`) calls, web fetches and searches, and `git commit` commands are counted from tool events without recording their arguments.
 - Fix the panel's Cully MCP health and Auth rows in Claude Code: a successful tool result sent as an array of content blocks now counts as healthy and authenticated instead of staying "unknown".
 - Add sessions and tasks to the memory schema (migration 004): a `cully_sessions` table with project, branch, assistant and a linked task, a `task` entry type, and the MCP tools `cully_session` (start or update a session, optionally with a task) and `cully_session_get`. The migration is additive; existing records, tools and the `entry_type` values `work`, `issue`, `learning` and `decision` are unchanged.
 - Make the terminal panel agent-neutral: in Claude it now shows Claude's model, tokens, limits and line changes from its statusline feed, says "waiting for Claude" instead of "waiting for Codex" when data is missing, and hides the Codex-only Fast row.
