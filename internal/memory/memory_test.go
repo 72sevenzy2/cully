@@ -85,7 +85,8 @@ func TestSessionValidation(t *testing.T) {
 	if r.Session.Assistant != "claude" {
 		t.Fatal("assistant not normalized")
 	}
-	long := strings.Repeat("x", 201)
+	long := strings.Repeat("x", 61)
+	exact := strings.Repeat("y", 60)
 	secret := "api_key=supersecretvalue"
 	cases := map[string]func(*Request){
 		"missing ref":     func(r *Request) { r.Session.SessionRef = "" },
@@ -109,8 +110,13 @@ func TestSessionValidation(t *testing.T) {
 	if err := get.Validate(); err != nil {
 		t.Fatal(err)
 	}
+	capped := good()
+	capped.Session.Task = &exact
+	if err := capped.Validate(); err != nil {
+		t.Fatalf("60-rune task rejected: %v", err)
+	}
 	log := Request{Operation: "log", Log: &LogInput{Summary: "Oauth validation", Assistant: "claude", Section: "company", EntryType: "task"}}
-	if err := log.Validate(); err != nil {
-		t.Fatalf("task entry type rejected: %v", err)
+	if err := log.Validate(); err == nil || !strings.Contains(err.Error(), "cully_session") {
+		t.Fatalf("task via cully_log must point at cully_session: %v", err)
 	}
 }

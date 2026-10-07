@@ -219,9 +219,14 @@ func loadSession(ctx context.Context, tx pgx.Tx, owner, ref string) (*memory.Ses
 }
 
 // session upserts one session. A new task name creates a task entry and links
-// it; the same task name again leaves the existing entry in place.
+// it; the same task name again leaves the existing entry in place. The
+// advisory lock serializes concurrent callers for one session so two new task
+// names cannot both insert and leave an orphan behind.
 func (s *Store) session(ctx context.Context, tx pgx.Tx, owner string, v *memory.SessionInput) (memory.Result, error) {
 	out := memory.Result{}
+	if _, err := tx.Exec(ctx, `SELECT pg_advisory_xact_lock(hashtextextended($1, 0))`, owner+"\x00"+v.SessionRef); err != nil {
+		return out, err
+	}
 	var taskID *string
 	if v.Task != nil && *v.Task != "" {
 		var current *string

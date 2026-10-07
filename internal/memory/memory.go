@@ -227,6 +227,11 @@ func category(v *string) error {
 	}
 	return fmt.Errorf("%w: invalid category", ErrInvalid)
 }
+
+// taskNameLimit keeps task names short enough for the health panel row.
+// The CLI truncates to the same limit in runes.
+const taskNameLimit = 60
+
 func section(v *string) error {
 	if v != nil && *v != "personal" && *v != "company" {
 		return fmt.Errorf("%w: section must be personal or company", ErrInvalid)
@@ -322,6 +327,9 @@ func (r *Request) Validate() error {
 		if v.EntryType == "" {
 			v.EntryType = "work"
 		}
+		if v.EntryType == "task" {
+			return fmt.Errorf("%w: save tasks through cully_session, not cully_log", ErrInvalid)
+		}
 		v.Assistant = strings.ToLower(strings.TrimSpace(v.Assistant))
 		if !assistantRE.MatchString(v.Assistant) {
 			return fmt.Errorf("%w: invalid assistant", ErrInvalid)
@@ -382,8 +390,8 @@ func (r *Request) Validate() error {
 			return fmt.Errorf("%w: invalid assistant", ErrInvalid)
 		}
 		checks = append(checks, sessionRef(&v.SessionRef), section(&v.Section), project(v.ProjectURL), text(v.Branch, false), text(v.Task, false))
-		if v.Task != nil && utf8.RuneCountInString(*v.Task) > 200 {
-			return fmt.Errorf("%w: task exceeds 200 characters", ErrInvalid)
+		if v.Task != nil && utf8.RuneCountInString(*v.Task) > taskNameLimit {
+			return fmt.Errorf("%w: task exceeds 60 characters", ErrInvalid)
 		}
 		if v.Branch != nil && utf8.RuneCountInString(*v.Branch) > 200 {
 			return fmt.Errorf("%w: branch exceeds 200 characters", ErrInvalid)

@@ -31,7 +31,7 @@ Both sections belong to the same owner. `company` is a label for organizing your
 | `cully_session` | Start or update the current agent session with its project, branch and an optional task name. A new task name saves one `task` record linked to the session; the same name again changes nothing. |
 | `cully_session_get` | Get one session by its `session_ref`, including its task. |
 
-Tool results contain `entry`, `entries`, `projects` or `deleted`, depending on the operation. Read tools require `tools:read` and mutations require `tools:write` when OAuth is enabled.
+Tool results contain `entry`, `entries`, `projects` or `deleted`, depending on the operation. Read tools require `tools:read` and mutations require `tools:write` when OAuth is enabled. Tasks are saved through `cully_session`; `cully_log` rejects `entry_type: task` and points at it instead.
 
 PostgreSQL holds the source notes. `cully_search` and `cully_recent` read those records directly. Mem0 is part of the standard Cully stack and provides semantic candidates for `cully_recall`; Cully checks them against live, owned records before returning them. A new or edited note may take a little time to appear in recall, while text search remains available.
 

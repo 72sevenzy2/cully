@@ -6,13 +6,20 @@ import (
 	"os"
 	"regexp"
 	"strings"
+	"unicode"
 )
 
 // taskSuggestionPrefix starts the suggestion Cully writes when a session has
 // work but no task. RunApply recognizes it and sets the task directly.
 const taskSuggestionPrefix = "Looks like you're working on "
 
-const taskMinEdits = 1
+// taskNameMax keeps task names short enough for the health panel row.
+// The MCP validation enforces the same limit in runes.
+const taskNameMax = 60
+
+// taskMinEdits is the edits a session needs before Cully suggests a task.
+// A single edit is often a typo fix, not a task worth naming.
+const taskMinEdits = 3
 
 func sessionTaskFile(session string) string {
 	return sessionReportFile(session) + ".task"
@@ -31,14 +38,14 @@ func readTask(session string) string {
 
 func writeTask(session, name string) error {
 	name = strings.Join(strings.Fields(name), " ")
-	if len(name) > 60 {
-		name = strings.TrimSpace(name[:60])
+	if runes := []rune(name); len(runes) > taskNameMax {
+		name = strings.TrimSpace(string(runes[:taskNameMax]))
 	}
 	if name == "" {
 		_ = os.Remove(sessionTaskFile(session))
 		return nil
 	}
-	return os.WriteFile(sessionTaskFile(session), []byte(name+"\n"), 0o644)
+	return os.WriteFile(sessionTaskFile(session), []byte(name+"\n"), 0o600)
 }
 
 var branchPrefixRe = regexp.MustCompile(`^(feat|feature|fix|bugfix|hotfix|chore|docs|refactor|test|product)/`)
@@ -56,7 +63,8 @@ func suggestTaskName(branch string) string {
 	if name == "" {
 		return ""
 	}
-	return strings.ToUpper(name[:1]) + name[1:]
+	runes := []rune(name)
+	return string(unicode.ToUpper(runes[0])) + string(runes[1:])
 }
 
 // ensureTaskSuggestion adds one task suggestion to the session report when the
