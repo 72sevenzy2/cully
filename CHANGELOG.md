@@ -5,6 +5,7 @@
 ## 0.8.3
 
 - Preserve richer Cully MCP counts when an older running wrapper rewrites its earlier state schema during an upgrade, using a private thread-scoped counter snapshot.
+- Add an opt-in live check confirming an advisor's actual semantic Cully call reaches its linked session counter without increasing foreground activity.
 
 ## 0.8.2
 
