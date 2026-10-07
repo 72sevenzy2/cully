@@ -3,8 +3,10 @@
 package cully
 
 import (
+	"context"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 	"testing"
@@ -71,6 +73,70 @@ func TestCodexResumeRestoresThreadMetrics(t *testing.T) {
 	open("new-pane", "different-thread")
 	if got := readCodexToolStats("new-pane"); got.Tools != 0 || got.Cully.Calls != 0 {
 		t.Fatal("different thread inherited metrics", got)
+	}
+}
+
+func TestCodexExplicitResumeID(t *testing.T) {
+	id := "05b59298-9154-497e-9161-59372e94882e"
+	for _, tc := range []struct {
+		args []string
+		want string
+	}{
+		{[]string{"resume", id}, id}, {[]string{"resume", strings.ToUpper(id)}, id},
+		{[]string{"resume"}, ""}, {[]string{"resume", "--last"}, ""},
+		{[]string{"resume", "thread-name"}, ""}, {[]string{"fork", id}, ""},
+	} {
+		if got := codexExplicitResumeID(tc.args); got != tc.want {
+			t.Fatal(tc.args, got)
+		}
+	}
+}
+
+func TestCodexStartupHealthProbeDoesNotInflateCounters(t *testing.T) {
+	t.Setenv("CLAUDE_CONFIG_DIR", t.TempDir())
+	t.Setenv("MODEL_HINT_GUARD", "")
+	t.Setenv("CULLY_PANE_SESSION", "probe")
+	cwd := t.TempDir()
+	registerCodexPane("probe", cwd)
+	bindCodexPane(cwd, "native-thread")
+	RunCodexSignalHook(strings.NewReader(`{"tool_name":"apply_patch","tool_response":{}}`))
+	t.Setenv("MODEL_HINT_GUARD", "1")
+	t.Setenv("CULLY_MCP_PROBE_SESSION", "probe")
+	RunCodexSignalHook(strings.NewReader(`{"tool_name":"mcp__cully__cully_context","tool_response":{"content":[{"text":"private-probe-result"}]}}`))
+	got := readCodexToolStats("probe")
+	if got.Tools != 1 || got.Edits != 1 || got.Cully.Calls != 0 || got.Cully.Health != "healthy" || got.Cully.Auth != "authenticated" {
+		t.Fatal("probe inflated counters or lost health", got)
+	}
+	RunCodexSignalHook(strings.NewReader(`{"tool_name":"mcp__cully__cully_context","tool_response":{"isError":true,"content":[{"text":"Unauthorized"}]}}`))
+	got = readCodexToolStats("probe")
+	if got.Tools != 1 || got.Cully.Calls != 0 || got.Cully.Auth != "unauthenticated" {
+		t.Fatal("probe auth failure lost", got)
+	}
+	clearCodexCullyStats("probe")
+	RunCodexSignalHook(strings.NewReader(`{"tool_name":"mcp__cully__cully_context","tool_response":{"content":[{"text":"late"}]}}`))
+	if readCodexToolStats("probe").Cully.Auth != "unauthenticated" {
+		t.Fatal("late probe changed closed thread")
+	}
+}
+
+func TestCodexHealthProbeCannotTrustWorkerClaims(t *testing.T) {
+	root := t.TempDir()
+	t.Setenv("CLAUDE_CONFIG_DIR", root)
+	t.Setenv("CODEX_HOME", root)
+	t.Setenv("PATH", root)
+	t.Setenv("CULLY_ANALYZE_DISABLE", "")
+	registerCodexPane("probe-claims", root)
+	bindCodexPane(root, "thread")
+	script := `#!/bin/sh
+[ "$CULLY_MCP_PROBE_SESSION" = probe-claims ] || exit 10
+[ "$MODEL_HINT_GUARD" = 1 ] || exit 11
+[ -z "$CULLY_PANE_SESSION" ] || exit 12
+printf 'SOURCE|MEMORY|checked\nhealthy authenticated\n'
+`
+	os.WriteFile(filepath.Join(root, "codex"), []byte(script), 0o755)
+	checkCodexMCPHealth(context.Background(), "probe-claims", root)
+	if got := readCodexToolStats("probe-claims"); got.Cully.Health != "" || got.Cully.Calls != 0 {
+		t.Fatal("worker output invented health", got)
 	}
 }
 

@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+## 0.8.1
+
+- Reduce panel row spacing: adjacent metric rows, one blank row after section titles and between major sections; keep the three-column gap.
+- Restore saved same-thread instruments before the first panel frame when resuming an explicit Codex thread ID, while the resume picker loads them on SessionStart.
+- Check Cully MCP through the coding agent's configured identity after opening a thread; only actual response hooks update health/authentication, without adding probe calls to foreground counters.
+
 ## 0.8.0
 
 - Organize the Codex pane into Model & activity, Project & usage, and Cully MCP groups, with aligned columns on wide screens and consistent spacing when stacked.

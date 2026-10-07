@@ -10,6 +10,8 @@ import (
 	"strings"
 	"syscall"
 	"time"
+
+	"github.com/google/uuid"
 )
 
 // Only reduced instruments live here: never prompts, screen text, tool payloads,
@@ -21,6 +23,18 @@ type codexSessionState struct {
 	ContextLeft                                  int
 	ContextKnown                                 bool
 	Started                                      time.Time
+}
+
+// An explicit native ID hydrates the first frame before the child opens. Names,
+// flags and the interactive resume picker bind through the actual SessionStart.
+func codexExplicitResumeID(args []string) string {
+	if len(args) < 2 || args[0] != "resume" {
+		return ""
+	}
+	if id, err := uuid.Parse(args[1]); err == nil {
+		return id.String()
+	}
+	return ""
 }
 
 func codexSessionStateFile(session string) string {

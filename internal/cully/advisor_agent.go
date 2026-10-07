@@ -133,6 +133,10 @@ func runAdvisorAgent(agent, cwd string, research bool, prompt string) (string, e
 }
 
 func runAdvisorAgentContext(parent context.Context, agent, cwd string, research bool, prompt string) (string, error) {
+	return runAdvisorAgentProbeContext(parent, agent, cwd, research, prompt, "")
+}
+
+func runAdvisorAgentProbeContext(parent context.Context, agent, cwd string, research bool, prompt, probeSession string) (string, error) {
 	name, args, err := advisorCommand(agent, research)
 	if err != nil {
 		return "", err
@@ -164,12 +168,15 @@ func runAdvisorAgentContext(parent context.Context, agent, cwd string, research 
 	for _, value := range os.Environ() {
 		key, _, _ := strings.Cut(value, "=")
 		switch key {
-		case "CULLY_PANE_SESSION", "CULLY_SESSION", "CULLY_AGENT", "MODEL_HINT_GUARD":
+		case "CULLY_PANE_SESSION", "CULLY_SESSION", "CULLY_AGENT", "MODEL_HINT_GUARD", "CULLY_MCP_PROBE_SESSION":
 			continue
 		}
 		cmd.Env = append(cmd.Env, value)
 	}
 	cmd.Env = append(cmd.Env, "MODEL_HINT_GUARD=1", "CULLY_AGENT="+agent)
+	if probeSession != "" {
+		cmd.Env = append(cmd.Env, "CULLY_MCP_PROBE_SESSION="+probeSession)
+	}
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
 	cmd.Cancel = func() error { return syscall.Kill(-cmd.Process.Pid, syscall.SIGKILL) }
 	cmd.WaitDelay = 2 * time.Second

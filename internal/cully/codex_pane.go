@@ -59,6 +59,9 @@ func RunCodexPane(args []string, input, output *os.File) error {
 	defer os.Remove(sessionSignalsFile(session))        //nolint:errcheck
 	defer os.Remove(sessionSeenFile(session))           //nolint:errcheck
 	defer clearCodexCullyStats(session)
+	if id := codexExplicitResumeID(args); id != "" {
+		bindCodexPane(currentDir(), id)
+	}
 	cmd := exec.Command("codex", append([]string{"-c", codexStatusConfig}, args...)...)
 	cmd.Env = append(os.Environ(), "CULLY_PANE_SESSION="+session, "CULLY_SESSION="+session, "CULLY_AGENT=codex")
 	view := codexStatusView{Project: currentDir(), Branch: gitBranch(currentDir()), Started: time.Now(), Daemon: isDaemonRunning()}
@@ -68,12 +71,16 @@ func RunCodexPane(args []string, input, output *os.File) error {
 	refreshSession := func() {
 		if !restoredSession {
 			restoredSession = restoreCodexSessionView(session, &view)
+			if restoredSession {
+				go checkCodexMCPHealth(reviewContext, session, view.Project)
+			}
 		}
 	}
 	persistSession := func() {
 		saveCodexSessionView(session, view)
 		lastSessionSave = time.Now()
 	}
+	refreshSession()
 	readCodexGitChanges(&view)
 	stats := readCodexToolStats(session)
 	advice := codexCombinedAdvice(session, stats, view)

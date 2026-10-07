@@ -103,17 +103,17 @@ func TestCodexCompactGroupSpacingAdaptsWithoutLosingMetrics(t *testing.T) {
 		return -1
 	}
 	for _, pair := range [][2]string{{"Model GPT", "Tools 60"}, {"Tools 60", "Edits 2"}, {"Edits 2", "Verification"}, {"Project cully", "Context "}, {"Tokens in", "5h 82%"}, {"Calls 0 observed", "Log 0"}, {"Search 0", "Auth authenticated"}} {
-		if gap := find(wide, pair[1]) - find(wide, pair[0]); gap != 2 {
-			t.Fatalf("metric spacing %q → %q = %d, want2", pair[0], pair[1], gap)
+		if gap := find(wide, pair[1]) - find(wide, pair[0]); gap != 1 {
+			t.Fatalf("metric spacing %q → %q = %d, want1", pair[0], pair[1], gap)
 		}
 	}
 	heading := find(wide, "Advisor has")
-	if heading < 2 || strings.TrimSpace(ansi.Strip(wide[heading-1])) != "" || strings.TrimSpace(ansi.Strip(wide[heading-2])) != "" {
-		t.Fatal("Advisor must have a larger two-row section break")
+	if heading < 1 || strings.TrimSpace(ansi.Strip(wide[heading-1])) != "" || strings.TrimSpace(ansi.Strip(wide[heading+1])) != "" {
+		t.Fatal("Advisor title must have one separator before and after")
 	}
 	longAdvice := []string{"CAUT|" + strings.Repeat("Inspect the first failure before retrying. ", 4), "ADV|" + strings.Repeat("Run focused verification before finishing. ", 4)}
 	longRows := codexCompactStatusRows(149, 43, longAdvice, stats, view)
-	if gap := find(longRows, "Tools 60") - find(longRows, "Model GPT"); gap != 2 {
+	if gap := find(longRows, "Tools 60") - find(longRows, "Model GPT"); gap != 1 {
 		t.Fatal("wrapped previews removed metric spacing on a normal wide terminal", gap)
 	}
 	for _, size := range [][2]int{{149, 16}, {80, 43}} {

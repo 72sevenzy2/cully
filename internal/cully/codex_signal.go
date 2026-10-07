@@ -145,11 +145,15 @@ func activeCodexPaneSession(cwd, codexSessionID string) string {
 // inactive outside the opt-in pane, so ordinary Codex sessions have no local
 // advisor artifacts.
 func RunCodexSignalHook(r io.Reader) {
-	if os.Getenv("MODEL_HINT_GUARD") != "" {
-		return
-	}
 	var event codexToolEvent
 	if json.NewDecoder(io.LimitReader(r, 1<<20)).Decode(&event) != nil || event.ToolName == "" {
+		return
+	}
+	if os.Getenv("MODEL_HINT_GUARD") != "" {
+		if session := os.Getenv("CULLY_MCP_PROBE_SESSION"); session != "" && codexCullyTool(event.ToolName) != "" {
+			health, auth := codexCullyResponseState(event.ToolResponse)
+			recordCodexCullyHealth(session, health, auth)
+		}
 		return
 	}
 	session := os.Getenv("CULLY_PANE_SESSION")

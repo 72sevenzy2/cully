@@ -502,21 +502,11 @@ func codexCompactStatusRows(cols, availableRows int, advice []string, stats code
 	if capacity == 2 {
 		return []string{"  " + ansi.Truncate("🧠 Context  "+context, width, "…") + rst, footer}
 	}
-	// Spend spare height on consistent breathing room, never on hiding a
-	// metric or shortening a preview. Wrapped continuations stay together.
-	if cols >= 120 {
-		spaced, _ := codexCompactInstrumentRowsSpaced(cols, stats, view, true)
-		if len(spaced)+len(preview)+4 <= capacity {
-			rows := append([]string(nil), spaced...)
-			rows = append(rows, "", "", "  "+cyan+ansi.Truncate(heading, width, "…")+rst)
-			rows = append(rows, preview...)
-			return append(rows, footer)
-		}
-	}
+	// Section titles get breathing room; related metric rows stay together.
 	// Smaller layouts shed optional whitespace before shedding information.
-	if len(status)+len(preview)+4 <= capacity {
+	if len(status)+len(preview)+5 <= capacity {
 		rows := append([]string(nil), status...)
-		rows = append(rows, "", "  "+cyan+ansi.Truncate(heading, width, "…")+rst)
+		rows = append(rows, "", "  "+cyan+ansi.Truncate(heading, width, "…")+rst, "")
 		rows = append(rows, preview...)
 		rows = append(rows, "", footer)
 		return rows
@@ -547,10 +537,6 @@ func codexCompactStatusRows(cols, availableRows int, advice []string, stats code
 }
 
 func codexCompactInstrumentRows(cols int, stats codexToolStats, view codexStatusView) ([]string, string) {
-	return codexCompactInstrumentRowsSpaced(cols, stats, view, false)
-}
-
-func codexCompactInstrumentRowsSpaced(cols int, stats codexToolStats, view codexStatusView, spaced bool) ([]string, string) {
 	width := max(1, cols-5)
 	var rows []string
 	add := func(text string) { rows = append(rows, "  "+ansi.Truncate(text, width, "…")+rst) }
@@ -626,11 +612,8 @@ func codexCompactInstrumentRowsSpaced(cols int, stats codexToolStats, view codex
 		cellWidth := max(1, (width-gap*2)/3)
 		var wrapped [3][]string
 		for column, group := range groups {
-			for index, value := range group {
+			for _, value := range group {
 				wrapped[column] = append(wrapped[column], strings.Split(ansi.Wrap(value, cellWidth, ""), "\n")...)
-				if spaced && index >= 2 && index < len(group)-1 {
-					wrapped[column] = append(wrapped[column], "")
-				}
 			}
 		}
 		for y := 0; y < max(len(wrapped[0]), len(wrapped[1]), len(wrapped[2])); y++ {

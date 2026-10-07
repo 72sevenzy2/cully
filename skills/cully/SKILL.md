@@ -29,6 +29,8 @@ The Codex panel detects terminal program/type, SSH and login-shell metadata, and
 
 ## Continue work across sessions
 
+Use `cully codex resume` to load the same coding thread's saved metrics automatically. An explicit native thread ID can restore the first panel frame; the interactive picker restores its selection on SessionStart. A bounded read-only background check uses Codex's configured Cully MCP connection to refresh health/authentication through actual response hooks, without increasing foreground call counts. Metric rows remain adjacent, with blank rows after headings and between major sections.
+
 The Codex pane saves reduced native instruments and cumulative tool/MCP counters in private local files keyed by the hashed coding thread. Resuming that thread restores model/context/token/quota values, pending verification, counts and last-observed MCP health/authentication when SessionStart supplies its identity. Different threads remain isolated. Fresh native totals replace saved totals without double counting; missing clipped fields keep their last observed value. Branch, Git changes and daemon status refresh live, and advice is analyzed again. New threads await actual MCP response evidence. These local aggregates contain no prompts, tool responses, retrieved notes or credentials; durable handoffs still belong in Cully MCP.
 
 - At the start of a substantive task, automatically call `cully_context` with the current project and a focused task query, using its default three-note limit. This returns concise previews; call `cully_get` only for a record whose full details matter. If the server is older and lacks `cully_context`, use one `cully_search` or `cully_recent` call with `limit: 3`.
