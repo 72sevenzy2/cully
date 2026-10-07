@@ -30,8 +30,8 @@ Usage:
   cully claude|codex|cursor [ARGS...]     Shortcuts for cully run claude, codex and cursor-agent
   cully timeline [--all] [--session ID] [--cwd DIR]
                                          Show what happened in a coding session
-  cully replay [--session ID] [--cwd DIR] [--steps] [--files] [--speed N|--instant] [--json] [--html [FILE]]
-                                         Replay what the agent did: stages, files, commands, checks
+  cully replay [--session ID] [--cwd DIR] [--files] [--speed N|--instant] [--json] [--html [FILE]]
+                                         Replay what the agent did: steps, files, commands, checks
   cully handoff [AGENT] [--print] [--cwd DIR]
                                          Hand the session to another coding agent
   cully apply <n> [--dry-run] [--yes] [--cwd DIR]

@@ -15,23 +15,15 @@ import (
 	"golang.org/x/term"
 )
 
-// The interactive replay is a model (state and key handling) and pure render
-// functions that turn it into lines. Only runReplayTUI touches the terminal,
-// so everything else is testable with strings.
+// The interactive replay is a step player beside file activity. Only
+// runReplayTUI touches the terminal, so everything else is testable with strings.
 //
-// Keys:   graph view   up/down, j/k select; enter or space expand; a expand all;
-//         s or p step-by-step player; f file activity; / filter by file;
-//         PgUp/PgDn scroll; q quit.   Mouse: click a stage to expand it,
-//         wheel scrolls.
-//         player       space pause; left/right step; up/down speed; f files;
-//         / filter; tab or g back to the graph; q quit.
+// Keys: space pause; left/right step; up/down speed; f files; / filter; q quit.
 
 const (
-	viewGraph = "graph"
 	viewSteps = "steps"
 	viewFiles = "files"
 
-	wideDetailCols  = 140
 	splitPanelCols  = 100
 	replayMinSpeed  = 0.25
 	replayMaxSpeed  = 64.0
@@ -142,96 +134,26 @@ type replayModel struct {
 }
 
 func newReplayModel(doc replayDoc, o replayOptions, width, height int, color bool) *replayModel {
-	m := &replayModel{Doc: doc, View: viewGraph, Width: width, Height: height, Color: color,
-		Expanded: map[int]bool{}, Speed: o.Speed}
+	m := &replayModel{Doc: doc, View: viewSteps, Width: width, Height: height, Color: color, Speed: o.Speed, Paused: true}
 	if m.Speed <= 0 {
 		m.Speed = 1
-	}
-	if o.Steps {
-		m.View = viewSteps
 	}
 	return m
 }
 
-func (m *replayModel) wide() bool { return m.Width >= wideDetailCols }
-
 func (m *replayModel) bodyHeight() int { return max(1, m.Height-5) }
 
-func (m *replayModel) graphOptions() stageGraphOptions {
-	w := m.Width
-	if m.wide() {
-		w = 72
-	}
-	return stageGraphOptions{Width: w, Color: m.Color, Selected: m.Selected, Expanded: m.Expanded, Filter: m.Filter, NoDetail: m.wide()}
-}
-
-// visibleStages are the stage indexes the current filter keeps.
-func (m *replayModel) visibleStages() []int {
-	var out []int
-	for i, s := range m.Doc.Stages {
-		if stageMatches(s, m.Filter) {
-			out = append(out, i)
-		}
-	}
-	return out
-}
-
-func (m *replayModel) moveSelection(delta int) {
-	vis := m.visibleStages()
-	if len(vis) == 0 {
-		return
-	}
-	pos := 0
-	for k, i := range vis {
-		if i == m.Selected {
-			pos = k
-		}
-	}
-	pos = min(max(pos+delta, 0), len(vis)-1)
-	m.Selected = vis[pos]
-	m.ensureVisible()
-}
-
-func (m *replayModel) ensureVisible() {
-	g := renderStageGraph(m.Doc, m.graphOptions())
-	if m.Selected < 0 || m.Selected >= len(g.Rows) {
-		return
-	}
-	row := g.Rows[m.Selected]
-	h := m.bodyHeight()
-	if row[0] < m.Scroll {
-		m.Scroll = row[0]
-	}
-	if row[1] >= m.Scroll+h {
-		m.Scroll = row[1] - h + 1
-	}
-	m.clampScroll(len(g.Lines))
-}
-
-func (m *replayModel) clampScroll(total int) {
-	m.Scroll = max(0, min(m.Scroll, total-m.bodyHeight()))
-}
-
-func (m *replayModel) toggle(i int) {
-	if i >= 0 && i < len(m.Doc.Stages) {
-		m.Expanded[i] = !m.Expanded[i]
-	}
-}
-
-func (m *replayModel) enterPlayer() {
+func (m *replayModel) restartPlayer() {
 	m.View = viewSteps
-	m.Pos, m.Paused = 0, false
-	if m.PrevView == viewGraph || m.PrevView == "" {
-		if m.Selected >= 0 && m.Selected < len(m.Doc.Stages) && m.Selected > 0 {
-			start := m.Doc.Stages[m.Selected].Start
-			for k, s := range m.Doc.Steps {
-				if !s.Time.Before(start) {
-					m.Pos = k
-					break
-				}
-			}
-		}
+	m.Pos = 0
+	m.Paused = false
+}
+
+func stepMatches(s replayStep, filter string) bool {
+	if filter == "" {
+		return true
 	}
+	return strings.Contains(s.Path, filter) || strings.Contains(s.To, filter) || strings.Contains(s.Detail, filter) || strings.Contains(s.Cmd, filter)
 }
 
 // Update applies one key or mouse event.
@@ -273,107 +195,28 @@ func (m *replayModel) Update(k replayKey) {
 			return
 		case 'f':
 			if m.View == viewFiles {
-				m.View = m.PrevView
+				m.View = viewSteps
 			} else {
 				m.PrevView, m.View = m.View, viewFiles
-				if m.PrevView == viewGraph {
-					m.Pos = len(m.Doc.Steps)
-				}
+				m.Pos = len(m.Doc.Steps)
 			}
 			return
 		case 's', 'p':
-			if m.View != viewSteps {
-				m.PrevView = m.View
-				m.enterPlayer()
-			}
-			return
-		case 'g':
-			m.View = viewGraph
+			m.restartPlayer()
 			return
 		}
-	}
-	if k.Kind == "tab" {
-		if m.View == viewGraph {
-			m.PrevView = viewGraph
-			m.enterPlayer()
-		} else {
-			m.View = viewGraph
-		}
-		return
 	}
 	switch m.View {
-	case viewGraph:
-		m.updateGraph(k)
 	case viewSteps:
 		m.updatePlayer(k)
 	case viewFiles:
 		if k.Kind == "esc" {
-			m.View = m.PrevView
+			m.View = viewSteps
 		}
 	}
 }
 
-func (m *replayModel) afterFilter() {
-	vis := m.visibleStages()
-	if len(vis) > 0 {
-		m.Selected = vis[0]
-	}
-	m.Scroll = 0
-}
-
-func (m *replayModel) updateGraph(k replayKey) {
-	g := renderStageGraph(m.Doc, m.graphOptions())
-	switch k.Kind {
-	case "up":
-		m.moveSelection(-1)
-	case "down":
-		m.moveSelection(1)
-	case "rune":
-		switch k.R {
-		case 'k':
-			m.moveSelection(-1)
-		case 'j':
-			m.moveSelection(1)
-		case 'a':
-			all := true
-			for i := range m.Doc.Stages {
-				if !m.Expanded[i] {
-					all = false
-				}
-			}
-			for i := range m.Doc.Stages {
-				m.Expanded[i] = !all
-			}
-		}
-	case "enter", "space":
-		m.toggle(m.Selected)
-	case "esc":
-		m.Filter = ""
-	case "pgup":
-		m.Scroll -= m.bodyHeight() - 1
-		m.clampScroll(len(g.Lines))
-	case "pgdn":
-		m.Scroll += m.bodyHeight() - 1
-		m.clampScroll(len(g.Lines))
-	case "wheelup":
-		m.Scroll -= 3
-		m.clampScroll(len(g.Lines))
-	case "wheeldown":
-		m.Scroll += 3
-		m.clampScroll(len(g.Lines))
-	case "click":
-		row := m.Scroll + k.Y - 1 - 3 // three header lines
-		if k.Y-1 < 3 || row < 0 || row >= len(g.StageAt) || (m.wide() && k.X > 74) {
-			return
-		}
-		if i := g.StageAt[row]; i >= 0 {
-			if m.Selected == i || m.wide() {
-				m.toggle(i)
-			}
-			m.Selected = i
-		}
-	}
-}
+func (m *replayModel) afterFilter() {}
 
 func (m *replayModel) updatePlayer(k replayKey) {
 	switch k.Kind {
@@ -414,6 +257,17 @@ func (m *replayModel) NextDelay() time.Duration {
 
 // ---------------------------------------------------------------------------
 // Pure layout
+
+func fitTo(s string, w int) string {
+	if w < 1 {
+		return ""
+	}
+	s = ansi.Truncate(s, w, "…")
+	if d := w - ansi.StringWidth(s); d > 0 {
+		s += strings.Repeat(" ", d)
+	}
+	return s
+}
 
 func joinColumns(left, right []string, lw, rw, height int) []string {
 	out := make([]string, 0, height)
@@ -621,7 +475,7 @@ func renderStepFeed(steps []replayStep, n int, filter string, width, height int,
 	cur := n - 1
 	for i := 0; i < n && i < len(steps); i++ {
 		s := steps[i]
-		if filter != "" && !(s.Kind == "file" && (strings.Contains(s.Path, filter) || strings.Contains(s.To, filter))) {
+		if !stepMatches(s, filter) {
 			continue
 		}
 		if i == cur {
@@ -668,11 +522,11 @@ func (m *replayModel) footer() []string {
 			state = "end"
 		}
 		status += fmt.Sprintf(" · %s %sx", state, strconv.FormatFloat(m.Speed, 'f', -1, 64))
-		keys = "space pause · ←/→ step · ↑/↓ speed · f files · / filter · tab graph · q quit"
+		keys = "space pause · ←/→ step · ↑/↓ speed · f files · / filter · q quit"
 	case m.View == viewFiles:
 		keys = "f/esc back · / filter · q quit"
 	default:
-		keys = "↑/↓ select · enter/click expand · a all · s steps · f files · / filter · PgUp/PgDn/wheel scroll · q quit"
+		keys = "space pause · ←/→ step · f files · / filter · q quit"
 	}
 	if m.Filter != "" && !m.Filtering {
 		status += " · filter /" + safeText(m.Filter)
@@ -686,9 +540,6 @@ func (m *replayModel) Render() []string {
 	w, h := m.Width, m.Height
 	var mark, spanA, spanB time.Time
 	switch {
-	case m.View == viewGraph && m.Selected >= 0 && m.Selected < len(m.Doc.Stages):
-		s := m.Doc.Stages[m.Selected]
-		mark, spanA, spanB = s.Start, s.Start, s.End
 	case len(m.Doc.Steps) > 0:
 		idx := len(m.Doc.Steps) - 1
 		if m.View == viewSteps {
@@ -705,20 +556,6 @@ func (m *replayModel) Render() []string {
 	lines = append(lines, renderScrubber(m.Doc, mark, spanA, spanB, w, m.Color)...)
 	body := m.bodyHeight()
 	switch m.View {
-	case viewGraph:
-		g := renderStageGraph(m.Doc, m.graphOptions())
-		m.clampScroll(len(g.Lines))
-		view := g.Lines[min(m.Scroll, len(g.Lines)):]
-		if m.wide() {
-			var detail []string
-			if m.Selected >= 0 && m.Selected < len(m.Doc.Stages) {
-				s := m.Doc.Stages[m.Selected]
-				detail = boxLines(fmt.Sprintf("%d %s%s", s.N, s.Kind, stageGlyph(s)), stageTimes(s), stageDetailLines(s, m.Color), w-76, false, false, stageColor(s), m.Color, false)
-			}
-			lines = append(lines, joinColumns(view, detail, 72, w-76, body)...)
-		} else {
-			lines = append(lines, clipLines(view, body, w)...)
-		}
 	case viewSteps:
 		if w >= splitPanelCols {
 			lw := w * 6 / 10
@@ -759,9 +596,6 @@ func runReplayTUI(out, in *os.File, doc replayDoc, o replayOptions) error {
 	defer io.WriteString(out, "\x1b[?1000l\x1b[?1006l\x1b[0m\x1b[?25h\x1b[?1049l") //nolint:errcheck
 
 	m := newReplayModel(doc, o, cols, rows, os.Getenv("NO_COLOR") == "")
-	if o.Steps {
-		m.enterPlayer()
-	}
 	input := make(chan []replayKey, 8)
 	go func() {
 		buf := make([]byte, 256)

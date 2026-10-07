@@ -30,12 +30,12 @@ Never recorded:  prompts · file contents · diffs · command arguments
 | Time and agent | `10:34`, Claude Code | Timeline and replay |
 | Kind of tool | edit, check, search, memory call | Loop detection, status |
 | Passed or failed | check failed | Verification and risk |
-| Project-relative file path and operation | `internal/auth/resource.go`, edited | Replay and file activity |
+| Project-relative file path and operation | `internal/auth/resource.go`, edited | Replay and file activity. Taken from file tools only, never from shell text |
 | Program and subcommand of a command | `go test`, `git commit` | Replay |
 | A one-way hash of a normalized command | `3f9a1c07` | Spotting the same failing command repeated, without keeping the command |
 | Fixed notes | a loop was detected | Timeline |
 
-Paths outside the project are dropped. Paths longer than 200 characters are dropped.
+Paths outside the project are dropped, as are URLs and other schemes. Paths longer than 200 characters are dropped. Shell commands contribute a program and subcommand only.
 
 **Not recorded:** prompts, file contents, diffs, command arguments, tool output, environment values, URLs, credentials and transcripts.
 

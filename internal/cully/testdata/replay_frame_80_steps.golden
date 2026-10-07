@@ -20,5 +20,5 @@ internal/auth/
   + resource_test.go
 
 
-files 2 · checks 0 passed / 3 failed · loops 0 · elapsed 15m / 19m · playing 1x
-space pause · ←/→ step · ↑/↓ speed · f files · / filter · tab graph · q quit
+files 2 · checks 0 passed / 3 failed · loops 0 · elapsed 15m / 19m · paused 1x
+space pause · ←/→ step · ↑/↓ speed · f files · / filter · q quit

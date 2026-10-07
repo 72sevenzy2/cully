@@ -55,7 +55,7 @@ This page separates what ships today from what is planned. Cully's other pages d
 | Capability | Status | Notes |
 | --- | --- | --- |
 | `cully timeline` | Shipped | Grouped history of a session. |
-| `cully replay` | Shipped | Clickable stage graph, step player, file activity, git reconcile, JSON and offline HTML export. The interactive view and the HTML page have been exercised in a pseudo-terminal and a stubbed DOM, not yet in a range of terminals and browsers. |
+| `cully replay` | Shipped | Step player, file activity, git reconcile, JSON and offline HTML export. File paths come from structured file tools. The interactive view and the HTML page have been exercised in a pseudo-terminal and a stubbed DOM, not yet in a range of terminals and browsers. |
 | `cully handoff` | Shipped | A structured handoff you can print or start another agent with. |
 | `cully rescue` | Shipped | Evidence and recovery steps; an optional headless advisor adds a probable cause. |
 | `cully status` session health | Shipped | |

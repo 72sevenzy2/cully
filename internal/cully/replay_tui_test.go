@@ -33,49 +33,19 @@ func goldenCompare(t *testing.T, name, got string) {
 	}
 }
 
-func TestStageGraphGoldenAndFit(t *testing.T) {
+func TestStepTranscriptFits(t *testing.T) {
 	utcLocal(t)
 	doc := fixtureDoc(t)
 	for _, width := range []int{80, 120, 200} {
-		for _, all := range []bool{true, false} {
-			g := renderStageGraph(doc, stageGraphOptions{Width: width, All: all, Selected: 1})
-			if len(g.Lines) != len(g.StageAt) {
-				t.Fatalf("StageAt length")
-			}
-			for i, l := range g.Lines {
-				if w := ansi.StringWidth(l); w > width {
-					t.Errorf("width %d: line %d is %d wide: %q", width, i, w, l)
-				}
+		out := renderReplayText(doc, replayOptions{}, width, false)
+		for _, line := range strings.Split(out, "\n") {
+			if ansi.StringWidth(line) > width && width >= 40 && strings.Contains(line, "┌") {
+				t.Errorf("width %d line %q", width, line)
 			}
 		}
-	}
-	collapsed := renderStageGraph(doc, stageGraphOptions{Width: 80, Selected: 1})
-	goldenCompare(t, "replay_graph_80.golden", strings.Join(collapsed.Lines, "\n")+"\n")
-	expanded := renderStageGraph(doc, stageGraphOptions{Width: 120, All: true, Selected: -1})
-	goldenCompare(t, "replay_graph_120_expanded.golden", strings.Join(expanded.Lines, "\n")+"\n")
-
-	joined := strings.Join(collapsed.Lines, "\n")
-	for _, want := range []string{"╔", "╗", "◄──┐", "───┤ ↺ retry 1x", "───┘ ↺ retry 3x", "───┤ ↺ retry 2x", "⚠", "Summary"} {
-		if !strings.Contains(joined, want) {
-			t.Errorf("graph missing %q", want)
+		if !strings.Contains(out, "go test") || strings.Contains(out, "┌") {
+			t.Errorf("width %d transcript:\n%s", width, out)
 		}
-	}
-	if strings.Contains(joined, "\x1b") {
-		t.Error("NO_COLOR graph has ANSI")
-	}
-	colored := renderStageGraph(doc, stageGraphOptions{Width: 100, Color: true, Selected: 0})
-	if !strings.Contains(strings.Join(colored.Lines, "\n"), "\x1b[") {
-		t.Error("colored graph has no ANSI")
-	}
-	// Filtering keeps only stages touching the file.
-	f := renderStageGraph(doc, stageGraphOptions{Width: 100, Filter: "helper.go", Selected: 0})
-	text := strings.Join(f.Lines, "\n")
-	if !strings.Contains(text, `Filter "helper.go": 1 of`) || strings.Contains(text, "Explore") {
-		t.Errorf("filtered graph:\n%s", text)
-	}
-	empty := renderStageGraph(replayDoc{}, stageGraphOptions{Width: 80})
-	if len(empty.Lines) != 1 {
-		t.Errorf("empty graph = %v", empty.Lines)
 	}
 }
 
@@ -85,63 +55,10 @@ func newTestModel(t *testing.T, w, h int) *replayModel {
 	return newReplayModel(fixtureDoc(t), replayOptions{Speed: 1}, w, h, false)
 }
 
-func TestModelClickToExpandAndKeys(t *testing.T) {
+func TestModelQuit(t *testing.T) {
 	m := newTestModel(t, 100, 40)
-	g := renderStageGraph(m.Doc, m.graphOptions())
-	// Click the 2nd stage's header row (three header lines above the body).
-	row := g.Rows[1][0]
-	click := replayKey{Kind: "click", X: 5, Y: row + 1 + 3}
-	m.Update(click)
-	if m.Selected != 1 || m.Expanded[1] {
-		t.Fatalf("first click selects: selected=%d expanded=%v", m.Selected, m.Expanded)
-	}
-	m.Update(click)
-	if !m.Expanded[1] {
-		t.Fatal("second click on the selected stage expands it")
-	}
-	if g2 := renderStageGraph(m.Doc, m.graphOptions()); len(g2.Lines) <= len(g.Lines) {
-		t.Errorf("expanded graph must be taller: %d vs %d", len(g2.Lines), len(g.Lines))
-	}
-	m.Update(click)
-	if m.Expanded[1] {
-		t.Fatal("click toggles back")
-	}
-	// Clicking a connector or the header strip does nothing.
-	m.Update(replayKey{Kind: "click", X: 5, Y: 2})
-	if m.Selected != 1 {
-		t.Error("header click moved selection")
-	}
-	m.Update(replayKey{Kind: "down"})
-	m.Update(replayKey{Kind: "enter"})
-	if m.Selected != 2 || !m.Expanded[2] {
-		t.Errorf("down+enter: %d %v", m.Selected, m.Expanded)
-	}
-	m.Update(replayKey{Kind: "rune", R: 'k'})
-	m.Update(replayKey{Kind: "space", R: ' '})
-	if m.Selected != 1 || !m.Expanded[1] {
-		t.Errorf("k+space: %d %v", m.Selected, m.Expanded)
-	}
-	m.Update(replayKey{Kind: "rune", R: 'a'})
-	for i := range m.Doc.Stages {
-		if !m.Expanded[i] {
-			t.Fatal("a expands all")
-		}
-	}
-	m.Update(replayKey{Kind: "rune", R: 'a'})
-	if m.Expanded[0] {
-		t.Fatal("a again collapses all")
-	}
-	// Bounds.
-	for i := 0; i < 50; i++ {
-		m.Update(replayKey{Kind: "down"})
-	}
-	if m.Selected != len(m.Doc.Stages)-1 {
-		t.Errorf("selection = %d", m.Selected)
-	}
-	m.Update(replayKey{Kind: "wheelup"})
-	m.Update(replayKey{Kind: "pgdn"})
-	if m.Scroll < 0 {
-		t.Error("negative scroll")
+	if m.View != viewSteps || !m.Paused {
+		t.Fatalf("opens on the step player, paused: %s %v", m.View, m.Paused)
 	}
 	m.Update(replayKey{Kind: "rune", R: 'q'})
 	if !m.Quit {
@@ -159,8 +76,18 @@ func TestModelFilterAndViews(t *testing.T) {
 		t.Fatal("not filtering")
 	}
 	m.Update(replayKey{Kind: "enter"})
-	if m.Filter != "helper" || len(m.visibleStages()) != 1 {
-		t.Fatalf("filter %q visible %v", m.Filter, m.visibleStages())
+	matched := 0
+	for _, s := range m.Doc.Steps {
+		if stepMatches(s, m.Filter) {
+			matched++
+		}
+	}
+	if m.Filter != "helper" || matched == 0 {
+		t.Fatalf("filter %q matched %d", m.Filter, matched)
+	}
+	m.Pos = len(m.Doc.Steps)
+	if !strings.Contains(strings.Join(renderStepFeed(m.Doc.Steps, m.Pos, m.Filter, 80, 20, false), "\n"), "helper.go") {
+		t.Error("filtered feed lacks helper.go")
 	}
 	m.Update(replayKey{Kind: "esc"})
 	if m.Filter != "" {
@@ -174,17 +101,12 @@ func TestModelFilterAndViews(t *testing.T) {
 		t.Error("files view lacks files")
 	}
 	m.Update(replayKey{Kind: "rune", R: 'f'})
-	if m.View != viewGraph {
+	if m.View != viewSteps {
 		t.Fatalf("f toggles back, view %s", m.View)
 	}
-	m.Selected = 0
 	m.Update(replayKey{Kind: "rune", R: 's'})
-	if m.View != viewSteps || m.Pos != 0 {
-		t.Fatalf("s opens player at start: %s %d", m.View, m.Pos)
-	}
-	m.Update(replayKey{Kind: "tab"})
-	if m.View != viewGraph {
-		t.Error("tab returns to graph")
+	if m.View != viewSteps || m.Pos != 0 || m.Paused {
+		t.Fatalf("s restarts the player: %s pos %d paused %v", m.View, m.Pos, m.Paused)
 	}
 }
 
@@ -258,7 +180,7 @@ func TestParseReplayKeys(t *testing.T) {
 func TestRenderFramesFitAt80_120_200(t *testing.T) {
 	for _, size := range [][2]int{{80, 24}, {120, 30}, {200, 50}} {
 		w, h := size[0], size[1]
-		for _, view := range []string{viewGraph, viewSteps, viewFiles} {
+		for _, view := range []string{viewSteps, viewFiles} {
 			m := newTestModel(t, w, h)
 			m.View, m.Pos, m.Selected = view, len(m.Doc.Steps), 1
 			if view == viewSteps {
@@ -275,14 +197,6 @@ func TestRenderFramesFitAt80_120_200(t *testing.T) {
 			}
 			frame := strings.Join(lines, "\n")
 			switch view {
-			case viewGraph:
-				if !strings.Contains(frame, "Replay · Claude Code · demo:main") || !strings.Contains(frame, "▬") || !strings.Contains(frame, "⚠") || !strings.Contains(frame, "✕") {
-					t.Errorf("%dx%d graph frame:\n%s", w, h, frame)
-				}
-				if w >= wideDetailCols && !strings.Contains(frame, "│ ╔") && !strings.Contains(frame, "┌─ 2 Implement") {
-					// Detail panel is a boxed column next to the graph.
-					t.Errorf("wide frame lacks detail panel:\n%s", frame)
-				}
 			case viewSteps:
 				if !strings.Contains(frame, "FILE ACTIVITY") || !strings.Contains(frame, "space pause") {
 					t.Errorf("%dx%d steps frame:\n%s", w, h, frame)
@@ -347,7 +261,7 @@ func TestReplayHTMLStructureAndOffline(t *testing.T) {
 			t.Errorf("page contains %q", bad)
 		}
 	}
-	for _, want := range []string{"<!doctype html>", "Content-Security-Policy", "prefers-color-scheme:dark", `id="stages"`, `id="feed"`, `id="files"`, `id="reconcile"`, `id="summary"`, `type="range"`,
+	for _, want := range []string{"<!doctype html>", "Content-Security-Policy", "prefers-color-scheme:dark", `id="feed"`, `id="files"`, `id="reconcile"`, `id="summary"`, `type="range"`,
 		"Generated locally by Cully. Contains file paths and command names, no file contents.", "default-src 'none'", "<noscript>"} {
 		if !strings.Contains(page, want) {
 			t.Errorf("page missing %q", want)
@@ -382,12 +296,11 @@ func TestReplayHTMLStructureAndOffline(t *testing.T) {
 	if err := json.Unmarshal([]byte(m[1]), &data); err != nil {
 		t.Fatal(err)
 	}
-	if data.SchemaVersion != 1 || len(data.Stages) == 0 || len(data.Steps) == 0 || data.Session != "sess-1" {
+	if data.SchemaVersion != 2 || len(data.Steps) == 0 || data.Session != "sess-1" {
 		t.Errorf("data = %+v", data.Meta)
 	}
-	// Mirrors the stage graph: retry back-edges and loops are in the data.
-	if !strings.Contains(m[1], `"retry_of"`) || !strings.Contains(m[1], `"loop":true`) {
-		t.Error("stage graph data missing retry/loop")
+	if strings.Contains(m[1], `"stages"`) {
+		t.Error("export still carries a stage graph")
 	}
 }
 

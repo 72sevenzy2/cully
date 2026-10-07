@@ -203,34 +203,25 @@ func RunPaneSignalHook(agent string, r io.Reader) {
 }
 
 func codexToolClass(event codexToolEvent) byte {
-	name := strings.ToLower(event.ToolName)
-	// Tool names can include transport namespaces. Recognize the actual shell
-	// tool rather than guessing commands embedded in orchestration source text.
-	if i := strings.LastIndex(name, "."); i >= 0 {
-		name = name[i+1:]
-	}
-	if i := strings.LastIndex(name, "__"); i >= 0 {
-		name = name[i+2:]
-	}
-	if name == "apply_patch" || name == "edit" || name == "write" || name == "delete" {
+	// Tool names can include transport namespaces. Recognize the actual tool
+	// rather than guessing commands embedded in orchestration source text.
+	name := toolBaseName(event.ToolName)
+	if name == "apply_patch" || name == "edit" || name == "write" || name == "delete" || name == "str_replace" || name == "strreplace" || name == "multiedit" {
 		return 'E'
 	}
-	if name == "bash" || name == "exec_command" {
-		var input struct {
-			Command string `json:"command"`
-			Cmd     string `json:"cmd"`
-		}
-		_ = json.Unmarshal(event.ToolInput, &input)
-		command := input.Command
-		if name == "exec_command" {
-			command = input.Cmd
-		}
+	if name == "bash" || name == "exec_command" || name == "shell" {
+		command := shellCommandOf(event.ToolInput)
 		if codexCheckCommand.MatchString(command) {
 			return 'T'
 		}
 		if codexSearchCommand.MatchString(command) {
 			return 'S'
 		}
+		return 'O'
+	}
+	switch name {
+	case "read", "read_file", "readfile", "view", "grep", "glob":
+		return 'S'
 	}
 	if strings.Contains(name, "search") || strings.Contains(name, "read_file") {
 		return 'S'
@@ -323,32 +314,19 @@ func codexAdvice(stats codexToolStats) []string {
 }
 
 // codexToolCommand returns the shell command of a shell tool call, or "".
+// An argv-style command is joined so the hash matches the string form.
 func codexToolCommand(event codexToolEvent) string {
-	name := strings.ToLower(event.ToolName)
-	if i := strings.LastIndex(name, "."); i >= 0 {
-		name = name[i+1:]
-	}
-	if i := strings.LastIndex(name, "__"); i >= 0 {
-		name = name[i+2:]
-	}
+	name := toolBaseName(event.ToolName)
 	if name != "bash" && name != "exec_command" && name != "shell" {
 		return ""
 	}
-	var input struct {
-		Command string `json:"command"`
-		Cmd     string `json:"cmd"`
-	}
-	_ = json.Unmarshal(event.ToolInput, &input)
-	if input.Command != "" {
-		return input.Command
-	}
-	return input.Cmd
+	return shellCommandOf(event.ToolInput)
 }
 
 // recordJournalTool adds one hook event to the session journal. It stores the
-// tool class, success, tool name, a one-way command hash and, unless
-// CULLY_JOURNAL_PATHS=0, the project-relative file operations and command
-// label described in journal.go. Contents, arguments and output are never read.
+// tool class, success, a one-way hash of a shell command, and, unless
+// CULLY_JOURNAL_PATHS=0, structured file operations and a command label.
+// The hash input is the command text; the command itself is not stored.
 func recordJournalTool(agent, session string, event codexToolEvent, class byte, failed bool) {
 	entry := journalEvent{Time: time.Now().UTC(), Agent: agent, Class: string(class), Failed: failed}
 	var extra []fileOp

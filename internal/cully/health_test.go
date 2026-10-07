@@ -31,8 +31,8 @@ func TestRenderSessionHealthRunning(t *testing.T) {
 	for _, want := range []string{
 		"CULLY", "Agent          Codex", "Branch         main", "Session        1h30m (running)",
 		"Context        ███████░░░ 71%", "Tests          0 ✓  1 ✕", "Verification   failed",
-		"Loops          1 ⚠", "Uncommitted    4 files", "Memory         1 recall · 1 save",
-		"Risk           HIGH · the agent may be looping",
+		"Loops          1", "Uncommitted    4 files", "Memory         1 recall · 1 save",
+		"Risk           HIGH · the last check failed",
 	} {
 		if !strings.Contains(got, want) {
 			t.Fatalf("missing %q in\n%s", want, got)
@@ -84,7 +84,8 @@ func TestHealthRiskRules(t *testing.T) {
 		in    healthInputs
 		level string
 	}{
-		{"loop", sessionHealth{Loops: 1, Verification: "passed since last edit"}, healthIn(0, -1), "HIGH"},
+		{"loop", sessionHealth{Looping: true, Verification: "passed since last edit"}, healthIn(0, -1), "HIGH"},
+		{"resolved loop", sessionHealth{Loops: 1, Verification: "passed since last edit"}, healthIn(2, 30), "LOW"},
 		{"failed check", sessionHealth{Verification: "failed"}, healthIn(0, -1), "HIGH"},
 		{"context full", sessionHealth{Verification: "no edits"}, healthIn(0, 92), "HIGH"},
 		{"unchecked edits", sessionHealth{Verification: "none since last edit"}, healthIn(0, -1), "MEDIUM"},

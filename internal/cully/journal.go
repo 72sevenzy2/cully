@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"io"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -24,13 +25,15 @@ import (
 // Replay privacy guarantee. For each tool event the journal may additionally
 // store, and only these:
 //
-//	Path  a project-RELATIVE file path, at most 200 characters. Absolute paths
-//	      and paths outside the project root are dropped, never stored.
+//	Path  a project-relative file path from a structured file tool, at most
+//	      200 characters. Absolute paths, paths outside the project, and
+//	      anything with a URL scheme are dropped. Shell commands do not
+//	      contribute paths.
 //	To    the project-relative destination of a move, under the same rules.
 //	Op    one of read, write, edit, create, delete, move.
 //	Cmd   only the program and, for a known tool such as git or go, its first
-//	      subcommand (for example "go test", "git commit", "rm"), and only when
-//	      it matches ^[A-Za-z0-9._/-]+( [A-Za-z0-9._-]+)?$.
+//	      subcommand (for example "go test", "git commit"), and only when it
+//	      matches ^[A-Za-z0-9._/-]+( [A-Za-z0-9._-]+)?$.
 //
 // Setting CULLY_JOURNAL_PATHS=0 turns off Path, To, Op and Cmd recording; the
 // event class and success are still recorded. Old journals without these
@@ -89,7 +92,8 @@ func journalPath(cwd, session string) string {
 }
 
 // appendJournal records one event. It never fails the caller: hooks must stay
-// silent and fast.
+// silent and fast. The file is locked so a concurrent hook cannot append while
+// an over-size journal is rewritten.
 func appendJournal(cwd, session string, event journalEvent) {
 	if session == "" || cwd == "" {
 		return
@@ -100,36 +104,63 @@ func appendJournal(cwd, session string, event journalEvent) {
 	if err := os.MkdirAll(journalDir(), 0o700); err != nil {
 		return
 	}
-	path := journalPath(cwd, session)
 	line, err := json.Marshal(event)
 	if err != nil {
 		return
 	}
-	trimJournal(path)
-	f, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o600)
+	line = append(line, '\n')
+	f, err := os.OpenFile(journalPath(cwd, session), os.O_CREATE|os.O_RDWR, 0o600)
 	if err != nil {
 		return
 	}
-	_, _ = f.Write(append(line, '\n'))
-	_ = f.Close()
-}
-
-// trimJournal keeps a very long session bounded by discarding its oldest half.
-func trimJournal(path string) {
-	info, err := os.Stat(path)
-	if err != nil || info.Size() < journalMaxBytes {
+	defer f.Close()
+	if lockFile(f) != nil {
 		return
 	}
-	events := readJournal(path)
-	events = events[len(events)/2:]
-	var out strings.Builder
-	for _, event := range events {
-		if line, err := json.Marshal(event); err == nil {
-			out.Write(line)
-			out.WriteByte('\n')
+	defer unlockFile(f)
+	info, err := f.Stat()
+	if err != nil {
+		return
+	}
+	if info.Size() >= journalMaxBytes {
+		if _, err := f.Seek(0, io.SeekStart); err != nil {
+			return
+		}
+		data, err := io.ReadAll(f)
+		if err != nil {
+			return
+		}
+		kept := keepHalfJournal(data)
+		kept = append(kept, line...)
+		if _, err := f.Seek(0, io.SeekStart); err != nil {
+			return
+		}
+		if _, err := f.Write(kept); err != nil {
+			return
+		}
+		_ = f.Truncate(int64(len(kept)))
+		return
+	}
+	if _, err := f.Seek(0, io.SeekEnd); err != nil {
+		return
+	}
+	_, _ = f.Write(line)
+}
+
+// keepHalfJournal returns the newer half of a journal's lines.
+func keepHalfJournal(data []byte) []byte {
+	lines := strings.Split(string(data), "\n")
+	var kept []string
+	for _, line := range lines {
+		if strings.TrimSpace(line) != "" {
+			kept = append(kept, line)
 		}
 	}
-	_ = os.WriteFile(path, []byte(out.String()), 0o600)
+	kept = kept[len(kept)/2:]
+	if len(kept) == 0 {
+		return nil
+	}
+	return []byte(strings.Join(kept, "\n") + "\n")
 }
 
 func readJournal(path string) []journalEvent {
@@ -189,25 +220,33 @@ func latestJournal(cwd string) (journalFile, []journalEvent, bool) {
 	return files[0], readJournal(files[0].Path), true
 }
 
-// pruneJournals removes old journals, keeping the newest few for every project.
+// pruneJournals removes old journals. Each project keeps its newest few, and
+// anything older than journalMaxAge is removed.
 func pruneJournals() {
 	entries, _ := os.ReadDir(journalDir())
 	type item struct {
 		path     string
 		modified time.Time
 	}
-	var all []item
+	groups := map[string][]item{}
 	for _, entry := range entries {
 		info, err := entry.Info()
 		if entry.IsDir() || err != nil || !strings.HasSuffix(entry.Name(), ".jsonl") {
 			continue
 		}
-		all = append(all, item{filepath.Join(journalDir(), entry.Name()), info.ModTime()})
+		name := entry.Name()
+		project := name
+		if i := strings.IndexByte(name, '-'); i > 0 {
+			project = name[:i]
+		}
+		groups[project] = append(groups[project], item{filepath.Join(journalDir(), name), info.ModTime()})
 	}
-	sort.Slice(all, func(i, j int) bool { return all[i].modified.After(all[j].modified) })
-	for i, it := range all {
-		if i >= journalKeep || time.Since(it.modified) > journalMaxAge {
-			_ = os.Remove(it.path)
+	for _, all := range groups {
+		sort.Slice(all, func(i, j int) bool { return all[i].modified.After(all[j].modified) })
+		for i, it := range all {
+			if i >= journalKeep || time.Since(it.modified) > journalMaxAge {
+				_ = os.Remove(it.path)
+			}
 		}
 	}
 }

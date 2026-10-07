@@ -50,97 +50,6 @@ func replayFixture() []journalEvent {
 	}
 }
 
-func TestBuildStages(t *testing.T) {
-	check := func(fail bool) journalEvent {
-		return journalEvent{Class: journalCheck, Failed: fail, Cmd: "go test", Sig: "x"}
-	}
-	edit := journalEvent{Class: journalEdit, Op: opEdit, Path: "a.go"}
-	read := journalEvent{Class: journalOther, Op: opRead, Path: "a.go"}
-	seq := func(evs ...journalEvent) []journalEvent {
-		for i := range evs {
-			evs[i].Time = at(time.Duration(i) * time.Minute)
-		}
-		return evs
-	}
-	kinds := func(st []stage) []string {
-		var k []string
-		for _, s := range st {
-			k = append(k, s.Kind)
-		}
-		return k
-	}
-	cases := []struct {
-		name   string
-		events []journalEvent
-		kinds  []string
-	}{
-		{"empty", nil, nil},
-		{"neutral only", seq(journalEvent{Class: journalStart}, journalEvent{Class: journalOther}, journalEvent{Class: journalEnd}), nil},
-		{"merge adjacent", seq(read, read, journalEvent{Class: journalSearch}, edit, edit), []string{"Explore", "Implement"}},
-		{"neutral does not split", seq(edit, journalEvent{Class: journalOther}, edit), []string{"Implement"}},
-		{"fix after fail", seq(edit, check(true), edit, check(false)), []string{"Implement", "Verify", "Fix", "Verify"}},
-		{"edit after pass stays implement", seq(edit, check(false), edit), []string{"Implement", "Verify", "Implement"}},
-		{"run command", seq(journalEvent{Class: journalOther, Cmd: "git commit"}), []string{"Run"}},
-		{"memory", seq(journalEvent{Class: journalMemory, Tool: "cully_log"}), []string{"Remember"}},
-		{"extra file op", seq(journalEvent{Class: journalFileOp, Op: opDelete, Path: "x"}), []string{"Implement"}},
-		{"paths disabled", seq(journalEvent{Class: journalEdit}, journalEvent{Class: journalEdit}, check(false)), []string{"Implement", "Verify"}},
-	}
-	for _, c := range cases {
-		if got := kinds(buildStages(c.events)); !reflect.DeepEqual(got, c.kinds) {
-			t.Errorf("%s: kinds = %v, want %v", c.name, got, c.kinds)
-		}
-	}
-
-	// A gap over five minutes splits a stage of the same kind; five is kept.
-	gap := []journalEvent{{Time: at(0), Class: journalEdit}, {Time: at(5 * time.Minute), Class: journalEdit}, {Time: at(11 * time.Minute), Class: journalEdit}}
-	if st := buildStages(gap); len(st) != 2 || st[0].Edits != 2 {
-		t.Errorf("gap split = %+v", st)
-	}
-
-	// Paths disabled: no files, still counted.
-	st := buildStages(seq(journalEvent{Class: journalEdit}, journalEvent{Class: journalEdit}))
-	if len(st) != 1 || st[0].Edits != 2 || len(st[0].Files) != 0 {
-		t.Errorf("paths disabled stage = %+v", st)
-	}
-
-	// Retry cycle: fail, fix, fail, fix, pass.
-	st = buildStages(seq(edit, check(true), edit, check(true), edit, check(false)))
-	if len(st) != 6 || st[1].Retries != 2 || st[3].RetryOf != 2 || st[3].RetryNo != 1 || st[5].RetryOf != 2 || st[5].RetryNo != 2 {
-		t.Errorf("retry cycle = %+v", st)
-	}
-	if st[1].Status != "failed" || st[5].Status != "passed" {
-		t.Errorf("statuses = %s %s", st[1].Status, st[5].Status)
-	}
-
-	// Fixture: loop flag lands on the Verify/Fix stages, files and commands recorded.
-	st = buildStages(replayFixture())
-	if got := kinds(st); !reflect.DeepEqual(got, []string{"Explore", "Implement", "Verify", "Fix", "Verify", "Fix", "Verify", "Fix", "Verify", "Remember"}) {
-		// the delete at 16m directly follows a failed check, so it is a Fix.
-		t.Fatalf("fixture kinds = %v", got)
-	}
-	loops := 0
-	for _, s := range st {
-		if s.Loop {
-			loops++
-		}
-	}
-	if loops == 0 || !st[6].Loop {
-		t.Errorf("loop flags = %d, stage 7 %+v", loops, st[6])
-	}
-	if st[1].Files[0].Path != "internal/auth/resource.go" || st[1].Files[0].Count != 2 {
-		t.Errorf("implement files = %+v", st[1].Files)
-	}
-	if st[2].Cmds[0].Cmd != "go test" || st[2].Status != "failed" {
-		t.Errorf("verify = %+v", st[2])
-	}
-
-	// Mixed status.
-	st = buildStages(seq(check(true), check(false)))
-	if st[0].Status != "mixed" {
-		t.Errorf("status = %s", st[0].Status)
-	}
-}
-
 func TestSummarizeFiles(t *testing.T) {
 	events := []journalEvent{
 		{Class: journalEdit, Op: opCreate, Path: "new.go"},
@@ -328,8 +237,8 @@ func TestInstantTranscriptGraphAndSummary(t *testing.T) {
 	out := renderReplayText(doc, replayOptions{}, 100, false)
 	for _, want := range []string{
 		"Replay · Claude Code · demo:main · 2026-10-08 10:31 · 19m",
-		"1 Explore", "2 Implement", "3 Verify ✕", "↺ retry", "⚠ loop",
-		"~ internal/auth/resource.go ×2", "+ internal/auth/resource_test.go", "ran go test ✕", "ran go test ✓",
+		"Edited   internal/auth/resource.go", "Created  internal/auth/resource_test.go",
+		"Ran      go test", "failed", "passed",
 		"Summary:", "FILE ACTIVITY", "Created (1)", "Edited (1)", "Deleted (1)",
 		"internal/auth/resource.go  edited ×4", "Hotspots", "RECONCILE",
 		"Changed outside the agent's recorded tool calls:", "? stray.txt",
@@ -402,7 +311,7 @@ func TestReplayJSONGolden(t *testing.T) {
 		t.Fatalf("JSON differs from %s (run with UPDATE_GOLDEN=1 if intended)\n%s", golden, got)
 	}
 	var parsed map[string]any
-	if err := json.Unmarshal(got, &parsed); err != nil || parsed["schema_version"] != float64(1) || parsed["session"] != "sess-1" {
+	if err := json.Unmarshal(got, &parsed); err != nil || parsed["schema_version"] != float64(2) || parsed["session"] != "sess-1" || parsed["stages"] != nil {
 		t.Fatalf("json = %v %v", parsed, err)
 	}
 }

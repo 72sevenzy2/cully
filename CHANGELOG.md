@@ -7,7 +7,8 @@
 - Add an Agent Health bar to the terminal: agent, project and branch, session time, context, loops and unchecked edits. Segments with no data are omitted.
 - Add a local session journal fed by asynchronous tool-event hooks for Claude Code, Codex and Cursor. It records time, agent, kind of tool, pass or fail and a one-way command hash, and never prompts, file contents, command arguments or output. Run `cully setup` again to install the new Claude Code and Cursor hooks.
 - Add loop detection (the same command failing three times, or three edit and failed-check cycles) and a project workflow hint when edits have not been checked.
-- Add `cully replay`: an interactive, clickable flow graph of the stages of a session (explore, implement, verify, fix, with retry loops), a step-by-step player, file activity with hotspots, a reconcile check against `git status`, `--json` output and a self-contained offline `--html` export. The journal now also records project-relative file paths with the operation and the program and subcommand of a command, never contents or arguments; set `CULLY_JOURNAL_PATHS=0` to stop.
+- Add `cully replay`: a step player, file activity with hotspots, a reconcile check against `git status`, `--json` output and a self-contained offline `--html` export. File paths come from structured file tools. A shell command records its program and subcommand only. Set `CULLY_JOURNAL_PATHS=0` to stop recording paths and command labels.
+- Keep session risk on a loop that is still happening. A resolved loop stays in the count and no longer marks the session HIGH. Journal pruning keeps the newest sessions per project, and journal writes lock the file.
 - Add `cully timeline`, `cully handoff` and `cully rescue`, and a measured session health block with a rule-based risk label in `cully status`.
 - Claude Code's status line stays silent inside the Cully terminal and feeds the panel instead. It behaves as before outside the terminal.
 

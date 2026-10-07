@@ -70,7 +70,7 @@ Only measured values appear. Context shows when the agent reports a window size.
 
 | Level | When |
 | --- | --- |
-| HIGH | A loop is active, the last check failed, or context is 90% used or more |
+| HIGH | A loop is still active, the last check failed, or context is 90% used or more |
 | MEDIUM | Edits have not been checked, context is 75% used or more, or 15 or more files are uncommitted |
 | LOW | Nothing is flagged |
 
@@ -91,66 +91,42 @@ Summary: 12m, 1 edit, checks 0 passed / 3 failed, 1 loop, 0 memory saves
 
 ## `cully replay`
 
-Replay shows what the agent did, and how, as a flow of stages: first it explored, then it implemented, then verification failed, then it fixed and tried again.
+Replay is a step list of what the agent did, plus the files those steps touched and whether checks passed.
 
 ```text
-┌─ 1 Explore ───────────────────── 10:31 · 3m ┐
-│ read ×6                                      │
-└──────────────────┬───────────────────────────┘
-                   ▼
-┌─ 2 Implement ─────────────────── 10:34 · 8m ┐
-│ ~ internal/auth/resource.go                  │
-│ + internal/auth/resource_test.go             │
-└──────────────────┬───────────────────────────┘
-                   ▼
-┌─ 3 Verify ✕ ⚠ ───────────────── 10:42 · 1m ┐ ◄──┐
-│ ran go test ✕                                │    │
-│ ⚠ loop span: the same thing failed           │    │
-└──────────────────┬───────────────────────────┘    │
-                   ▼                                │
-┌─ 4 Fix ──────────────────────── 10:44 · 2m ┐     │
-│ ~ internal/auth/resource.go                  │     │
-└──────────────────┬───────────────────────────┘     │
-                   ▼                                │
-┌─ 5 Verify ✓ ────────────────── 10:47 · 1m ┐ ───┘ ↺ retry 1x
-│ ran go test ✓                                │
-└──────────────────────────────────────────────┘
+10:31  Read     internal/auth/resource.go
+10:34  Edited   internal/auth/resource.go
+10:42  Ran      go test  ✕ failed
+10:47  Ran      go test  ✓ passed
 ```
 
-Stages come from plain rules over the journal: Explore (reads and searches), Implement (edits, creates, moves and deletes), Verify (checks), Fix (edits that follow a failed check), Remember (Cully memory calls) and Run (other tools). Adjacent events of one kind merge, and a gap of more than five minutes starts a new stage. A failed Verify followed by a Fix and another Verify is drawn as a retry with a back-edge, and a detected loop marks its stages with ⚠.
+File paths come from structured file tools (read, write, edit, delete, apply_patch). A shell command shows up as its program and subcommand, such as `go test`, and does not invent a file list from the command text.
 
-In a terminal, replay is interactive:
+In a terminal, replay is a step player beside the file list:
 
 | Input | Action |
 | --- | --- |
-| Click a stage, or `Enter` / `Space` | Select it, then expand or collapse it to see every file and command in it |
-| `↑` `↓` or `j` `k` | Select a stage |
-| `a` | Expand every stage |
-| `s` or `p` | Switch to the step-by-step player |
+| `Space` | Pause or play |
+| `←` `→` | Step one event |
+| `↑` `↓` | Change speed |
 | `f` | File activity only |
-| `/` | Filter by file |
-| `PgUp` `PgDn` or the mouse wheel | Scroll |
+| `/` | Filter by file or command |
 | `q` | Quit |
-
-A terminal at least 140 columns wide shows the selected stage in a side panel instead of expanding in place.
-
-The step player replays events with their real timing, compressing long gaps. Space pauses, `←` `→` step, `↑` `↓` change speed, and `Tab` or `g` returns to the graph.
 
 ```sh
 cully replay                     # newest session of this project
 cully replay --session ID        # a specific session (a unique prefix works)
-cully replay --steps             # start in the step player
 cully replay --files             # file activity only
-cully replay --instant           # print the full graph, no animation (also used when not a terminal)
+cully replay --instant           # print the transcript, no animation
 cully replay --json              # a versioned JSON document for other tools
 cully replay --html [FILE]       # one self-contained HTML file
 ```
 
-Every view ends with **File activity**: created, edited, deleted, moved and read-only files, how many times each was touched, and hotspots edited three or more times. A **Reconcile** section compares the journal with live `git status`: files Git shows as changed that the journal never saw, and recorded deletions that still exist. It also says plainly when the data is partial, for example when hooks started late or path recording is off.
+**File activity** lists created, edited, deleted, moved and read-only files, how many times each was touched, and hotspots edited three or more times. **Reconcile** compares the journal with live `git status`: files Git shows as changed that the journal never saw, and recorded deletions that still exist. It also says plainly when the data is partial, for example when hooks started late or path recording is off.
 
-`--html` writes `cully-replay-<session>.html` with the same stage graph, a scrubber, a file heatmap and filters. It is one offline file: inline styles and script, no network requests, owner-only permissions. It contains file paths and command names but no file contents, so treat it like a build log before you share it.
+`--html` writes `cully-replay-<session>.html` with the same steps, a scrubber, a file heatmap and filters. It is one offline file: inline styles and script, no network requests, owner-only permissions. It contains file paths and command names but no file contents, so treat it like a build log before you share it.
 
-Replay can only show what the hooks saw. A shell-only command appears as a generic tool stage, and with `CULLY_JOURNAL_PATHS=0` there are no file names or command names to show.
+With `CULLY_JOURNAL_PATHS=0` there are no file names or command names to show.
 
 ## `cully handoff`
 

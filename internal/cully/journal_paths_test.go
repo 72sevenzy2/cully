@@ -32,6 +32,9 @@ func TestRelProjectPath(t *testing.T) {
 		{"newline", "a\nb", ""},
 		{"too long", strings.Repeat("a", 201), ""},
 		{"huge", strings.Repeat("a/", 5000), ""},
+		{"url", "https://hooks.example.com/services/T00/secret", ""},
+		{"collapsed url", "https:/hooks.example.com/secret", ""},
+		{"file url", "file:///etc/passwd", ""},
 		{"spaces", "my dir/my file.txt", "my dir/my file.txt"},
 		{"metachar name", "a;rm -rf $(x).go", "a;rm -rf $(x).go"},
 	}
@@ -73,44 +76,43 @@ func TestExtractToolActivity(t *testing.T) {
 		{"apply_patch", toolEvent(cwd, "apply_patch", map[string]string{"input": patch}), []fileOp{
 			{Path: "new.go", Op: "create"}, {Path: "old.go", Op: "move", To: "moved.go"},
 			{Path: "keep.go", Op: "edit"}, {Path: "gone.go", Op: "delete"}}, "apply_patch"},
-		{"patch via shell", toolEvent(cwd, "exec_command", map[string]string{"cmd": "apply_patch <<'EOF'\n" + patch + "\nEOF"}), []fileOp{
-			{Path: "new.go", Op: "create"}, {Path: "old.go", Op: "move", To: "moved.go"},
-			{Path: "keep.go", Op: "edit"}, {Path: "gone.go", Op: "delete"}}, "apply_patch"},
+		{"patch via shell", toolEvent(cwd, "exec_command", map[string]string{"cmd": "apply_patch <<'EOF'\n" + patch + "\nEOF"}), nil, "apply_patch"},
 		{"patch escape", toolEvent(cwd, "apply_patch", map[string]string{"input": "*** Add File: /etc/x\n*** Update File: ../y"}), nil, "apply_patch"},
-		{"rm", toolEvent(cwd, "Bash", map[string]string{"command": "rm -rf a.go b.go"}), []fileOp{{Path: "a.go", Op: "delete"}, {Path: "b.go", Op: "delete"}}, "rm"},
-		{"rm glob", toolEvent(cwd, "Bash", map[string]string{"command": "rm *.tmp 'x y.txt'"}), []fileOp{{Path: "x y.txt", Op: "delete"}}, "rm"},
+		{"rm", toolEvent(cwd, "Bash", map[string]string{"command": "rm -rf a.go b.go"}), nil, "rm"},
+		{"rm glob", toolEvent(cwd, "Bash", map[string]string{"command": "rm *.tmp 'x y.txt'"}), nil, "rm"},
 		{"rm variable", toolEvent(cwd, "Bash", map[string]string{"command": `rm "$HOME/a" ~/b $X`}), nil, "rm"},
 		{"rm absolute outside", toolEvent(cwd, "Bash", map[string]string{"command": "rm /etc/passwd"}), nil, "rm"},
-		{"rm quoted spaces", toolEvent(cwd, "Bash", map[string]string{"command": `rm "my dir/my file.txt"`}), []fileOp{{Path: "my dir/my file.txt", Op: "delete"}}, "rm"},
-		{"rm double dash", toolEvent(cwd, "Bash", map[string]string{"command": "rm -- -weird"}), []fileOp{{Path: "-weird", Op: "delete"}}, "rm"},
-		{"unlink", toolEvent(cwd, "Bash", map[string]string{"command": "unlink a.go"}), []fileOp{{Path: "a.go", Op: "delete"}}, "unlink"},
-		{"git rm", toolEvent(cwd, "Bash", map[string]string{"command": "git rm a.go"}), []fileOp{{Path: "a.go", Op: "delete"}}, "git rm"},
+		{"rm quoted spaces", toolEvent(cwd, "Bash", map[string]string{"command": `rm "my dir/my file.txt"`}), nil, "rm"},
+		{"rm double dash", toolEvent(cwd, "Bash", map[string]string{"command": "rm -- -weird"}), nil, "rm"},
+		{"unlink", toolEvent(cwd, "Bash", map[string]string{"command": "unlink a.go"}), nil, "unlink"},
+		{"git rm", toolEvent(cwd, "Bash", map[string]string{"command": "git rm a.go"}), nil, "git rm"},
 		{"git rm cached", toolEvent(cwd, "Bash", map[string]string{"command": "git rm --cached a.go"}), nil, "git rm"},
-		{"mv", toolEvent(cwd, "Bash", map[string]string{"command": "mv a.go b.go"}), []fileOp{{Path: "a.go", Op: "move", To: "b.go"}}, "mv"},
-		{"git mv", toolEvent(cwd, "Bash", map[string]string{"command": "git mv a.go b.go"}), []fileOp{{Path: "a.go", Op: "move", To: "b.go"}}, "git mv"},
+		{"mv", toolEvent(cwd, "Bash", map[string]string{"command": "mv a.go b.go"}), nil, "mv"},
+		{"git mv", toolEvent(cwd, "Bash", map[string]string{"command": "git mv a.go b.go"}), nil, "git mv"},
 		{"mv many", toolEvent(cwd, "Bash", map[string]string{"command": "mv a b c"}), nil, "mv"},
 		{"mv outside", toolEvent(cwd, "Bash", map[string]string{"command": "mv a.go /tmp/b.go"}), nil, "mv"},
-		{"cat", toolEvent(cwd, "Bash", map[string]string{"command": "cat a.go b.go"}), []fileOp{{Path: "a.go", Op: "read"}, {Path: "b.go", Op: "read"}}, "cat"},
-		{"head -n", toolEvent(cwd, "Bash", map[string]string{"command": "head -n 5 a.go"}), []fileOp{{Path: "a.go", Op: "read"}}, "head"},
-		{"sed -n", toolEvent(cwd, "Bash", map[string]string{"command": "sed -n '1,10p' a.go"}), []fileOp{{Path: "a.go", Op: "read"}}, "sed"},
+		{"cat", toolEvent(cwd, "Bash", map[string]string{"command": "cat a.go b.go"}), nil, "cat"},
+		{"cat url", toolEvent(cwd, "Bash", map[string]string{"command": "cat https://example.com/x?token=1"}), nil, "cat"},
+		{"head -n", toolEvent(cwd, "Bash", map[string]string{"command": "head -n 5 a.go"}), nil, "head"},
+		{"sed -n", toolEvent(cwd, "Bash", map[string]string{"command": "sed -n '1,10p' a.go"}), nil, "sed"},
 		{"sed -i unsure", toolEvent(cwd, "Bash", map[string]string{"command": "sed -i s/a/b/ a.go"}), nil, "sed"},
-		{"rg pattern path", toolEvent(cwd, "Bash", map[string]string{"command": "rg foo a.go"}), []fileOp{{Path: "a.go", Op: "read"}}, "rg"},
+		{"rg pattern path", toolEvent(cwd, "Bash", map[string]string{"command": "rg foo a.go"}), nil, "rg"},
 		{"rg dir", toolEvent(cwd, "Bash", map[string]string{"command": "rg foo src"}), nil, "rg"},
 		{"rg value flag", toolEvent(cwd, "Bash", map[string]string{"command": "rg -g '*.go' foo a.go"}), nil, "rg"},
-		{"grep -rn", toolEvent(cwd, "Bash", map[string]string{"command": "grep -rn foo a.go"}), []fileOp{{Path: "a.go", Op: "read"}}, "grep"},
-		{"touch", toolEvent(cwd, "Bash", map[string]string{"command": "touch a.go"}), []fileOp{{Path: "a.go", Op: "write"}}, "touch"},
-		{"tee", toolEvent(cwd, "Bash", map[string]string{"command": "echo hi | tee out.txt"}), []fileOp{{Path: "out.txt", Op: "write"}}, "echo"},
-		{"redirect", toolEvent(cwd, "Bash", map[string]string{"command": "echo hi > out.txt"}), []fileOp{{Path: "out.txt", Op: "write"}}, "echo"},
-		{"append and stderr", toolEvent(cwd, "Bash", map[string]string{"command": "go test ./... >> log.txt 2>&1"}), []fileOp{{Path: "log.txt", Op: "write"}}, "go test"},
-		{"fd redirect file", toolEvent(cwd, "Bash", map[string]string{"command": "go build 2>err.txt"}), []fileOp{{Path: "err.txt", Op: "write"}}, "go build"},
+		{"grep -rn", toolEvent(cwd, "Bash", map[string]string{"command": "grep -rn foo a.go"}), nil, "grep"},
+		{"touch", toolEvent(cwd, "Bash", map[string]string{"command": "touch a.go"}), nil, "touch"},
+		{"tee", toolEvent(cwd, "Bash", map[string]string{"command": "echo hi | tee out.txt"}), nil, "echo"},
+		{"redirect", toolEvent(cwd, "Bash", map[string]string{"command": "echo hi > out.txt"}), nil, "echo"},
+		{"pipeline prefers go", toolEvent(cwd, "Bash", map[string]string{"command": "echo hi | go test ./..."}), nil, "go test"},
+		{"append and stderr", toolEvent(cwd, "Bash", map[string]string{"command": "go test ./... >> log.txt 2>&1"}), nil, "go test"},
+		{"fd redirect file", toolEvent(cwd, "Bash", map[string]string{"command": "go build 2>err.txt"}), nil, "go build"},
 		{"heredoc unsure", toolEvent(cwd, "Bash", map[string]string{"command": "cat > a.go <<EOF\nrm b.go\nEOF"}), nil, "cat"},
 		{"cd unsure", toolEvent(cwd, "Bash", map[string]string{"command": "cd sub && rm a.go"}), nil, "rm"},
 		{"subshell unsure", toolEvent(cwd, "Bash", map[string]string{"command": "rm $(echo a.go)"}), nil, "rm"},
 		{"quoted rm text", toolEvent(cwd, "Bash", map[string]string{"command": `echo "rm a.go"`}), nil, "echo"},
-		{"chain", toolEvent(cwd, "Bash", map[string]string{"command": "rm a.go; mv b.go c.go && cat d.go"}), []fileOp{
-			{Path: "a.go", Op: "delete"}, {Path: "b.go", Op: "move", To: "c.go"}, {Path: "d.go", Op: "read"}}, "rm"},
+		{"chain", toolEvent(cwd, "Bash", map[string]string{"command": "rm a.go; mv b.go c.go && cat d.go"}), nil, "rm"},
 		{"env prefix", toolEvent(cwd, "Bash", map[string]string{"command": "TOKEN=abc123 go test ./..."}), nil, "go test"},
-		{"sudo", toolEvent(cwd, "Bash", map[string]string{"command": "sudo rm a.go"}), []fileOp{{Path: "a.go", Op: "delete"}}, "rm"},
+		{"sudo", toolEvent(cwd, "Bash", map[string]string{"command": "sudo rm a.go"}), nil, "rm"},
 		{"git commit args dropped", toolEvent(cwd, "Bash", map[string]string{"command": `git commit -m "secret message"`}), nil, "git commit"},
 		{"git flag first", toolEvent(cwd, "Bash", map[string]string{"command": "git -C /x status"}), nil, "git"},
 		{"npm install", toolEvent(cwd, "Bash", map[string]string{"command": "npm install left-pad"}), nil, "npm install"},
@@ -118,8 +120,8 @@ func TestExtractToolActivity(t *testing.T) {
 		{"program with weird chars", toolEvent(cwd, "Bash", map[string]string{"command": "$(evil) x"}), nil, ""},
 		{"script path", toolEvent(cwd, "Bash", map[string]string{"command": "./scripts/run.sh --flag"}), nil, "run.sh"},
 		{"huge command", toolEvent(cwd, "Bash", map[string]string{"command": "rm " + strings.Repeat("a", 20000)}), nil, ""},
-		{"codex argv", toolEvent(cwd, "shell", map[string]any{"command": []string{"rm", "a.go"}}), []fileOp{{Path: "a.go", Op: "delete"}}, "rm"},
-		{"exec_command cmd", toolEvent(cwd, "exec_command", map[string]string{"cmd": "rm a.go"}), []fileOp{{Path: "a.go", Op: "delete"}}, "rm"},
+		{"codex argv", toolEvent(cwd, "shell", map[string]any{"command": []string{"go", "test", "./..."}}), nil, "go test"},
+		{"exec_command cmd", toolEvent(cwd, "exec_command", map[string]string{"cmd": "rm a.go"}), nil, "rm"},
 		{"unknown tool", toolEvent(cwd, "WebFetch", map[string]string{"url": "https://x"}), nil, ""},
 		{"bad input", codexToolEvent{Cwd: cwd, ToolName: "Read", ToolInput: json.RawMessage(`"oops"`)}, nil, ""},
 	}
@@ -211,8 +213,12 @@ func TestCursorEventsCarryPaths(t *testing.T) {
 		t.Fatalf("delete ops = %+v class %c", ops, codexToolClass(ev))
 	}
 	ev, _ = cursorToolEvent([]byte(`{"hook_event_name":"afterShellExecution","cwd":` + jsonQuote(cwd) + `,"command":"rm old.go"}`))
-	if ops, cmd := extractToolActivity(ev); len(ops) != 1 || ops[0].Op != "delete" || cmd != "rm" {
+	if ops, cmd := extractToolActivity(ev); len(ops) != 0 || cmd != "rm" {
 		t.Fatalf("shell ops = %+v %q", ops, cmd)
+	}
+	ev, _ = cursorToolEvent([]byte(`{"hook_event_name":"afterShellExecution","cwd":` + jsonQuote(cwd) + `,"command":"cat https://example.com/hook?token=secret"}`))
+	if ops, cmd := extractToolActivity(ev); len(ops) != 0 || cmd != "cat" || strings.Contains(cmd, "token") {
+		t.Fatalf("url shell = %+v %q", ops, cmd)
 	}
 }
 

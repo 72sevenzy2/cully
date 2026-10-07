@@ -15,9 +15,10 @@ type sessionHealth struct {
 	Edits        int
 	ChecksPassed int
 	ChecksFailed int
-	Loops        int
-	Recalls      int // Cully memory lookups
-	Saves        int // Cully memory writes
+	Loops        int  // notes and live detections, for the count
+	Looping      bool // a loop is active now
+	Recalls      int  // Cully memory lookups
+	Saves        int  // Cully memory writes
 	Verification string
 }
 
@@ -68,6 +69,7 @@ func measureHealth(events []journalEvent) sessionHealth {
 		h.Verification = "passed since last edit"
 	}
 	h.Loops = loopCount(events)
+	h.Looping = detectLoops(events).Active()
 	return h
 }
 
@@ -108,7 +110,7 @@ func healthGauge(pct int) string {
 // reason so a developer can check it.
 func healthRisk(h sessionHealth, in healthInputs) (level, reason string) {
 	switch {
-	case h.Loops > 0:
+	case h.Looping:
 		return "HIGH", "the agent may be looping"
 	case h.Verification == "failed":
 		return "HIGH", "the last check failed"
@@ -149,7 +151,7 @@ func renderSessionHealth(events []journalEvent, in healthInputs) string {
 	row("Tests", fmt.Sprintf("%d ✓  %d ✕", h.ChecksPassed, h.ChecksFailed))
 	row("Verification", h.Verification)
 	loops := fmt.Sprintf("%d", h.Loops)
-	if h.Loops > 0 {
+	if h.Looping {
 		loops += " ⚠"
 	}
 	row("Loops", loops)

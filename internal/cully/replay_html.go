@@ -49,7 +49,6 @@ const replayHTMLPage = `<!doctype html>
 <div class="times"><span id="t0"></span><span id="counts"></span><span id="t1"></span></div>
 </div>
 <main>
-<section><h2>Stages</h2><div id="stages"></div></section>
 <section><h2>Step by step</h2><div id="feed"></div></section>
 <section class="wide"><h2>File activity</h2><div class="tree" id="files"></div></section>
 <section><h2>Summary</h2><div id="summary"></div></section>
@@ -73,10 +72,6 @@ func renderReplayHTML(doc replayDoc) (string, error) {
 	export := replayExport(doc)
 	for i := range export.Steps {
 		export.Steps[i].Time = export.Steps[i].Time.Truncate(time.Millisecond)
-	}
-	for i := range export.Stages {
-		export.Stages[i].Start = export.Stages[i].Start.Truncate(time.Millisecond)
-		export.Stages[i].End = export.Stages[i].End.Truncate(time.Millisecond)
 	}
 	data, err := json.Marshal(export)
 	if err != nil {

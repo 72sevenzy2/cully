@@ -17,8 +17,8 @@ import (
 	"golang.org/x/term"
 )
 
-// `cully replay` shows what an agent did in a session and how: the stages of
-// the work, the files it read, wrote, edited, created, moved and deleted, the
+// `cully replay` shows what an agent did in a session: the steps, the files
+// structured tools read, wrote, edited, created, moved and deleted, the
 // commands it ran, which checks passed or failed, and where loops happened.
 //
 // Everything is derived from the session journal (see the privacy guarantee in
@@ -29,7 +29,7 @@ import (
 // tree; its output is shown as file names and never stored.
 
 const (
-	replaySchemaVersion = 1
+	replaySchemaVersion = 2
 	replayMaxGap        = 1500 * time.Millisecond
 	replayMinGap        = 80 * time.Millisecond
 	replayHotspotEdits  = 3
@@ -505,7 +505,6 @@ type replayDoc struct {
 	Meta      replayMeta
 	Events    []journalEvent
 	Steps     []replayStep
-	Stages    []stage
 	Files     fileSummary
 	Reconcile reconcileResult
 	Stats     journalStats
@@ -565,7 +564,6 @@ func buildReplay(events []journalEvent, meta replayMeta, git gitReader, cwd stri
 		}
 	}
 	doc.Steps = buildSteps(events)
-	doc.Stages = buildStages(events)
 	doc.Files = summarizeFiles(events)
 	doc.Stats = computeStats(events)
 	doc.Partial = replayPartial(events)
@@ -741,20 +739,17 @@ func renderReconcile(doc replayDoc, color bool) string {
 	return b.String()
 }
 
-// renderReplayText is the non-interactive transcript. By default it prints the
-// stage graph fully expanded; steps selects the step-by-step transcript.
+// renderReplayText is the non-interactive transcript: the step list, then file
+// activity and the git reconcile.
 func renderReplayText(doc replayDoc, o replayOptions, width int, color bool) string {
 	if len(doc.Events) == 0 {
 		return emptyReplay + "\n"
 	}
+	_ = width
 	var b strings.Builder
 	if !o.FilesOnly {
 		b.WriteString(renderHeader(doc, color) + "\n\n")
-		if o.Steps {
-			b.WriteString(renderStepsText(doc, color))
-		} else {
-			b.WriteString(strings.Join(renderStageGraph(doc, stageGraphOptions{Width: width, Color: color, All: true, Selected: -1}).Lines, "\n") + "\n")
-		}
+		b.WriteString(renderStepsText(doc, color))
 		b.WriteString("\n" + summaryLine(doc.Stats) + "\n\n")
 	}
 	b.WriteString(renderFileActivity(doc, color) + "\n")
@@ -801,7 +796,6 @@ type replayJSON struct {
 	Agent         string            `json:"agent"`
 	Meta          replayJSONMeta    `json:"meta"`
 	Events        []replayJSONEvent `json:"events"`
-	Stages        []stage           `json:"stages"`
 	Steps         []replayStep      `json:"steps"`
 	Summary       replayJSONSummary `json:"summary"`
 	Reconcile     reconcileResult   `json:"reconcile"`
@@ -825,7 +819,6 @@ func replayExport(doc replayDoc) replayJSON {
 		Meta: replayJSONMeta{Session: doc.Meta.Session, Agent: doc.Meta.Agent, Project: doc.Meta.Project, Branch: doc.Meta.Branch,
 			Start: utcStamp(doc.Meta.Start), End: utcStamp(doc.Meta.End)},
 		Events:    []replayJSONEvent{},
-		Stages:    doc.Stages,
 		Steps:     doc.Steps,
 		Reconcile: doc.Reconcile,
 		Partial:   doc.Partial,
@@ -833,9 +826,6 @@ func replayExport(doc replayDoc) replayJSON {
 			DurationSeconds: int(doc.Stats.Duration.Seconds()), Edits: doc.Stats.Edits,
 			ChecksPassed: doc.Stats.ChecksPassed, ChecksFailed: doc.Stats.ChecksFailed, Loops: doc.Stats.Loops, Files: doc.Files,
 		},
-	}
-	if out.Stages == nil {
-		out.Stages = []stage{}
 	}
 	if out.Steps == nil {
 		out.Steps = []replayStep{}

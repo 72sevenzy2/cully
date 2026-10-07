@@ -1,6 +1,11 @@
 package cully
 
-import "time"
+import (
+	"fmt"
+	"strings"
+	"sync"
+	"time"
+)
 
 // A workflow hint compares this session with the project's earlier journals.
 // It only fires on a clear habit: at least workflowMinSessions earlier sessions
@@ -27,7 +32,50 @@ func editsCheckedAfter(events []journalEvent) (hasEdits, checked bool) {
 	return hasEdits, checked
 }
 
+type workflowSnap struct {
+	key   string
+	hints []string
+}
+
+var (
+	workflowMu     sync.Mutex
+	workflowCached workflowSnap
+)
+
+func workflowKey(cwd string, current []journalEvent) string {
+	var last time.Time
+	if n := len(current); n > 0 {
+		last = current[n-1].Time
+	}
+	files := projectJournals(cwd)
+	if len(files) > workflowMaxFiles {
+		files = files[:workflowMaxFiles]
+	}
+	var b strings.Builder
+	fmt.Fprintf(&b, "%s|%d|%s|", cwd, len(current), last.UTC().Format(time.RFC3339Nano))
+	for _, f := range files {
+		fmt.Fprintf(&b, "%s:%d;", f.Session, f.Modified.UnixNano())
+	}
+	return b.String()
+}
+
 func workflowHints(cwd string, current []journalEvent) []string {
+	key := workflowKey(cwd, current)
+	workflowMu.Lock()
+	if workflowCached.key == key {
+		hints := workflowCached.hints
+		workflowMu.Unlock()
+		return hints
+	}
+	workflowMu.Unlock()
+	hints := computeWorkflowHints(cwd, current)
+	workflowMu.Lock()
+	workflowCached = workflowSnap{key: key, hints: hints}
+	workflowMu.Unlock()
+	return hints
+}
+
+func computeWorkflowHints(cwd string, current []journalEvent) []string {
 	hasEdits, checked := editsCheckedAfter(current)
 	if !hasEdits || checked {
 		return nil

@@ -26,5 +26,5 @@ Replay · Claude Code · demo:main · 2026-10-08 10:31 · 19m
                                                                          │                                              
                                                                          │                                              
                                                                          │                                              
-files 3 · checks 1 passed / 3 failed · loops 1 · elapsed 17m / 19m · playing 1x
-space pause · ←/→ step · ↑/↓ speed · f files · / filter · tab graph · q quit
+files 3 · checks 1 passed / 3 failed · loops 1 · elapsed 17m / 19m · paused 1x
+space pause · ←/→ step · ↑/↓ speed · f files · / filter · q quit
