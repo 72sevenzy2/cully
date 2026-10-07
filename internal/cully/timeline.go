@@ -151,10 +151,6 @@ func computeStats(events []journalEvent) journalStats {
 				s.ChecksPassed++
 				s.LastCheckState = "passed"
 			}
-		case journalNote:
-			if e.Note == noteLoop {
-				s.Loops++
-			}
 		case journalMemory:
 			if e.Tool == "cully_log" {
 				s.MemorySaves++
@@ -165,6 +161,7 @@ func computeStats(events []journalEvent) journalStats {
 			s.Ended = false
 		}
 	}
+	s.Loops = loopCount(events)
 	return s
 }
 

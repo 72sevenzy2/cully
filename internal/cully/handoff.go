@@ -60,10 +60,6 @@ func handoffFactsOf(events []journalEvent) handoffFacts {
 				f.ChecksPassed++
 				f.LastCheck = "passed"
 			}
-		case journalNote:
-			if e.Note == noteLoop {
-				f.Loops++
-			}
 		}
 	}
 	for _, n := range fails {
@@ -71,6 +67,7 @@ func handoffFactsOf(events []journalEvent) handoffFacts {
 			f.RepeatedFailures++
 		}
 	}
+	f.Loops = loopCount(events)
 	return f
 }
 

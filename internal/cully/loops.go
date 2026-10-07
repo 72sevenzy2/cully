@@ -222,3 +222,17 @@ func sessionLoops(cwd, session string) (loopReport, []journalEvent) {
 	}
 	return report, events
 }
+
+// loopCount is how many loops a session had: those Cully noted while the
+// terminal was running, or those the journal shows now if that is more. Status,
+// timeline and handoff use it so they agree with rescue even when the session
+// ran outside the terminal's advice loop.
+func loopCount(events []journalEvent) int {
+	noted := 0
+	for _, e := range events {
+		if e.Class == journalNote && e.Note == noteLoop {
+			noted++
+		}
+	}
+	return max(noted, len(detectLoops(events).Loops))
+}

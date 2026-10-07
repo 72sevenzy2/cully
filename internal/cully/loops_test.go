@@ -197,3 +197,23 @@ func TestCombinedAdviceContainsLoopLine(t *testing.T) {
 		t.Fatal("Loops row shown without data")
 	}
 }
+
+func TestLoopCountMatchesDetectionOutsideTheTerminal(t *testing.T) {
+	now := time.Date(2026, 10, 8, 10, 0, 0, 0, time.UTC)
+	var events []journalEvent
+	for i := 0; i < loopMinAttempts; i++ {
+		events = append(events, journalEvent{Time: now.Add(time.Duration(i) * time.Minute), Class: journalCheck, Failed: true, Sig: "abc"})
+	}
+	if got := loopCount(events); got != 1 {
+		t.Fatalf("loopCount without notes = %d, want 1", got)
+	}
+	noted := append(append([]journalEvent{}, events...),
+		journalEvent{Time: now, Class: journalNote, Note: noteLoop},
+		journalEvent{Time: now, Class: journalNote, Note: noteLoop})
+	if got := loopCount(noted); got != 2 {
+		t.Fatalf("loopCount with two notes = %d, want 2", got)
+	}
+	if got := loopCount(nil); got != 0 {
+		t.Fatalf("loopCount(nil) = %d", got)
+	}
+}

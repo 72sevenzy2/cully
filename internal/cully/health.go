@@ -48,10 +48,6 @@ func measureHealth(events []journalEvent) sessionHealth {
 			h.Tools++
 		case journalMemory:
 			h.MemorySaves++
-		case journalNote:
-			if e.Note == noteLoop {
-				h.Loops++
-			}
 		case journalEnd:
 			h.End = e.Time
 		}
@@ -66,6 +62,7 @@ func measureHealth(events []journalEvent) sessionHealth {
 	default:
 		h.Verification = "passed since last edit"
 	}
+	h.Loops = loopCount(events)
 	return h
 }
 
