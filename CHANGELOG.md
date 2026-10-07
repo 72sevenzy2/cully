@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+## 0.8.3
+
+- Preserve richer Cully MCP counts when an older running wrapper rewrites its earlier state schema during an upgrade, using a private thread-scoped counter snapshot.
+
 ## 0.8.2
 
 - Count every observed Cully MCP tool by name across foreground, advisor and startup calls, with saved combined and per-source totals restored on resume.

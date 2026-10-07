@@ -54,6 +54,13 @@ func readCodexSessionState(path string) codexSessionState {
 	if err != nil || len(b) > 128*1024 || json.Unmarshal(b, &state) != nil || state.Version != 1 {
 		return codexSessionState{Version: 1}
 	}
+	// Older running wrappers rewrite the original schema and discard fields
+	// they do not know. Keep the richer Cully breakdown in its own private
+	// snapshot, under the same thread lock, until those wrappers are reopened.
+	var cully codexCullyStats
+	if data, err := os.ReadFile(path + ".cully-mcp"); err == nil && len(data) <= 128*1024 && json.Unmarshal(data, &cully) == nil && cully.ByTool != nil && cully.Calls >= state.Stats.Cully.Calls {
+		state.Stats.Cully = cully
+	}
 	return state
 }
 
@@ -80,20 +87,27 @@ func updateCodexSessionState(session string, update func(*codexSessionState)) {
 		state.Stats = readCodexToolStats(session)
 	}
 	update(&state)
-	b, err := json.Marshal(state)
+	if state.Stats.Cully.ByTool != nil {
+		if !writeCodexPrivateJSON(path+".cully-mcp", state.Stats.Cully) {
+			return
+		}
+	}
+	writeCodexPrivateJSON(path, state)
+}
+
+func writeCodexPrivateJSON(path string, value any) bool {
+	b, err := json.Marshal(value)
 	if err != nil {
-		return
+		return false
 	}
 	tmp, err := os.CreateTemp(filepath.Dir(path), ".codex-session-*")
 	if err != nil {
-		return
+		return false
 	}
 	defer os.Remove(tmp.Name()) //nolint:errcheck
 	_, writeErr := tmp.Write(b)
 	closeErr := tmp.Close()
-	if writeErr == nil && closeErr == nil {
-		_ = os.Rename(tmp.Name(), path)
-	}
+	return writeErr == nil && closeErr == nil && os.Rename(tmp.Name(), path) == nil
 }
 
 func recordCodexSessionTool(session string, class, failure byte) {

@@ -4,12 +4,48 @@ package cully
 
 import (
 	"context"
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"strings"
 	"sync"
 	"testing"
 )
+
+func TestCullyCounterUpgradeSurvivesOlderWrapperWrites(t *testing.T) {
+	t.Setenv("CLAUDE_CONFIG_DIR", t.TempDir())
+	cwd := t.TempDir()
+	registerCodexPane("upgrade", cwd)
+	bindCodexPane(cwd, "thread")
+	recordCodexCullyOriginCall("upgrade", "cully_projects", "healthy", "authenticated", "advisor", false)
+	path := codexSessionStateFile("upgrade")
+	state := readCodexSessionState(path)
+	// Simulate an already running 0.8.1 wrapper preserving its known fields
+	// while dropping the newer named/source counters on its next footer save.
+	state.Stats.Cully.ByTool = nil
+	state.Stats.Cully.Advisor = 0
+	data, _ := json.Marshal(state)
+	os.WriteFile(path, data, 0o600)
+	if got := readCodexToolStats("upgrade"); got.Cully.Advisor != 1 || got.Cully.ByTool["cully_projects"] != 1 {
+		t.Fatal("older wrapper erased richer counts", got)
+	}
+	recordCodexCullyOriginCall("upgrade", "cully_context", "healthy", "authenticated", "startup", false)
+	got := readCodexToolStats("upgrade")
+	if got.Cully.Calls != 2 || got.Cully.Advisor != 1 || got.Cully.Startup != 1 {
+		t.Fatal("upgrade stopped accumulating", got)
+	}
+	info, _ := os.Stat(path + ".cully-mcp")
+	if info.Mode().Perm() != 0o600 {
+		t.Fatal("counter snapshot not private")
+	}
+	clearCodexCullyStats("upgrade")
+	os.Remove(codexPaneBindingFile("upgrade"))
+	registerCodexPane("upgrade-resumed", cwd)
+	bindCodexPane(cwd, "thread")
+	if readCodexToolStats("upgrade-resumed").Cully.Advisor != 1 {
+		t.Fatal("upgrade details did not survive resume")
+	}
+}
 
 func TestCullyScopePanelKeepsBothCommentsAndCompleteDetails(t *testing.T) {
 	s := codexToolStats{Cully: codexCullyStats{Calls: 30, Foreground: 20, Advisor: 8, Startup: 2, SemanticRecall: 6, Health: "healthy", Auth: "authenticated", CheckedAt: "2026-10-07T12:34:56Z", ByTool: map[string]int{"cully_update": 4, "cully_recent": 3, "cully_projects": 2}}}
