@@ -12,11 +12,9 @@ Cully's memory service runs on your laptop for the default single-user setup. Yo
 1. Install and start Docker with the Compose plugin. Install the [Cully CLI](/installation) if you have not already.
 2. Run setup for your agent:
 
-   ```sh
-   cully setup --agent codex
-   ```
+   <InstallCommand kind="setup" />
 
-   Use `--agent claude` or `--agent cursor` for another agent. Run `cully setup` without `--agent` if you only want to start the services.
+   Run `cully setup` without `--agent` if you only want to start the services.
 3. Wait for `Cully MCP is configured at ...` to appear, then restart your agent. Setup registers the MCP connection, configures the Cully skill, hooks and agent controls, and starts the advisor daemon if it is not already running. If advisor startup fails, setup prints a warning and `cully status` shows its state.
 4. Work on a substantive task. Your connected agent is prompted to find relevant notes and save a concise work summary for later sessions. The [memory guide](/memory) explains what gets saved.
 

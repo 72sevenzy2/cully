@@ -9,13 +9,11 @@ Set up Cully on your laptop with Docker Compose and Claude Code, Codex or Cursor
 
 ## 1. Install Cully
 
-For Codex:
+Pick your agent, then copy the command:
 
-```sh
-curl -fsSL https://cully.net/install.sh | sh -s -- --agent codex
-```
+<InstallCommand />
 
-Use `--agent claude` or `--agent cursor` for another agent. The installer puts Cully in that agent's `bin` directory, starts the advisor and adds the directory to your zsh or Bash startup file when needed. Open a new terminal before the next step, or use the installed binary path printed by the installer.
+The installer puts Cully in that agent's `bin` directory, starts the advisor and adds the directory to your zsh or Bash startup file when needed. Open a new terminal before the next step, or use the installed binary path printed by the installer.
 
 For source builds, version pinning or custom PATH setup, see [installer options](/installation).
 
@@ -23,11 +21,9 @@ For source builds, version pinning or custom PATH setup, see [installer options]
 
 With Docker running, connect the agent you installed:
 
-```sh
-cully setup --agent codex
-```
+<InstallCommand kind="setup" />
 
-Replace `codex` with `claude` or `cursor` if that is the agent you installed. This one command downloads the matching local stack, creates private credentials that stay stable across restarts, and starts PostgreSQL, Mem0, the private data API and Cully MCP in Docker. It connects your agent to MCP, configures the Cully skill, session hooks and [agent-specific controls](/agents), and starts the local advisor daemon if needed. If the advisor cannot start, setup prints a warning; `cully status` shows its state. See [what runs on your laptop](/hosting#what-starts-on-your-laptop).
+Use the same agent you picked in step 1. This one command downloads the matching local stack, creates private credentials that stay stable across restarts, and starts PostgreSQL, Mem0, the private data API and Cully MCP in Docker. It connects your agent to MCP, configures the Cully skill, session hooks and [agent-specific controls](/agents), and starts the local advisor daemon if needed. If the advisor cannot start, setup prints a warning; `cully status` shows its state. See [what runs on your laptop](/hosting#what-starts-on-your-laptop).
 
 When `Cully MCP is configured at ...` appears, restart your agent. In Codex, review and trust the installed Cully hooks in `/hooks` when asked. You do not need a repository checkout or OAuth for this laptop setup.
 

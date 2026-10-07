@@ -43,11 +43,9 @@ For the provided Docker Compose stack, prepare two public hostnames pointing to 
 
 6. Start the stack and connect your agent:
 
-   ```sh
-   cully setup --agent codex --oauth
-   ```
+   <InstallCommand template="cully setup --agent {agent} --oauth" />
 
-   Use `claude` or `cursor` instead if needed. Setup starts Cully, MCP Auth and Caddy, then registers the public MCP URL with your agent. Restart the agent. For Codex, run `codex mcp login cully`; in Claude Code, use `/mcp`; in Cursor, sign in from MCP settings.
+   Setup starts Cully, MCP Auth and Caddy, then registers the public MCP URL with your agent. Restart the agent. For Codex, run `codex mcp login cully`; in Claude Code, use `/mcp`; in Cursor, sign in from MCP settings.
 
 Check the public routes after setup, replacing the example hostnames:
 

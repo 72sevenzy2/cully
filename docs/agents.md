@@ -7,11 +7,9 @@ description: Connect Claude Code, Codex or Cursor to Cully and its memory tools.
 
 The [quickstart](/quickstart) starts Cully and connects your first agent. To connect another agent or use an existing Cully server, give that agent the MCP URL printed by setup.
 
-```sh
-cully agent setup codex --mcp-url http://127.0.0.1:8080/mcp
-```
+<InstallCommand template="cully agent setup {agent} --mcp-url http://127.0.0.1:8080/mcp" />
 
-Replace `codex` with `claude` or `cursor` and use the URL printed by your server. Restart your agent after setup. In Codex, review and trust the Cully hooks in `/hooks` when prompted. For an OAuth-enabled HTTPS server, append `--oauth` and sign in using the steps below.
+Pick your agent and use the URL printed by your server. Restart your agent after setup. In Codex, review and trust the Cully hooks in `/hooks` when prompted. For an OAuth-enabled HTTPS server, append `--oauth` and sign in using the steps below.
 
 | Agent | Local Cully controls | OAuth sign-in, when enabled |
 | --- | --- | --- |

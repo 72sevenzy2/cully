@@ -7,6 +7,16 @@ description: Choose an agent, set up PATH, pin a release or build Cully from sou
 
 Follow the [quickstart](/quickstart) for the normal laptop setup. The installer accepts `--agent claude`, `--agent codex`, `--agent cursor` or `--agent all`; with no agent selected, Cully detects installed agents. It registers the selected integrations and starts the advisor daemon.
 
+## macOS
+
+Install Docker Desktop, start it, then run the installer from the [quickstart](/quickstart). The installer clears the download quarantine flag on the `cully` binary. Open a new terminal afterwards so your zsh startup file is reloaded.
+
+## Linux
+
+Install Docker Engine with the Compose plugin and make sure your user can run `docker` without `sudo`. Run the installer from the [quickstart](/quickstart), then open a new terminal so your Bash startup file is reloaded.
+
+Windows is not supported by the installer.
+
 ## Binary location and PATH
 
 | Install target | CLI path |

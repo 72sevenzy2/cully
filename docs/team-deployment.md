@@ -71,13 +71,10 @@ After deployment, check that the Cully Deployment's updated and ready replicas m
 1. Choose the public MCP URL, such as `https://mcp.example.com/mcp`, and an authorization-server URL. The exact MCP URL must be the token's resource audience.
 2. Configure [MCP Auth](https://github.com/mcp-runtime/mcp-auth/blob/main/docs/auth-server.md#connect-an-organizations-identity-provider) or a compatible authorization server with the company's identity provider. Grant `tools:read` and `tools:write` for the MCP resource.
 3. Configure Cully MCP with `CULLY_MCP_AUTH_MODE=oauth`, the issuer, exact resource URL and JWKS URL. The [configuration reference](/configuration#manual-mcp-service-settings) lists the service variables.
-4. Give each person the public MCP URL. For Codex, they can install and connect with:
+4. Give each person the public MCP URL. They pick their agent and install and connect with:
 
-   ```sh
-   curl -fsSL https://cully.net/install.sh | sh -s -- --agent codex --mcp-url https://mcp.example.com/mcp --oauth
-   codex mcp login cully
-   ```
+   <InstallCommand template="curl -fsSL https://cully.net/install.sh | sh -s -- --agent {agent} --mcp-url https://mcp.example.com/mcp --oauth" />
 
-   Use `claude` or `cursor` instead of `codex` for another agent. See [connect an agent](/agents) for its sign-in step.
+   Then they sign in; for Codex, run `codex mcp login cully`. See [connect an agent](/agents) for its sign-in step.
 
 MCP uses a private service token to call the data API. The data API holds database and Mem0 credentials. Keep those credentials in the deployment's secret store; agents need only the public MCP URL and their own OAuth sign-in. The [architecture](/architecture) shows the service flow.
