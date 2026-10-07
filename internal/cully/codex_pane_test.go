@@ -3,9 +3,12 @@
 package cully
 
 import (
+	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
+	"syscall"
 	"testing"
 	"time"
 
@@ -17,8 +20,9 @@ func TestCodexPaneConfinesChildScreen(t *testing.T) {
 	emulator := vt.NewEmulator(60, 12)
 	defer emulator.Close()
 	_, _ = emulator.WriteString("\x1b[2J\x1b[1;1HCODEX\x1b[12;1Hlower edge")
-	frame := renderCodexPane(emulator, 60, 24, []string{"ADV|Run a focused check."}, codexToolStats{Tools: 3})
-	for _, want := range []string{"CODEX", "lower edge", "CULLY", "Run a focused check.", "\x1b[13;1H"} {
+	content := codexStatusRows(60, []string{"ADV|Run a focused check."}, codexToolStats{Tools: 3}, codexStatusView{Project: "/work/cully"})
+	frame := renderCodexPane(emulator, 60, 24, content)
+	for _, want := range []string{"CODEX", "lower edge", "Cully", "Run a focused check.", "\x1b[13;1H"} {
 		if !strings.Contains(frame, want) {
 			t.Fatalf("pane frame missing %q", want)
 		}
@@ -26,15 +30,286 @@ func TestCodexPaneConfinesChildScreen(t *testing.T) {
 	if strings.Contains(frame, "\x1b[2J") {
 		t.Fatal("child's whole-screen clear escaped the virtual terminal")
 	}
-	if codexPaneTop(12) != 12 || codexPaneTop(24) != 12 {
+	if strings.Contains(frame, "\x1b[48;") || strings.Contains(frame, "\x1b[40m") {
+		t.Fatal("panel must inherit the terminal background")
+	}
+	if codexPaneTop(10, 10) != 10 || codexPaneTop(40, 10) != 29 || codexPaneTop(24, 40) != 12 {
 		t.Fatal("unexpected pane sizing")
 	}
 }
 
+func TestCodexPaneStopsOnTerminalHangup(t *testing.T) {
+	if os.Getenv("CULLY_PANE_HANGUP_HELPER") == "1" {
+		if RunCodexPane(nil, os.Stdin, os.Stdout) != nil {
+			os.Exit(1)
+		}
+		os.Exit(0)
+	}
+	dir := t.TempDir()
+	// Exercise the bounded fallback when a child ignores graceful shutdown.
+	script := "#!/bin/sh\ntrap '' HUP TERM\nprintf 'hangup child ready\\n'\nwhile :; do sleep 1; done\n"
+	if err := os.WriteFile(filepath.Join(dir, "codex"), []byte(script), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	helper := exec.Command(os.Args[0], "-test.run=^TestCodexPaneStopsOnTerminalHangup$")
+	helper.Env = append(os.Environ(), "CULLY_PANE_HANGUP_HELPER=1", "PATH="+dir+string(os.PathListSeparator)+os.Getenv("PATH"), "CLAUDE_CONFIG_DIR="+t.TempDir())
+	terminal, err := pty.StartWithSize(helper, &pty.Winsize{Rows: 24, Cols: 80})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer terminal.Close()
+	defer helper.Process.Kill() //nolint:errcheck
+	ready := make(chan struct{})
+	go func() {
+		var captured strings.Builder
+		buf := make([]byte, 4096)
+		for {
+			n, readErr := terminal.Read(buf)
+			captured.Write(buf[:n])
+			if strings.Contains(captured.String(), "hangup child ready") {
+				close(ready)
+				return
+			}
+			if readErr != nil {
+				return
+			}
+		}
+	}()
+	select {
+	case <-ready:
+	case <-time.After(5 * time.Second):
+		t.Fatal("child did not become ready")
+	}
+	if err := helper.Process.Signal(syscall.SIGHUP); err != nil {
+		t.Fatal(err)
+	}
+	done := make(chan error, 1)
+	go func() { done <- helper.Wait() }()
+	select {
+	case err := <-done:
+		if exitErr, ok := err.(*exec.ExitError); !ok || exitErr.ExitCode() != 1 {
+			t.Fatalf("hangup should end child and restore wrapper: %v", err)
+		}
+	case <-time.After(5 * time.Second):
+		t.Fatal("wrapper failed to stop an unresponsive child after hangup")
+	}
+}
+
 func TestCodexPaneLaunchesChildInPTY(t *testing.T) {
+	t.Setenv("CULLY_ANALYZE_DISABLE", "1")
 	dir := t.TempDir()
 	command := filepath.Join(dir, "codex")
-	if err := os.WriteFile(command, []byte("#!/bin/sh\nprintf '\\033[2J\\033[1;1Hcodex child\\n'\n"), 0o755); err != nil {
+	// The second tool event arrives while Codex is idle. Its advice is unchanged,
+	// but the count must still repaint. Later warnings remain compact and must
+	// leave most of the terminal for the coding session.
+	script := `#!/bin/sh
+set -- $(stty size)
+initial_rows=$1
+printf '\033[2J\033[1;1Hcodex child\033[%s;1HGPT-6.1-Sol medium · Context 73%% left · 120 in · 24 out' "$(( $1 - 1 ))"
+printf 'O.\n' >> "$CLAUDE_CONFIG_DIR/cully-logs/$CULLY_PANE_SESSION.codex-events"
+sleep 0.3
+printf 'O.\n' >> "$CLAUDE_CONFIG_DIR/cully-logs/$CULLY_PANE_SESSION.codex-events"
+sleep 0.3
+printf 'O!\nO!\nO!\nE.\n' >> "$CLAUDE_CONFIG_DIR/cully-logs/$CULLY_PANE_SESSION.codex-events"
+sleep 0.3
+set -- $(stty size)
+if [ "$1" -lt 37 ]; then exit 2; fi
+`
+	if err := os.WriteFile(command, []byte(script), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("PATH", dir+string(os.PathListSeparator)+os.Getenv("PATH"))
+	t.Setenv("CLAUDE_CONFIG_DIR", t.TempDir())
+	master, slave, err := pty.Open()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer master.Close()
+	defer slave.Close()
+	if err := pty.Setsize(slave, &pty.Winsize{Rows: 55, Cols: 80}); err != nil {
+		t.Fatal(err)
+	}
+	output := make(chan string, 1)
+	go func() {
+		var captured strings.Builder
+		buf := make([]byte, 4096)
+		for {
+			n, readErr := master.Read(buf)
+			captured.Write(buf[:n])
+			if strings.Contains(captured.String(), "\x1b[?1049l") || readErr != nil {
+				output <- captured.String()
+				return
+			}
+		}
+	}()
+	done := make(chan error, 1)
+	go func() { done <- RunCodexPane(nil, slave, slave) }()
+	select {
+	case err := <-done:
+		if err != nil {
+			t.Fatal(err)
+		}
+	case <-time.After(5 * time.Second):
+		t.Fatal("Codex pane did not exit with its child")
+	}
+	select {
+	case got := <-output:
+		plain := normalizedCodexPanel(got)
+		for _, want := range []string{"codex child", "Cully", "Tools 2", "73% left", "GPT-6.1-Sol medium"} {
+			if !strings.Contains(plain, want) {
+				t.Fatalf("pane missing %q", want)
+			}
+		}
+		if !strings.Contains(got, "\x1b[?1049l") {
+			t.Fatal("pane did not restore the terminal")
+		}
+	case <-time.After(5 * time.Second):
+		t.Fatal("pane output did not close")
+	}
+}
+
+func TestCodexPaneAdvisorControlsDoNotReachChild(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv("CULLY_ANALYZE_DISABLE", "1")
+	t.Setenv("CLAUDE_CONFIG_DIR", dir)
+	t.Setenv("PATH", dir+string(os.PathListSeparator)+os.Getenv("PATH"))
+	received := filepath.Join(dir, "received")
+	t.Setenv("CULLY_TEST_INPUT_FILE", received)
+	script := `#!/bin/sh
+stty raw -echo
+printf 'scroll input ready\n'
+dd bs=1 count=2 of="$CULLY_TEST_INPUT_FILE" 2>/dev/null
+`
+	if err := os.WriteFile(filepath.Join(dir, "codex"), []byte(script), 0755); err != nil {
+		t.Fatal(err)
+	}
+	master, slave, err := pty.Open()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer master.Close()
+	defer slave.Close()
+	if err := pty.Setsize(slave, &pty.Winsize{Rows: 40, Cols: 149}); err != nil {
+		t.Fatal(err)
+	}
+	ready := make(chan struct{})
+	go func() {
+		var captured strings.Builder
+		buf := make([]byte, 4096)
+		notified := false
+		for {
+			n, err := master.Read(buf)
+			captured.Write(buf[:n])
+			if !notified && strings.Contains(captured.String(), "scroll input ready") {
+				close(ready)
+				notified = true
+			}
+			if err != nil || strings.Contains(captured.String(), "\x1b[?1049l") {
+				return
+			}
+		}
+	}()
+	done := make(chan error, 1)
+	go func() { done <- RunCodexPane(nil, slave, slave) }()
+	select {
+	case <-ready:
+	case <-time.After(5 * time.Second):
+		t.Fatal("child did not start")
+	}
+	// Click the compact panel, preview, inspect instruments, navigate, return.
+	// None of these controls should reach the coding agent's prompt.
+	_, _ = master.Write([]byte("\x1b[<0;20;40M\r\t\t\x1b[A\x1b[6~\x1b[F\x1b[17~ok"))
+	select {
+	case err := <-done:
+		if err != nil {
+			t.Fatal(err)
+		}
+	case <-time.After(5 * time.Second):
+		t.Fatal("controls swallowed ordinary input")
+	}
+	data, err := os.ReadFile(received)
+	if err != nil || string(data) != "ok" {
+		t.Fatalf("advisor controls leaked: %q (%v)", data, err)
+	}
+}
+
+func TestCodexPaneAcceptHandoffPreservesDraftAndChildSize(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv("CULLY_ANALYZE_DISABLE", "1")
+	t.Setenv("CLAUDE_CONFIG_DIR", dir)
+	t.Setenv("PATH", dir+string(os.PathListSeparator)+os.Getenv("PATH"))
+	received := filepath.Join(dir, "received")
+	line := codexAdvice(codexToolStats{Tools: 1, Edits: 1, EditsSinceCheck: 1})[0]
+	expected := "draft\x1b[200~\n" + advisorHandoff(line).Handoff + "\x1b[201~"
+	t.Setenv("CULLY_TEST_RECEIVED", received)
+	t.Setenv("CULLY_TEST_BYTES", fmt.Sprint(len(expected)))
+	script := `#!/bin/sh
+stty raw -echo
+initial_size=$(stty size)
+printf 'E.\n' >> "$CLAUDE_CONFIG_DIR/cully-logs/$CULLY_PANE_SESSION.codex-events"
+printf 'handoff ready\n'
+dd bs=1 count="$CULLY_TEST_BYTES" of="$CULLY_TEST_RECEIVED" 2>/dev/null
+if [ "$(stty size)" != "$initial_size" ]; then exit 2; fi
+`
+	if err := os.WriteFile(filepath.Join(dir, "codex"), []byte(script), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	master, slave, err := pty.Open()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer master.Close()
+	defer slave.Close()
+	pty.Setsize(slave, &pty.Winsize{Rows: 40, Cols: 149})
+	ready := make(chan struct{})
+	go func() {
+		var captured strings.Builder
+		buf := make([]byte, 4096)
+		notified := false
+		for {
+			n, err := master.Read(buf)
+			captured.Write(buf[:n])
+			if !notified && strings.Contains(captured.String(), "Files changed.") {
+				close(ready)
+				notified = true
+			}
+			if err != nil || strings.Contains(captured.String(), "\x1b[?1049l") {
+				return
+			}
+		}
+	}()
+	done := make(chan error, 1)
+	go func() { done <- RunCodexPane(nil, slave, slave) }()
+	select {
+	case <-ready:
+	case <-time.After(5 * time.Second):
+		t.Fatal("child did not start")
+	}
+	// The first Enter previews; the second accepts the clearly labeled input
+	// handoff. It does not submit it or erase the user's existing draft.
+	master.Write([]byte("draft\x1d\r\r"))
+	select {
+	case err := <-done:
+		if err != nil {
+			t.Fatal(err)
+		}
+	case <-time.After(5 * time.Second):
+		got, _ := os.ReadFile(received)
+		t.Fatalf("handoff was not delivered, received %q expected %q", got, expected)
+	}
+	got, err := os.ReadFile(received)
+	if err != nil || string(got) != expected {
+		t.Fatalf("handoff/draft mismatch: %q (%v)", got, err)
+	}
+}
+
+func TestCodexPaneExitsWhenDescendantHoldsPTY(t *testing.T) {
+	dir := t.TempDir()
+	command := filepath.Join(dir, "codex")
+	// The background process retains stdout after the main process exits.
+	// Waiting for terminal EOF would keep the wrapper alive for 30 seconds.
+	script := "#!/bin/sh\nsleep 30 &\nprintf 'Codex finished\\n'\nexit 0\n"
+	if err := os.WriteFile(command, []byte(script), 0o755); err != nil {
 		t.Fatal(err)
 	}
 	t.Setenv("PATH", dir+string(os.PathListSeparator)+os.Getenv("PATH"))
@@ -69,14 +344,14 @@ func TestCodexPaneLaunchesChildInPTY(t *testing.T) {
 			t.Fatal(err)
 		}
 	case <-time.After(5 * time.Second):
-		t.Fatal("Codex pane did not exit with its child")
+		t.Fatal("wrapper stayed alive after Codex exited")
 	}
 	select {
 	case got := <-output:
-		if !strings.Contains(got, "codex child") || !strings.Contains(got, "CULLY") || !strings.Contains(got, "\x1b[?1049l") {
-			t.Fatalf("pane did not render child and advisor or restore terminal: %q", got)
+		if !strings.Contains(got, "\x1b[?1049l") {
+			t.Fatal("wrapper did not restore the terminal")
 		}
-	case <-time.After(5 * time.Second):
-		t.Fatal("pane output did not close")
+	case <-time.After(time.Second):
+		t.Fatal("terminal restoration was not rendered")
 	}
 }

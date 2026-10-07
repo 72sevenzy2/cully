@@ -29,7 +29,7 @@ type codexToolStats struct {
 
 var (
 	codexSearchCommand = regexp.MustCompile(`(?i)(^|[;&|[:space:]])(rg|grep|find|ls)([[:space:]]|$)`)
-	codexCheckCommand  = regexp.MustCompile(`(?i)(^|[;&|[:space:]])(go test|go vet|go fmt|gofmt|npm test|npm run test|cargo test|pytest)([[:space:]]|$)`)
+	codexCheckCommand  = regexp.MustCompile(`(?i)(^|[;&|[:space:]])(go test|go vet|npm test|npm run test|cargo test|pytest)([[:space:]]|$)`)
 )
 
 func codexSignalFile(session string) string {
@@ -136,6 +136,9 @@ func activeCodexPaneSession(cwd, codexSessionID string) string {
 // inactive outside the opt-in pane, so ordinary Codex sessions have no local
 // advisor artifacts.
 func RunCodexSignalHook(r io.Reader) {
+	if os.Getenv("MODEL_HINT_GUARD") != "" {
+		return
+	}
 	var event codexToolEvent
 	if json.NewDecoder(io.LimitReader(r, 1<<20)).Decode(&event) != nil || event.ToolName == "" {
 		return
@@ -162,18 +165,31 @@ func RunCodexSignalHook(r io.Reader) {
 
 func codexToolClass(event codexToolEvent) byte {
 	name := strings.ToLower(event.ToolName)
+	// Tool names can include transport namespaces. Recognize the actual shell
+	// tool rather than guessing commands embedded in orchestration source text.
+	if i := strings.LastIndex(name, "."); i >= 0 {
+		name = name[i+1:]
+	}
+	if i := strings.LastIndex(name, "__"); i >= 0 {
+		name = name[i+2:]
+	}
 	if name == "apply_patch" || name == "edit" || name == "write" {
 		return 'E'
 	}
-	if name == "bash" {
+	if name == "bash" || name == "exec_command" {
 		var input struct {
 			Command string `json:"command"`
+			Cmd     string `json:"cmd"`
 		}
 		_ = json.Unmarshal(event.ToolInput, &input)
-		if codexCheckCommand.MatchString(input.Command) {
+		command := input.Command
+		if name == "exec_command" {
+			command = input.Cmd
+		}
+		if codexCheckCommand.MatchString(command) {
 			return 'T'
 		}
-		if codexSearchCommand.MatchString(input.Command) {
+		if codexSearchCommand.MatchString(command) {
 			return 'S'
 		}
 	}
@@ -255,9 +271,9 @@ func codexAdvice(stats codexToolStats) []string {
 	}
 	if len(lines) == 0 {
 		if stats.Tools == 0 {
-			return []string{"MEMO|Watching Codex. Advice appears as the session progresses."}
+			return []string{"MEMO|Awaiting Codex tool signals. Workflow checks are unavailable until a tool event arrives."}
 		}
-		return []string{"MEMO|Session looks steady. No workflow warning right now."}
+		return []string{"MEMO|No workflow warning in the observed tool signals."}
 	}
 	return lines
 }

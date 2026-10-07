@@ -2,6 +2,20 @@
 
 ## Unreleased
 
+## 0.7.0
+
+- Require a changelog update in every PR through repository instructions, a PR checklist and a dedicated CI check.
+- Add a compact full-width Codex pane with two prioritized comments, suggestion/tip counts and an interactive advisor opened by mouse or Ctrl+] / F6.
+- Preview and accept advice with mouse/arrow selection and Enter; apply supported shared instruction/skill changes locally or hand task actions to the current coding input without discarding its draft.
+- Share owner-scoped memory recall and targeted research across Claude, Codex and Cursor advisor workers, with isolated native CLI adapters and clear startup/source status.
+- Add an evidence-based red Messy phase, terminal-aware command guidance, native-background styling and adaptive group spacing while retaining full session instruments.
+- Release Codex sessions and process descendants when the wrapper exits or loses its terminal.
+
+## 0.6.1
+
+- Bind Codex pane signals to their SessionStart session when hooks run through a persistent app server, without saving prompts or tool output.
+- Document the distinct Claude, Codex and Cursor surfaces, live signal checks, and local CLI setup with a remote MCP/data/Mem0 stack.
+
 ## 0.6.0
 
 - Replace `cully agent setup` with one `cully setup` command for local services, detected agent integrations and the advisor; use `--mcp-url` for existing servers.

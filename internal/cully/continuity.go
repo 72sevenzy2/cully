@@ -104,6 +104,14 @@ func RunContinuityHook(agent, event string, r io.Reader, w io.Writer) {
 			}
 		}
 	case "stop":
+		if agent == "cursor" && in.Status == "completed" && in.LoopCount == 0 && in.Cwd != "" {
+			if ref := continuitySessionRef(agent, in); ref != "" {
+				n := bumpCounter("advisor-" + ref)
+				if n == 1 || n%3 == 0 {
+					dispatchAdvisor(fmt.Sprintf("agent=cursor\nturns=%d\nsignal_scope=completed_turns_only\ncontext=unknown tools=unknown verification=unknown\n", n), ref, in.Cwd)
+				}
+			}
+		}
 		switch agent {
 		case "claude":
 			if !in.StopHookActive && usefulResponse(in.LastAssistantMessage) {

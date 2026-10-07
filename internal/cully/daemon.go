@@ -271,6 +271,15 @@ func enqueueAdvisorJob(signalsPath, session, cwd string) error {
 
 // dispatchAdvisor sends work to the daemon queue, or spawns a one-shot worker.
 func dispatchAdvisor(signals, session, cwd string) {
+	if os.Getenv("CULLY_ANALYZE_DISABLE") == "1" {
+		return
+	}
+	if !strings.Contains(signals, "terminal_program=") {
+		signals += "\n" + detectTerminalProfile().signals()
+	}
+	if project := advisorProjectURL(cwd); project != "" {
+		signals += "\nproject_url=" + project + "\n"
+	}
 	if err := os.MkdirAll(logDir(), 0o755); err != nil {
 		logf(session, "dispatchAdvisor: mkdir logs: %v", err)
 		return

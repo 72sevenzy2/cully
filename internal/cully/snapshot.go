@@ -32,6 +32,11 @@ type cullySnapshot struct {
 	PlanDeviation      string  `json:"plan_deviation"`
 	PendingSuggestions int     `json:"pending_suggestions"`
 	AdvisorOK          bool    `json:"advisor_ok"`
+	AdvisorAgent       string  `json:"advisor_agent,omitempty"`
+	AdvisorAt          string  `json:"advisor_at,omitempty"`
+	AdvisorMemory      string  `json:"advisor_memory,omitempty"`
+	AdvisorResearch    string  `json:"advisor_research,omitempty"`
+	AdvisorFailure     string  `json:"advisor_failure,omitempty"`
 }
 
 func writeSnapshot(session string, s cullySnapshot) {
@@ -67,6 +72,7 @@ func readSnapshot(session string) cullySnapshot {
 func buildSnapshot(s Signals, prReview, session, cwd string) cullySnapshot {
 	phase := detectPhase(s, prReview)
 	anchor, deviation := inferPlan(s.RecentPrompts)
+	previous := readSnapshot(session)
 	return cullySnapshot{
 		Session:            session,
 		Cwd:                cwd,
@@ -83,7 +89,12 @@ func buildSnapshot(s Signals, prReview, session, cwd string) cullySnapshot {
 		PlanAnchor:         anchor,
 		PlanDeviation:      deviation,
 		PendingSuggestions: len(readSuggestions(session)),
-		AdvisorOK:          true,
+		AdvisorOK:          previous.AdvisorOK,
+		AdvisorAgent:       previous.AdvisorAgent,
+		AdvisorAt:          previous.AdvisorAt,
+		AdvisorMemory:      previous.AdvisorMemory,
+		AdvisorResearch:    previous.AdvisorResearch,
+		AdvisorFailure:     previous.AdvisorFailure,
 	}
 }
 

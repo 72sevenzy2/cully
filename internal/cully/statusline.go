@@ -214,7 +214,11 @@ func patchSnapshotFromStatusline(in slInput, session string) {
 		Searches:       snap.Searches,
 		GraphifyGraph:  snap.GraphifyGraph,
 	}
-	snap.Phase = string(detectPhase(sig, in.PR.ReviewState))
+	// Native instruments omit workflow tool totals. Keep a real analyzed Messy
+	// result until the next analyzer updates its observed failure/recovery data.
+	if snap.Phase != string(PhaseMessy) {
+		snap.Phase = string(detectPhase(sig, in.PR.ReviewState))
+	}
 	writeSnapshot(session, snap)
 }
 
@@ -263,6 +267,10 @@ func reportAge(session string) time.Duration {
 // size and staleness. Only that session's report is ever consulted — there is
 // deliberately no global fallback, so another session's advice cannot appear.
 func readSuggestions(session string) []string {
+	return readSuggestionsLimit(session, 4)
+}
+
+func readSuggestionsLimit(session string, limit int) []string {
 	if session == "" {
 		return nil
 	}
@@ -283,12 +291,15 @@ func readSuggestions(session string) []string {
 	if json.Unmarshal(b, &rep) != nil {
 		return nil
 	}
+	if rep.Session != session {
+		return nil
+	}
 	var out []string
 	for _, ln := range rep.Lines {
 		if ln = strings.TrimSpace(ln); ln != "" {
 			out = append(out, ln)
 		}
-		if len(out) >= 4 { // safety cap on suggestion rows
+		if len(out) >= limit {
 			break
 		}
 	}
@@ -460,6 +471,8 @@ func formatPhaseBadge(phase string) string {
 
 func phaseColor(phase string) string {
 	switch strings.ToLower(strings.TrimSpace(phase)) {
+	case "messy":
+		return red
 	case "emergency", "emer":
 		return red
 	case "preflight":

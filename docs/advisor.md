@@ -12,7 +12,7 @@ Cully checks the session signals your coding agent makes available and suggests 
 | Agent | In the agent |
 | --- | --- |
 | Claude Code | Watch the Cully status line or run `/cully suggestions`. |
-| Codex | Start `cully codex` for a live lower advisor pane, or run `/prompts:cully suggestions`. |
+| Codex | Start `cully codex` for an expandable status panel, or run `/prompts:cully suggestions`. |
 | Cursor | Run the project `/cully suggestions` command or ask Cursor to check Cully suggestions. |
 
 You can always run these in a terminal:
@@ -22,15 +22,43 @@ cully status
 cully suggestions
 ```
 
-`cully status` shows whether the daemon is running. If startup failed, resolve the reported error and rerun `cully setup` with the same options. For an existing server, keep the `--mcp-url URL` option. Claude Code provides live hook signals and a Cully status line. Codex shows Cully advice in the optional `cully codex` pane; Cursor uses its supported command and status surfaces. The available advice may differ between agents.
+`cully status` shows whether the daemon is running. If startup failed, resolve the reported error and rerun `cully setup` with the same options. For an existing server, keep the `--mcp-url URL` option. Claude Code provides live hook signals and a Cully status line. Codex shows session instruments and advice in the optional `cully codex` status view; Cursor uses its supported command and status surfaces. The available advice may differ between agents.
 
 | Agent | Installed local integration |
 | --- | --- |
 | Claude Code | Live Cully status line, session and stop hooks, `/cully` command and skill. |
-| Codex | Optional `cully codex` advisor pane, session-start and asynchronous tool-count hooks, `/prompts:cully`, managed `AGENTS.md` pointer and skill. Setup leaves Codex's native footer settings to the user. |
+| Codex | Optional `cully codex` status view, session-start and asynchronous tool-count hooks, `/prompts:cully`, managed `AGENTS.md` pointer and skill. Setup leaves Codex's saved footer settings to the user. |
 | Cursor | Session and response hooks, project `/cully` command and skill. |
 
-Claude Code supplies the richest live signals to the background advisor. It can identify high context pressure, repeated tool faults or searches, cost and rate pressure, and a missing verifier, then suggest a native control or a useful MCP integration. The optional Codex pane uses bounded tool counters to flag repeated failures, broad searching and edits without a check. It does not inspect prompt or tool content. Cursor still gets continuity prompts and Cully commands. The [session optimization guide](/session-optimization) explains the difference.
+The background advisor uses one shared analysis workflow with adapters for Claude Code, Codex and Cursor. The originating agent selects its own CLI adapter and configured MCP connection; it does not resume or take over the foreground conversation. Claude supplies its richer hook-derived signals, the Codex wrapper supplies bounded context/tool counters, and Cursor supplies coarse metadata through its continuity stop hook. Missing instruments remain unknown.
+
+| Agent | Background worker | Live input |
+| --- | --- | --- |
+| Claude Code | `claude` print mode | Existing analysis-hook signals and session instruments. |
+| Codex | An ephemeral `codex exec` process with a read-only workspace | Native context and bounded tool counters from `cully codex`. |
+| Cursor | `cursor-agent` print/ask mode | Coarse continuity-stop metadata, without transcript reads. |
+
+The shared instructions ask the worker to consult a few relevant owner/project-scoped Cully records before advising. If a concrete signal identifies a missing capability or a need for current documentation, a separate targeted research step uses that adapter's available web tools. The worker reports whether recall was checked, unavailable, skipped or unconfirmed; missing tools, login or model access do not imply that research succeeded. CLI adapters and their source-reporting behavior are distinct from verification that live MCP/web tools actually worked on a particular machine.
+
+Workers advise without editing the project or writing durable memory. Claude and Codex restrict Cully tools to a read-only allowlist; Cursor uses ask mode and the shared read-only instructions. The foreground coding agent remains responsible for `cully_log` and other authorized durable writes. Local warnings remain available if the background worker cannot run, and Codex combines those warnings with current worker findings.
+
+Claude Code supplies the richest live signals to the background advisor. It can identify high context pressure, repeated tool faults or searches, cost and rate pressure, and a missing verifier, then suggest a native control or a useful MCP integration.
+
+The optional Codex panel combines native model/context/token/quota instruments, Git working-tree change counts and bounded tool counters. The default pane uses a tight full-width grid with two prioritized advisor comments and an Open advisor control. Open the full advisor and press Tab for all session instruments. The panel uses the terminal's native background, semantic colors and sparse icons; wrapped advice has a badge and hanging indent. The compact panel grows only enough for its bounded preview while leaving at least 12 Codex rows on normal screens and eight on short screens; terminals shorter than 12 rows give Codex the whole screen. Its reserved height is retained until a terminal resize, avoiding repeated conversation reflow as advice clears. The expanded advisor gives each recommendation room to breathe. Press Ctrl+] / F6 to open all advice, select by mouse or Up/Down, and use Enter to preview an action. Missing native values show waiting or unavailable; cost/cache remain explicitly unavailable from Codex. Working-tree additions/deletions describe staged and unstaged tracked Git changes against HEAD, separately from Claude session change counters.
+
+Codex advice cautions at 25% context remaining or less and warns at 10% or less. It also flags repeated explicitly observed failures, broad searching and edits awaiting a check. Direct Bash commands and Codex `exec_command` calls support search/check classification; formatting alone does not satisfy verification. Orchestrated calls such as `functions.exec` remain generic unless their inner events are supplied separately, and arbitrary output text does not establish a tool failure. Missing tool signals show awaiting signals rather than implying a healthy workflow. No prompts, tool output or transcripts are saved. Cursor still gets continuity prompts and Cully commands. The [session optimization guide](/session-optimization) explains the difference.
+
+Durable handoff notes and reusable optimization lessons live in authenticated Cully MCP records, backed by PostgreSQL and indexed by Mem0 for semantic recall. The foreground agent writes those records through its configured connection; the worker uses its adapter's configured connection for read-only recall. Transient local counters and snapshots support offline live warnings; the local advisor does not maintain a second durable memory store or receive the agent's OAuth credentials. Remote memory provides continuity across sessions; it does not replace the live inputs needed to detect current context pressure or pending verification.
+
+The compact Codex pane shows two prioritized comments and an **Open advisor** control. Click the pane or press **Ctrl+] / F6** (macOS may require **Fn+F6**); Alt+A works with Option-as-Meta. The full advisor overlays the session without resizing it. Click a suggestion or use **Up/Down** to select, **Page Up/Down** and **Home/End** to navigate, then **Enter** to preview and **Enter** again to accept. The **Apply** category identifies concrete configuration/skill changes alongside **Next**, **Watch**, **Warn** and **Tip**. Supported local changes show exact file contents before application; commands, integrations and task actions add a request to the current coding input, preserving its existing draft. Review that input and submit it to the agent. Tips are informational. **Tab** shows all instruments; arrows scroll preview/details, and **Esc** goes back or closes. Reports retain up to 12 recommendations; Claude's native status line displays four. Deeper analysis runs after observed Codex activity, at most once every two minutes; Cursor's coarse analysis runs on the first completed turn and then every third completed turn.
+
+The phase turns red **Messy** when at least three explicit failures account for 25% or more of observed calls. Codex also flags eight or more edits awaiting verification together with at least two failures. Successful activity can lower failure density, and a real successful check clears the pending-edit condition. High activity or context pressure alone does not imply disorder. Advice about plans, independent subagents and recurring checks must match the active agent's configured capabilities; Claude-only commands do not apply to Codex or Cursor.
+
+The Codex panel shows the last completed analysis time and memory/research source states. These states are reported by the agent, rather than independently verified tool telemetry. Claude workers use an isolated temporary Cully-only MCP configuration; Codex workers disable unrelated configured MCP servers for their invocation. Saved agent configurations remain unchanged.
+
+The wrapper detects `TERM_PROGRAM`, `TERM`, the login-shell environment and whether it runs over SSH. The panel displays that profile, and the worker receives it alongside the execution host's OS. Recommendations use the host's shell and OS for command syntax; a Warp client over SSH does not imply that the remote host runs macOS. Unknown client settings remain unknown. Ctrl+] and F6 avoid relying on Option-as-Meta; Alt+A remains available when Meta forwarding is enabled.
+
+If the agent process cannot start, memory is marked **not run**, with a bounded failure category such as invalid MCP configuration or authentication required. This differs from a completed analysis whose actual recall failed. Raw CLI stderr is not exposed because it can include private tool data or credentials.
 
 ## Preview a suggestion
 

@@ -1,6 +1,7 @@
 package cully
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
 	"os"
@@ -103,5 +104,52 @@ func TestCodexAdviceUsesBoundedCounters(t *testing.T) {
 	got := codexAdvice(codexToolStats{Tools: 20, Errors: 3, Searches: 11, Edits: 2, EditsSinceCheck: 2})
 	if len(got) != 3 || !strings.Contains(got[0], "failed") || !strings.Contains(got[1], "searches") || !strings.Contains(got[2], "check") {
 		t.Fatalf("unexpected advice: %v", got)
+	}
+}
+
+func TestCodexSignalClassifiesShellToolsWithoutGuessingNestedCalls(t *testing.T) {
+	for _, tc := range []struct {
+		name, input string
+		class       byte
+	}{
+		{"functions.exec_command", `{"cmd":"go test ./internal/cully"}`, 'T'},
+		{"exec_command", `{"cmd":"rg -n Context internal/cully"}`, 'S'},
+		{"functions.apply_patch", `{}`, 'E'},
+		{"Bash", `{"command":"go vet ./..."}`, 'T'},
+		{"exec_command", `{"cmd":"gofmt -w internal/cully/codex_status.go"}`, 'O'},
+		{"Bash", `{"command":"go fmt ./..."}`, 'O'},
+		{"functions.exec", `{"code":"await tools.exec_command({cmd: 'go test ./...'})"}`, 'O'},
+	} {
+		if got := codexToolClass(codexToolEvent{ToolName: tc.name, ToolInput: json.RawMessage(tc.input)}); got != tc.class {
+			t.Fatalf("%s class=%c want=%c", tc.name, got, tc.class)
+		}
+	}
+}
+
+func TestCodexFormattingDoesNotClearPendingVerification(t *testing.T) {
+	t.Setenv("CLAUDE_CONFIG_DIR", t.TempDir())
+	t.Setenv("CULLY_PANE_SESSION", "pane-a")
+	for _, event := range []string{
+		`{"tool_name":"functions.apply_patch","tool_response":{}}`,
+		`{"tool_name":"functions.exec_command","tool_input":{"cmd":"gofmt -w app.go"},"tool_response":{"exit_code":0}}`,
+		`{"tool_name":"functions.exec_command","tool_input":{"cmd":"go test ./..."},"tool_response":{"exit_code":1}}`,
+	} {
+		RunCodexSignalHook(strings.NewReader(event))
+	}
+	stats := readCodexToolStats("pane-a")
+	if stats.EditsSinceCheck != 1 || stats.Checks != 1 || stats.Errors != 1 {
+		t.Fatalf("formatting or failed test incorrectly cleared verification: %+v", stats)
+	}
+	RunCodexSignalHook(strings.NewReader(`{"tool_name":"functions.exec_command","tool_input":{"cmd":"go test ./..."},"tool_response":{"exit_code":0}}`))
+	if stats = readCodexToolStats("pane-a"); stats.EditsSinceCheck != 0 || stats.Checks != 2 {
+		t.Fatalf("successful direct check didn't clear verification: %+v", stats)
+	}
+}
+
+func TestCodexFailuresRequireExplicitStructuredEvidence(t *testing.T) {
+	for _, raw := range []string{`{"output":"failed exit_code 1"}`, `{"content":[{"type":"text","text":"exit_code: 1"}]}`, `"command failed"`} {
+		if codexToolFailed(json.RawMessage(raw)) {
+			t.Fatalf("arbitrary nested output must not invent failure: %s", raw)
+		}
 	}
 }
