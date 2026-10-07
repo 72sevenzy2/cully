@@ -486,6 +486,7 @@ func codexCompactStatusRows(cols, availableRows int, advice []string, stats code
 		model = dim + "waiting for Codex" + rst
 	}
 	pair(location, dim+"Model "+rst+model)
+	metricBreak := len(status)
 	context := dim + "waiting for Codex footer" + rst
 	if view.ContextKnown {
 		used := 100 - view.ContextLeft
@@ -495,7 +496,6 @@ func codexCompactStatusRows(cols, availableRows int, advice []string, stats code
 		}
 	}
 	line("🧠 Context  " + context)
-	metricBreak := len(status)
 	tokens := "Tokens " + dim + "unavailable" + rst
 	if view.Input != "" || view.Output != "" {
 		tokens = "Tokens in " + codexInstrument(view.Input) + " / out " + codexInstrument(view.Output)
@@ -531,11 +531,7 @@ func codexCompactStatusRows(cols, availableRows int, advice []string, stats code
 
 	selected := codexCompactAdvice(advice)
 	var preview []string
-	var spacedPreview []string
 	for _, suggestion := range selected {
-		if len(spacedPreview) > 0 {
-			spacedPreview = append(spacedPreview, "")
-		}
 		_, text, ok := strings.Cut(suggestion, "|")
 		if !ok {
 			text = suggestion
@@ -555,12 +551,10 @@ func codexCompactStatusRows(cols, availableRows int, advice []string, stats code
 			}
 			row := "    " + indent + message + rst
 			preview = append(preview, row)
-			spacedPreview = append(spacedPreview, row)
 		}
 	}
 	if len(preview) == 0 {
 		preview = []string{"    " + dim + "note    Awaiting advisor comments." + rst}
-		spacedPreview = preview
 	}
 	more := max(0, len(advice)-len(selected))
 	suggestions, tips := 0, 0
@@ -592,14 +586,14 @@ func codexCompactStatusRows(cols, availableRows int, advice []string, stats code
 	if capacity == 2 {
 		return []string{"  " + ansi.Truncate("🧠 Context  "+context, width, "…") + rst, footer}
 	}
-	// Give groups and separate comments one breathing row when the terminal
-	// can fit it. Short screens keep the same information-first compact layout.
-	if len(status)+len(spacedPreview)+5 <= capacity {
+	// Rows within a section share the same spacing. One blank row separates
+	// identity, instruments, advisor and controls when the terminal can fit it.
+	if len(status)+len(preview)+5 <= capacity {
 		rows := append([]string(nil), status[:metricBreak]...)
 		rows = append(rows, "")
 		rows = append(rows, status[metricBreak:]...)
-		rows = append(rows, "  "+cyan+ansi.Truncate(heading, width, "…")+rst, "")
-		rows = append(rows, spacedPreview...)
+		rows = append(rows, "", "  "+cyan+ansi.Truncate(heading, width, "…")+rst)
+		rows = append(rows, preview...)
 		rows = append(rows, "", footer)
 		return rows
 	}

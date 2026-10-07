@@ -4,6 +4,7 @@
 
 ## 0.7.0
 
+- Make the Codex pane's row spacing consistent within each section, with a single separator row between identity, instruments, advice and controls.
 - Require a changelog update in every PR through repository instructions, a PR checklist and a dedicated CI check.
 - Add a compact full-width Codex pane with two prioritized comments, suggestion/tip counts and an interactive advisor opened by mouse or Ctrl+] / F6.
 - Preview and accept advice with mouse/arrow selection and Enter; apply supported shared instruction/skill changes locally or hand task actions to the current coding input without discarding its draft.
