@@ -51,7 +51,7 @@ func codexSessionStateFile(session string) string {
 func readCodexSessionState(path string) codexSessionState {
 	var state codexSessionState
 	b, err := os.ReadFile(path)
-	if err != nil || len(b) > 16384 || json.Unmarshal(b, &state) != nil || state.Version != 1 {
+	if err != nil || len(b) > 128*1024 || json.Unmarshal(b, &state) != nil || state.Version != 1 {
 		return codexSessionState{Version: 1}
 	}
 	return state

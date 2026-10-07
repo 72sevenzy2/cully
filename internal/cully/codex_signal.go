@@ -150,9 +150,14 @@ func RunCodexSignalHook(r io.Reader) {
 		return
 	}
 	if os.Getenv("MODEL_HINT_GUARD") != "" {
-		if session := os.Getenv("CULLY_MCP_PROBE_SESSION"); session != "" && codexCullyTool(event.ToolName) != "" {
+		session := os.Getenv("CULLY_MCP_METRICS_SESSION")
+		origin := os.Getenv("CULLY_MCP_ORIGIN")
+		if session == "" {
+			session, origin = os.Getenv("CULLY_MCP_PROBE_SESSION"), "startup"
+		}
+		if tool := codexCullyTool(event.ToolName); session != "" && tool != "" {
 			health, auth := codexCullyResponseState(event.ToolResponse)
-			recordCodexCullyHealth(session, health, auth)
+			recordCodexCullyOriginCall(session, tool, health, auth, origin, codexCullySemantic(event.ToolInput))
 		}
 		return
 	}
@@ -173,7 +178,7 @@ func RunCodexSignalHook(r io.Reader) {
 		if health == "unhealthy" {
 			failure = '!'
 		}
-		recordCodexCullyCall(session, tool, health, auth)
+		recordCodexCullyOriginCall(session, tool, health, auth, "foreground", codexCullySemantic(event.ToolInput))
 	}
 	recordCodexSessionTool(session, class, failure)
 	f, err := os.OpenFile(codexSignalFile(session), os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o600)

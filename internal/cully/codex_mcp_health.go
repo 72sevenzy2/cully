@@ -10,7 +10,8 @@ import (
 )
 
 // Use the coding agent's configured identity; only actual MCP response hooks
-// update status. Probe tools never increment foreground activity or MCP totals.
+// update status. Probe calls have their own source in the combined Cully totals,
+// and never increment foreground coding activity.
 func checkCodexMCPHealth(parent context.Context, session, cwd string) {
 	if os.Getenv("CULLY_ANALYZE_DISABLE") == "1" {
 		return
@@ -22,14 +23,4 @@ func checkCodexMCPHealth(parent context.Context, session, cwd string) {
 		prompt += fmt.Sprintf(" Use project_url %q.", project)
 	}
 	_, _ = runAdvisorAgentProbeContext(ctx, "codex", cwd, false, prompt, session)
-}
-
-func recordCodexCullyHealth(session, health, auth string) {
-	if health == "unknown" {
-		return
-	}
-	updateCodexSessionState(session, func(state *codexSessionState) {
-		state.Stats.Cully.Health, state.Stats.Cully.Auth = health, auth
-		state.Stats.Cully.CheckedAt = time.Now().UTC().Format(time.RFC3339)
-	})
 }

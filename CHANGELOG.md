@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+## 0.8.2
+
+- Count every observed Cully MCP tool by name across foreground, advisor and startup calls, with saved combined and per-source totals restored on resume.
+- Show all Cully tool counts in expanded session instruments and distinguish semantic context recall from direct recall calls.
+- Preserve earlier category totals during telemetry upgrades, without inventing names for previously grouped Other calls.
+
 ## 0.8.1
 
 - Reduce panel row spacing: adjacent metric rows, one blank row after section titles and between major sections; keep the three-column gap.

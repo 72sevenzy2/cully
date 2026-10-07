@@ -79,6 +79,8 @@ func (d *codexAdvisorDrawer) render(cols, rows int, stats codexToolStats, view c
 	budget := max(1, rows-4-len(lines))
 	if d.Details {
 		info := codexStatusContent(cols, nil, stats, view).status
+		info = append(info, "")
+		info = append(info, codexCullyToolRows(stats.Cully, max(1, cols-5))...)
 		d.Scroll = min(d.Scroll, max(0, len(info)-budget))
 		lines = append(lines, info[d.Scroll:min(len(info), d.Scroll+budget)]...)
 	} else if d.Review != nil {

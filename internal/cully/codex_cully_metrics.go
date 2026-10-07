@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"syscall"
 	"time"
@@ -17,7 +18,11 @@ type codexCullyStats struct {
 	Calls, Log, Context, Recall, Search, Get, Other int
 	Health, Auth                                    string
 	CheckedAt                                       string
+	Foreground, Advisor, Startup, SemanticRecall    int
+	ByTool                                          map[string]int
 }
+
+var codexCullyToolName = regexp.MustCompile(`^cully_[a-z0-9_]{1,80}$`)
 
 func codexCullyStatsFile(session string) string {
 	return filepath.Join(cullyDir(), safeSession(session)+".codex-mcp")
@@ -28,7 +33,7 @@ func codexCullyTool(name string) string {
 	for _, prefix := range []string{"mcp__cully__", "mcp__cully.", "mcp.cully."} {
 		if index := strings.LastIndex(name, prefix); index >= 0 {
 			tool := name[index+len(prefix):]
-			if strings.HasPrefix(tool, "cully_") && !strings.ContainsAny(tool, " .:/") {
+			if codexCullyToolName.MatchString(tool) {
 				return tool
 			}
 		}
@@ -84,16 +89,21 @@ func readCodexCullyStats(session string) codexCullyStats {
 	}
 	var stats codexCullyStats
 	data, err := os.ReadFile(codexCullyStatsFile(session))
-	if err == nil && len(data) <= 8192 {
+	if err == nil && len(data) <= 128*1024 {
 		_ = json.Unmarshal(data, &stats)
 	}
 	return stats
 }
 
 func recordCodexCullyCall(session, tool, health, auth string) {
+	recordCodexCullyOriginCall(session, tool, health, auth, "foreground", false)
+}
+
+func recordCodexCullyOriginCall(session, tool, health, auth, origin string, semantic bool) {
 	if codexSessionStateFile(session) != "" {
 		updateCodexSessionState(session, func(state *codexSessionState) {
 			incrementCodexCullyStats(&state.Stats.Cully, tool, health, auth)
+			incrementCodexCullyOrigin(&state.Stats.Cully, origin, tool, semantic)
 		})
 		return
 	}
@@ -116,6 +126,7 @@ func recordCodexCullyCall(session, tool, health, auth string) {
 	}
 	stats := readCodexCullyStats(session)
 	incrementCodexCullyStats(&stats, tool, health, auth)
+	incrementCodexCullyOrigin(&stats, origin, tool, semantic)
 	data, err := json.Marshal(stats)
 	if err != nil {
 		return
@@ -133,6 +144,25 @@ func recordCodexCullyCall(session, tool, health, auth string) {
 }
 
 func incrementCodexCullyStats(stats *codexCullyStats, tool, health, auth string) {
+	if stats.ByTool == nil {
+		stats.ByTool = map[string]int{}
+		if stats.SemanticRecall == 0 {
+			stats.SemanticRecall = stats.Recall
+		}
+		for name, n := range map[string]int{"cully_log": stats.Log, "cully_context": stats.Context, "cully_recall": stats.Recall, "cully_search": stats.Search, "cully_get": stats.Get, "earlier_other": stats.Other} {
+			if n > 0 {
+				stats.ByTool[name] = n
+			}
+		}
+		if stats.Foreground+stats.Advisor+stats.Startup == 0 {
+			stats.Foreground = stats.Calls
+		}
+	}
+	key := tool
+	if _, exists := stats.ByTool[key]; !exists && len(stats.ByTool) >= 512 {
+		key = "other_tools"
+	}
+	stats.ByTool[key]++
 	stats.Calls++
 	switch tool {
 	case "cully_log":
@@ -152,6 +182,20 @@ func incrementCodexCullyStats(stats *codexCullyStats, tool, health, auth string)
 		stats.Health = health
 		stats.Auth = auth
 		stats.CheckedAt = time.Now().UTC().Format(time.RFC3339)
+	}
+}
+
+func incrementCodexCullyOrigin(stats *codexCullyStats, origin, tool string, semantic bool) {
+	switch origin {
+	case "advisor":
+		stats.Advisor++
+	case "startup":
+		stats.Startup++
+	default:
+		stats.Foreground++
+	}
+	if tool == "cully_recall" || tool == "cully_context" && semantic {
+		stats.SemanticRecall++
 	}
 }
 

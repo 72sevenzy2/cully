@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"path/filepath"
 	"regexp"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -668,8 +669,41 @@ func codexCullyInstrumentRows(stats codexToolStats, width int) []string {
 	}
 	auth := codexObservedState(c.Auth, true)
 	rows := []string{bold + "Cully MCP" + rst + " · " + health, "", fmt.Sprintf("Calls %d observed", c.Calls), fmt.Sprintf("Log %d · Context %d · Recall %d", c.Log, c.Context, c.Recall), fmt.Sprintf("Search %d · Get %d · Other %d", c.Search, c.Get, c.Other), "Auth " + auth}
+	if c.Foreground+c.Advisor+c.Startup > 0 {
+		rows = append(rows, fmt.Sprintf("Foreground %d · Advisor %d · Startup %d", c.Foreground, c.Advisor, c.Startup))
+	}
+	if c.SemanticRecall > 0 {
+		rows = append(rows, fmt.Sprintf("Semantic recall %d", c.SemanticRecall))
+	}
 	if c.CheckedAt != "" {
 		rows = append(rows, "Last observed "+c.CheckedAt)
+	}
+	return rows
+}
+
+func codexCullyToolRows(stats codexCullyStats, width int) []string {
+	rows := []string{bold + "Cully MCP tools · entire session" + rst, ""}
+	counts := stats.ByTool
+	if counts == nil {
+		counts = map[string]int{"cully_log": stats.Log, "cully_context": stats.Context, "cully_recall": stats.Recall, "cully_search": stats.Search, "cully_get": stats.Get, "earlier_other": stats.Other}
+	}
+	names := map[string]bool{}
+	for _, name := range []string{"cully_log", "cully_context", "cully_search", "cully_recall", "cully_get", "cully_update", "cully_delete", "cully_recent", "cully_projects"} {
+		names[name] = true
+	}
+	for name := range counts {
+		names[name] = true
+	}
+	ordered := make([]string, 0, len(names))
+	for name := range names {
+		ordered = append(ordered, name)
+	}
+	sort.Strings(ordered)
+	for _, name := range ordered {
+		if name == "earlier_other" && counts[name] == 0 {
+			continue
+		}
+		rows = append(rows, strings.Split(ansi.Wrap(fmt.Sprintf("%s  %d", name, counts[name]), max(1, width), ""), "\n")...)
 	}
 	return rows
 }

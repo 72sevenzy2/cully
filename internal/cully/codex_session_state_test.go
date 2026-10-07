@@ -92,7 +92,7 @@ func TestCodexExplicitResumeID(t *testing.T) {
 	}
 }
 
-func TestCodexStartupHealthProbeDoesNotInflateCounters(t *testing.T) {
+func TestCodexStartupHealthProbeCountsCullyWithoutForegroundActivity(t *testing.T) {
 	t.Setenv("CLAUDE_CONFIG_DIR", t.TempDir())
 	t.Setenv("MODEL_HINT_GUARD", "")
 	t.Setenv("CULLY_PANE_SESSION", "probe")
@@ -104,12 +104,12 @@ func TestCodexStartupHealthProbeDoesNotInflateCounters(t *testing.T) {
 	t.Setenv("CULLY_MCP_PROBE_SESSION", "probe")
 	RunCodexSignalHook(strings.NewReader(`{"tool_name":"mcp__cully__cully_context","tool_response":{"content":[{"text":"private-probe-result"}]}}`))
 	got := readCodexToolStats("probe")
-	if got.Tools != 1 || got.Edits != 1 || got.Cully.Calls != 0 || got.Cully.Health != "healthy" || got.Cully.Auth != "authenticated" {
+	if got.Tools != 1 || got.Edits != 1 || got.Cully.Calls != 1 || got.Cully.Startup != 1 || got.Cully.Health != "healthy" || got.Cully.Auth != "authenticated" {
 		t.Fatal("probe inflated counters or lost health", got)
 	}
 	RunCodexSignalHook(strings.NewReader(`{"tool_name":"mcp__cully__cully_context","tool_response":{"isError":true,"content":[{"text":"Unauthorized"}]}}`))
 	got = readCodexToolStats("probe")
-	if got.Tools != 1 || got.Cully.Calls != 0 || got.Cully.Auth != "unauthenticated" {
+	if got.Tools != 1 || got.Cully.Calls != 2 || got.Cully.Startup != 2 || got.Cully.Auth != "unauthenticated" {
 		t.Fatal("probe auth failure lost", got)
 	}
 	clearCodexCullyStats("probe")

@@ -1,6 +1,7 @@
 package cully
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"os/exec"
@@ -71,7 +72,11 @@ func RunWorker(sigPath, session, cwd string) {
 		prompt += "\n\nALREADY SUGGESTED THIS SESSION (do not repeat these levers — propose different ones, or the memo if nothing new applies):\n- " +
 			strings.Join(tail, "\n- ")
 	}
-	out1, err := runAdvisorAgent(agent, cwd, false, prompt)
+	workerContext := context.Background()
+	if agent == "codex" {
+		workerContext = withCodexMCPScope(workerContext, session, "advisor")
+	}
+	out1, err := runAdvisorAgentContext(workerContext, agent, cwd, false, prompt)
 	if err != nil {
 		failureReason = advisorFailureReason(err)
 		logf(session, "worker: phase1 %s failed: %v — reversionary mode", agent, err)
@@ -89,7 +94,7 @@ func RunWorker(sigPath, session, cwd string) {
 
 		if hasGap && gap.Evidence != "" {
 			logf(session, "worker: tool gap detected: %q (evidence: %q) -> web search", gap.Need, gap.Evidence)
-			out2, err := runAdvisorAgent(agent, cwd, true, buildScoutPrompt(gap, string(sig)))
+			out2, err := runAdvisorAgentContext(workerContext, agent, cwd, true, buildScoutPrompt(gap, string(sig)))
 			if err != nil {
 				researchState = "unavailable"
 				logf(session, "worker: phase2 search failed: %v", err)

@@ -242,6 +242,7 @@ func RunCodexPane(args []string, input, output *os.File) error {
 			cancelPreview()
 		}
 		previewCtx, cancel := context.WithCancel(reviewContext)
+		previewCtx = withCodexMCPScope(previewCtx, session, "advisor")
 		cancelPreview = cancel
 		go func() {
 			review, err := prepareAdvisorReviewContext(previewCtx, "codex", project, line)

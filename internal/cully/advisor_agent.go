@@ -168,7 +168,7 @@ func runAdvisorAgentProbeContext(parent context.Context, agent, cwd string, rese
 	for _, value := range os.Environ() {
 		key, _, _ := strings.Cut(value, "=")
 		switch key {
-		case "CULLY_PANE_SESSION", "CULLY_SESSION", "CULLY_AGENT", "MODEL_HINT_GUARD", "CULLY_MCP_PROBE_SESSION":
+		case "CULLY_PANE_SESSION", "CULLY_SESSION", "CULLY_AGENT", "MODEL_HINT_GUARD", "CULLY_MCP_PROBE_SESSION", "CULLY_MCP_METRICS_SESSION", "CULLY_MCP_ORIGIN":
 			continue
 		}
 		cmd.Env = append(cmd.Env, value)
@@ -176,6 +176,9 @@ func runAdvisorAgentProbeContext(parent context.Context, agent, cwd string, rese
 	cmd.Env = append(cmd.Env, "MODEL_HINT_GUARD=1", "CULLY_AGENT="+agent)
 	if probeSession != "" {
 		cmd.Env = append(cmd.Env, "CULLY_MCP_PROBE_SESSION="+probeSession)
+	}
+	if scope, ok := parent.Value(codexMCPScopeKey{}).(codexMCPScope); ok && scope.Session != "" && agent == "codex" {
+		cmd.Env = append(cmd.Env, "CULLY_MCP_METRICS_SESSION="+scope.Session, "CULLY_MCP_ORIGIN="+scope.Origin)
 	}
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
 	cmd.Cancel = func() error { return syscall.Kill(-cmd.Process.Pid, syscall.SIGKILL) }
