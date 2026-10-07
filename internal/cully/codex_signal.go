@@ -141,10 +141,13 @@ func activeCodexPaneSession(cwd, codexSessionID string) string {
 	return pane.Session
 }
 
-// RunCodexSignalHook is installed as an asynchronous PostToolUse hook. It is
-// inactive outside the opt-in pane, so ordinary Codex sessions have no local
-// advisor artifacts.
-func RunCodexSignalHook(r io.Reader) {
+// RunCodexSignalHook keeps hooks installed by earlier versions working.
+func RunCodexSignalHook(r io.Reader) { RunPaneSignalHook("codex", r) }
+
+// RunPaneSignalHook is installed as an asynchronous PostToolUse hook. It is
+// inactive outside the opt-in terminal, so ordinary agent sessions have no
+// local advisor artifacts.
+func RunPaneSignalHook(agent string, r io.Reader) {
 	var event codexToolEvent
 	if json.NewDecoder(io.LimitReader(r, 1<<20)).Decode(&event) != nil || event.ToolName == "" {
 		return
@@ -181,6 +184,7 @@ func RunCodexSignalHook(r io.Reader) {
 		recordCodexCullyOriginCall(session, tool, health, auth, "foreground", codexCullySemantic(event.ToolInput))
 	}
 	recordCodexSessionTool(session, class, failure)
+	recordJournalTool(agent, session, event, class, failure == '!')
 	f, err := os.OpenFile(codexSignalFile(session), os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o600)
 	if err != nil {
 		return
@@ -307,4 +311,39 @@ func codexAdvice(stats codexToolStats) []string {
 		return []string{"MEMO|No workflow warning in the observed tool signals."}
 	}
 	return lines
+}
+
+// codexToolCommand returns the shell command of a shell tool call, or "".
+func codexToolCommand(event codexToolEvent) string {
+	name := strings.ToLower(event.ToolName)
+	if i := strings.LastIndex(name, "."); i >= 0 {
+		name = name[i+1:]
+	}
+	if i := strings.LastIndex(name, "__"); i >= 0 {
+		name = name[i+2:]
+	}
+	if name != "bash" && name != "exec_command" && name != "shell" {
+		return ""
+	}
+	var input struct {
+		Command string `json:"command"`
+		Cmd     string `json:"cmd"`
+	}
+	_ = json.Unmarshal(event.ToolInput, &input)
+	if input.Command != "" {
+		return input.Command
+	}
+	return input.Cmd
+}
+
+// recordJournalTool adds one hook event to the session journal. Only the tool
+// class, success, tool name and a one-way command hash are stored.
+func recordJournalTool(agent, session string, event codexToolEvent, class byte, failed bool) {
+	entry := journalEvent{Agent: agent, Class: string(class), Failed: failed}
+	if codexCullyTool(event.ToolName) != "" {
+		entry.Class, entry.Tool = journalMemory, codexCullyTool(event.ToolName)
+	} else if class == 'T' || failed {
+		entry.Sig = commandSig(codexToolCommand(event))
+	}
+	appendJournal(event.Cwd, session, entry)
 }

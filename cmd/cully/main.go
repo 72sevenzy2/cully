@@ -13,7 +13,7 @@ import (
 
 var version = "dev"
 
-const help = `Cully — your companion for better work and everyday life.
+const help = `Cully — your coding agents need a copilot too.
 
 Usage:
   cully setup [--agent claude|codex|cursor|all] [--oauth] [--prepare]
@@ -24,12 +24,14 @@ Usage:
   cully uninstall [claude|codex|cursor|all] Remove one or all agent integrations
   cully status [directory]                Show session and agent status
   cully suggestions                       Review suggested improvements
-  cully codex [ARGS...]                   Run Codex with a live Cully advisor pane
+  cully run AGENT [ARGS...]               Run any coding agent in the Cully terminal
+  cully claude|codex|cursor [ARGS...]     Shortcuts for cully run claude, codex and cursor-agent
   cully apply <n> [--dry-run] [--yes] [--cwd DIR]
   cully mcp add --url URL [--agent claude|codex|cursor] [--oauth]
   cully version
 
-Shared personal and project memory is available through Cully's MCP tools.
+Cully watches your coding sessions, remembers what matters and helps you steer
+Claude Code, Codex, Cursor and other coding agents.
 Docs: https://docs.cully.net
 `
 
@@ -66,8 +68,13 @@ func run(args []string) error {
 		cully.RunStatus(os.Stdout, cwd)
 	case "suggestions":
 		cully.RunList(os.Stdout)
-	case "codex":
-		return cully.RunCodexPane(args[1:], os.Stdin, os.Stdout)
+	case "run":
+		if len(args) < 2 {
+			return fmt.Errorf("usage: cully run AGENT [ARGS...]")
+		}
+		return cully.RunPane(args[1], args[2:], os.Stdin, os.Stdout)
+	case "claude", "codex", "cursor":
+		return cully.RunPane(args[0], args[1:], os.Stdin, os.Stdout)
 	case "apply":
 		n, yes, dryRun, cwd, err := parseApply(args[1:])
 		if err != nil {
@@ -216,6 +223,11 @@ func runInternal(args []string) error {
 		cully.RunContinuityHook(args[1], args[2], os.Stdin, os.Stdout)
 	case "codex-signal":
 		cully.RunCodexSignalHook(os.Stdin)
+	case "pane-signal":
+		if len(args) != 2 {
+			return fmt.Errorf("internal pane-signal requires an agent")
+		}
+		cully.RunPaneSignalHook(args[1], os.Stdin)
 	case "daemon":
 		cully.RunDaemon()
 	case "stop-daemon":

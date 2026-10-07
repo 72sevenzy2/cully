@@ -21,7 +21,7 @@ func TestCodexPaneConfinesChildScreen(t *testing.T) {
 	defer emulator.Close()
 	_, _ = emulator.WriteString("\x1b[2J\x1b[1;1HCODEX\x1b[12;1Hlower edge")
 	content := codexStatusRows(60, []string{"ADV|Run a focused check."}, codexToolStats{Tools: 3}, codexStatusView{Project: "/work/cully"})
-	frame := renderCodexPane(emulator, 60, 24, content)
+	frame := renderCodexPane(emulator, 60, 24, content, true)
 	for _, want := range []string{"CODEX", "lower edge", "Cully", "Run a focused check.", "\x1b[13;1H"} {
 		if !strings.Contains(frame, want) {
 			t.Fatalf("pane frame missing %q", want)
@@ -40,7 +40,7 @@ func TestCodexPaneConfinesChildScreen(t *testing.T) {
 
 func TestCodexPaneStopsOnTerminalHangup(t *testing.T) {
 	if os.Getenv("CULLY_PANE_HANGUP_HELPER") == "1" {
-		if RunCodexPane(nil, os.Stdin, os.Stdout) != nil {
+		if RunPane("codex", nil, os.Stdin, os.Stdout) != nil {
 			os.Exit(1)
 		}
 		os.Exit(0)
@@ -143,7 +143,7 @@ if [ "$1" -lt 33 ]; then exit 2; fi
 		}
 	}()
 	done := make(chan error, 1)
-	go func() { done <- RunCodexPane(nil, slave, slave) }()
+	go func() { done <- RunPane("codex", nil, slave, slave) }()
 	select {
 	case err := <-done:
 		if err != nil {
@@ -210,7 +210,7 @@ dd bs=1 count=2 of="$CULLY_TEST_INPUT_FILE" 2>/dev/null
 		}
 	}()
 	done := make(chan error, 1)
-	go func() { done <- RunCodexPane(nil, slave, slave) }()
+	go func() { done <- RunPane("codex", nil, slave, slave) }()
 	select {
 	case <-ready:
 	case <-time.After(5 * time.Second):
@@ -279,7 +279,7 @@ if [ "$(stty size)" != "$initial_size" ]; then exit 2; fi
 		}
 	}()
 	done := make(chan error, 1)
-	go func() { done <- RunCodexPane(nil, slave, slave) }()
+	go func() { done <- RunPane("codex", nil, slave, slave) }()
 	select {
 	case <-ready:
 	case <-time.After(5 * time.Second):
@@ -337,7 +337,7 @@ func TestCodexPaneExitsWhenDescendantHoldsPTY(t *testing.T) {
 		}
 	}()
 	done := make(chan error, 1)
-	go func() { done <- RunCodexPane(nil, slave, slave) }()
+	go func() { done <- RunPane("codex", nil, slave, slave) }()
 	select {
 	case err := <-done:
 		if err != nil {

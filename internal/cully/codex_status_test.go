@@ -24,7 +24,7 @@ func TestCodexNativeFooter(t *testing.T) {
 		t.Fatalf("incorrect native instruments: %+v", view)
 	}
 	content := codexStatusRows(180, nil, codexToolStats{}, view)
-	frame := ansi.Strip(renderCodexPane(emulator, 180, 32, content))
+	frame := ansi.Strip(renderCodexPane(emulator, 180, 32, content, true))
 	if strings.Contains(frame, "Context 73% left · 1.2K in") {
 		t.Fatal("duplicate native footer still shown above Cully")
 	}
