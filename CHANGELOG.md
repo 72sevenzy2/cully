@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Run a single end-to-end CI check that follows the documented path: install, `cully setup`, MCP use and uninstall, replacing the separate compose-only job.
+- Describe Cully in the docs introduction as a companion for work and everyday life, not only session resume and guidance.
+
 ## 0.9.0
 
 - `cully setup` now runs the local stack without OAuth on port 3393 for Cully MCP and fixed uncommon loopback ports for the data API, Mem0 and both databases, picks the next free port when one is busy, saves the choice in `.env`, and keeps ports of an already running stack.
