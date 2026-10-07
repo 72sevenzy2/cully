@@ -42,6 +42,18 @@ func codexAdvisorSignals(stats codexToolStats, view codexStatusView) string {
 
 func codexCombinedAdvice(session string, stats codexToolStats, view codexStatusView) []string {
 	local := codexAdviceWithStatus(stats, view)
+	cwd := currentDir()
+	loops, events := sessionLoops(cwd, session)
+	loopLines, hints := loops.Advice(), workflowHints(cwd, events)
+	if len(loopLines)+len(hints) > 0 {
+		// A nominal memo is redundant with an actual observation.
+		if len(local) == 1 && strings.HasPrefix(local[0], "MEMO|") {
+			local = nil
+		}
+		merged := append([]string{}, loopLines...)
+		merged = append(merged, local...)
+		local = append(merged, hints...)
+	}
 	deep := readSuggestionsLimit(session, maxReportLines)
 	if len(deep) > 0 {
 		// A nominal local memo is redundant with actual deeper findings.

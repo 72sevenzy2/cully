@@ -94,6 +94,7 @@ func RunPane(agentName string, args []string, input, output *os.File) error {
 	refreshSession()
 	readCodexGitChanges(&view)
 	stats := readCodexToolStats(session)
+	view.Loops, _ = sessionLoops(currentDir(), session)
 	advice := codexCombinedAdvice(session, stats, view)
 	panelBudget := func() int { return rows - codexPaneTop(rows, rows) }
 	statusRows := func() []string { return codexCompactStatusRows(cols, panelBudget(), advice, stats, view) }
@@ -351,6 +352,7 @@ func RunPane(agentName string, args []string, input, output *os.File) error {
 		readFooter()
 		persistSession()
 		stats = readCodexToolStats(session)
+		view.Loops, _ = sessionLoops(currentDir(), session)
 		advice = codexCombinedAdvice(session, stats, view)
 		content = statusRows()
 		_, _ = io.WriteString(output, paint())
@@ -399,6 +401,7 @@ func RunPane(agentName string, args []string, input, output *os.File) error {
 				if dirty {
 					readFooter()
 					stats = readCodexToolStats(session)
+					view.Loops, _ = sessionLoops(currentDir(), session)
 					advice = codexCombinedAdvice(session, stats, view)
 					content = statusRows()
 					_, _ = io.WriteString(output, paint())
@@ -453,6 +456,7 @@ func RunPane(agentName string, args []string, input, output *os.File) error {
 				dispatchAdvisor(codexAdvisorSignals(stats, view), session, view.Project)
 				lastAnalysis, lastAnalysisTools = time.Now(), stats.Tools
 			}
+			view.Loops, _ = sessionLoops(currentDir(), session)
 			advice = codexCombinedAdvice(session, stats, view)
 			joined := strings.Join(advice, "\n")
 			if joined != lastAdvice {
