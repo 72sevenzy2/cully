@@ -10,6 +10,7 @@
 - Add `cully replay`: a step player, file activity with hotspots, a reconcile check against `git status`, `--json` output and a self-contained offline `--html` export. File paths come from structured file tools. A shell command records its program and subcommand only. Set `CULLY_JOURNAL_PATHS=0` to stop recording paths and command labels.
 - Keep session risk on a loop that is still happening. A resolved loop stays in the count and no longer marks the session HIGH. Journal pruning keeps the newest sessions per project, and journal writes lock the file.
 - Add `cully timeline`, `cully handoff` and `cully rescue`, and a measured session health block with a rule-based risk label in `cully status`.
+- Add a [use cases](docs/use-cases.md) page positioning the shipped primitives as a flight recorder for agent sessions, audit-grade session review and replayable playbooks, with a matching section on the homepage.
 - Claude Code's status line stays silent inside the Cully terminal and feeds the panel instead. It behaves as before outside the terminal.
 
 ## 0.9.1

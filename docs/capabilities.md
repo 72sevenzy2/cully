@@ -59,6 +59,7 @@ This page separates what ships today from what is planned. Cully's other pages d
 | `cully handoff` | Shipped | A structured handoff you can print or start another agent with. |
 | `cully rescue` | Shipped | Evidence and recovery steps; an optional headless advisor adds a probable cause. |
 | `cully status` session health | Shipped | |
+| [Session forensics](/use-cases) | Shipped | Flight-recorder postmortems, audit-grade session review and replayable playbooks, composed of timeline, replay, reconcile and handoff. |
 
 ## Improve
 

@@ -28,6 +28,7 @@ Terminal and hooks ──► Session journal ──► Session intelligence ─�
 | `cully handoff` | A structured handoff for the next agent |
 | `cully rescue` | Evidence and recovery steps when a session is stuck |
 | `cully status` | Measured session health and a rule-based risk label |
+| [Session forensics](/use-cases) | Flight-recorder postmortems, audit-grade review and replayable playbooks from the same record |
 | Project workflow hint | "You usually run checks after editing here" |
 
 ## Next

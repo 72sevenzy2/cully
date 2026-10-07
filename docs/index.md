@@ -23,6 +23,7 @@ Works across agents. Learns across sessions.
 | See how the parts fit together | [How Cully works](/how-cully-works) |
 | Run any agent with a live health bar and advisor | [The Cully terminal](/terminal) |
 | Replay a session, hand it off or get unstuck | [Session intelligence](/session-intelligence) |
+| Put sessions on the record: forensics, review, playbooks | [Use cases](/use-cases) |
 | Know what is built and what is planned | [Current capabilities](/capabilities) |
 
 ## Core concepts
