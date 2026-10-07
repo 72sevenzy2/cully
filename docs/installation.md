@@ -5,15 +5,15 @@ description: Choose an agent, set up PATH, pin a release or build Cully from sou
 
 # Installer options
 
-Follow the [quickstart](/quickstart) for the normal laptop setup. The installer accepts `--agent claude`, `--agent codex`, `--agent cursor` or `--agent all`; with no agent selected, it installs the CLI in `~/.local/bin`. After installation, `cully setup` detects installed agents, registers their integrations and starts the full local stack and advisor daemon.
+Follow the [quickstart](/quickstart) to run the memory stack on your laptop, or [connect to a remote MCP server](#connect-to-a-remote-memory-stack) to keep only the agent integration and advisor on your machine. The installer accepts `--agent claude`, `--agent codex`, `--agent cursor` or `--agent all`; with no agent selected, it installs the CLI in `~/.local/bin`. Without `--mcp-url`, run `cully setup` after installation to start the local memory stack and advisor daemon.
 
 ## macOS
 
-Install Docker Desktop, start it, then run the installer from the [quickstart](/quickstart). The installer clears the download quarantine flag on the `cully` binary. Open a new terminal afterwards so your zsh startup file is reloaded.
+For the full local memory stack, install and start Docker Desktop before running the installer from the [quickstart](/quickstart). The [remote MCP path](#connect-to-a-remote-memory-stack) does not need Docker. The installer clears the download quarantine flag on the `cully` binary. Open a new terminal afterwards so your zsh startup file is reloaded.
 
 ## Linux
 
-Install Docker Engine with the Compose plugin and make sure your user can run `docker` without `sudo`. Run the installer from the [quickstart](/quickstart), then open a new terminal so your Bash startup file is reloaded.
+For the full local memory stack, install Docker Engine with the Compose plugin and make sure your user can run `docker` without `sudo`. The [remote MCP path](#connect-to-a-remote-memory-stack) does not need Docker. Run the installer, then open a new terminal so your Bash startup file is reloaded.
 
 Windows is not supported by the installer.
 
@@ -28,13 +28,15 @@ Windows is not supported by the installer.
 
 The installer adds the selected directory to your zsh or Bash startup file when needed. Open a new terminal before typing `cully`, or use the full path printed by the installer in your current terminal. A piped installer cannot update the shell that launched it. With a custom `CLAUDE_CONFIG_DIR`, `CODEX_HOME` or `CURSOR_CONFIG_DIR`, or another shell, add the printed directory to PATH yourself. Existing shell settings are preserved.
 
-## Connect to a server already running
+## Connect to a remote memory stack
 
-If a company runs Cully for you, use its MCP URL when installing:
+Your team can host Cully MCP, the private Cully data API, Mem0 and their databases on remote infrastructure. These services can run on separate hosts. Your machine needs only the Cully CLI, your coding agent, and the local advisor, skill and hooks installed by setup. Give the installer the public Cully MCP URL:
 
-<InstallCommand template="curl -fsSL https://cully.net/install.sh | sh -s -- --agent {agent} --mcp-url https://mcp.example.com/mcp --oauth" />
+<InstallCommand template="curl -fsSL https://cully.net/install.sh | sh -s -- --agent {agent} --mcp-url https://mcp.example.com/mcp" />
 
-Use the URL and sign-in instructions your company provides. Leave off `--oauth` for a private single-user endpoint. You can add the server later with `cully setup --agent AGENT --mcp-url URL`. See [connect an agent](/agents).
+The installer downloads the latest released CLI and runs setup with that URL. Setup registers the remote MCP connection, installs the selected agent's Cully skill and hooks, and starts the local advisor daemon. It does not start a local Docker stack or install Mem0 on your machine. Your agent sends memory tool calls to the remote MCP server; the advisor reads local session signals.
+
+Use the URL and sign-in instructions your team provides. Add `--oauth` to the installer command when the server requires OAuth sign-in; a trusted private single-user endpoint does not need it. If the CLI is already installed, run `cully setup --agent AGENT --mcp-url URL` and add `--oauth` when needed. See [connect an agent](/agents) for sign-in and [team deployment](/team-deployment) for the remote services.
 
 ## Build the CLI from source
 

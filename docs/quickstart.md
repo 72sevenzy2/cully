@@ -5,7 +5,7 @@ description: Install Cully, try a task handoff, and use Mem0 recall and advisor 
 
 # Quickstart
 
-Set up Cully on your laptop with Docker Compose and Claude Code, Codex or Cursor. Then try one task and pick it up in a new session.
+Set up Cully on your laptop with Docker Compose and Claude Code, Codex or Cursor. Then try one task and pick it up in a new session. If your memory services already run elsewhere, use the [remote MCP installation path](/installation#connect-to-a-remote-memory-stack); it installs the advisor and agent integration locally without starting Docker.
 
 ## 1. Install Cully
 
