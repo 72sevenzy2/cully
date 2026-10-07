@@ -404,3 +404,26 @@ func TestDatabaseSessionTaskClearAndScope(t *testing.T) {
 		t.Fatal("cross-owner task update")
 	}
 }
+
+func TestDatabaseSessionTaskRepeatAfterClearRelinks(t *testing.T) {
+	s := testStore(t)
+	project := "https://github.com/mcp-runtime/cully"
+	task := "Oauth validation"
+	clear := true
+	session := func(task *string, clear *bool) memory.Result {
+		in := memory.SessionInput{SessionRef: "claude-0123456789abcdef", Assistant: "claude", Section: "company", ProjectURL: &project, Task: task, ClearTask: clear}
+		return execute(t, s, "owner-a", memory.Request{Operation: "session", Session: &in})
+	}
+	taskID := *session(&task, nil).Session.TaskID
+	session(nil, &clear)
+	// The same name after a clear relinks the kept record instead of duplicating it.
+	relinked := session(&task, nil)
+	if relinked.Session.TaskID == nil || *relinked.Session.TaskID != taskID {
+		t.Fatalf("repeat after clear must relink the existing task: %+v", relinked.Session)
+	}
+	kind := "task"
+	all := execute(t, s, "owner-a", memory.Request{Operation: "recent", Recent: &memory.RecentInput{EntryType: &kind, Limit: 10}})
+	if len(all.Entries) != 1 {
+		t.Fatalf("repeat after clear must not insert a duplicate: %+v", all.Entries)
+	}
+}

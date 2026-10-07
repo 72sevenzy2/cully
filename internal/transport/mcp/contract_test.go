@@ -22,7 +22,10 @@ func repoRoot(t *testing.T) string {
 }
 
 var manifestToolRE = regexp.MustCompile(`(?m)^\s*-\s*name:\s*(cully_[a-z_]+)\s*$`)
-var docToolRE = regexp.MustCompile(`\b(cully_[a-z_]+)\b`)
+
+// Only backticked names count as tool references; bare cully_ identifiers
+// such as table names are not tools.
+var docToolRE = regexp.MustCompile("`(cully_[a-z_]+)`")
 
 // manifestTools returns the cully_* tool names a deployment manifest gates.
 func manifestTools(t *testing.T, path string) []string {
@@ -76,7 +79,7 @@ func TestToolDiscoveryMatchesManifests(t *testing.T) {
 			t.Fatalf("skill references unregistered tool %s", name)
 		}
 	}
-	if !strings.Contains(string(raw), "clear_task") {
+	if !strings.Contains(string(raw), "`clear_task`") {
 		t.Fatal("skill does not document task unlinking")
 	}
 }

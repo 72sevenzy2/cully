@@ -110,7 +110,7 @@ type Project struct {
 }
 
 // SessionInput starts or updates one agent session. A non-empty Task creates
-// the session's task entry once and links it; repeating the same task is a no-op.
+// the session's task entry once and links it; repeating the same task keeps or relinks that record.
 // An omitted Task preserves the current link; ClearTask unlinks it while
 // keeping the task record. Task and ClearTask are mutually exclusive.
 type SessionInput struct {
