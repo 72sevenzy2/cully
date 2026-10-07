@@ -6,6 +6,7 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"sort"
 	"strings"
 	"time"
 
@@ -13,9 +14,10 @@ import (
 )
 
 // A handoff lets a different coding agent continue without rebuilding context.
-// It is derived from the journal's counts plus git state read live at render
-// time. File names come only from git and are never persisted; the journal's
-// commands and prompts are not available, so none can appear here.
+// It is derived from the journal's counts and recorded file activity
+// (project-relative paths and operations only, see journal.go) plus git state
+// read live at render time. Prompts, command arguments and file contents are
+// not available, so none can appear here.
 
 const handoffMaxFiles = 30
 
@@ -114,6 +116,7 @@ func buildHandoff(in handoffInput) string {
 	} else if in.Branch != "" {
 		state = append(state, "- Working tree is clean")
 	}
+	state = append(state, handoffActivityLines(summarizeFiles(in.Events))...)
 	if len(state) > 0 {
 		section("Current state", state...)
 	}
@@ -153,6 +156,55 @@ func buildHandoff(in handoffInput) string {
 		"- Verify the current state with the project's checks before building on it.",
 		"- Save progress with cully_log before you finish.")
 	return b.String()
+}
+
+const handoffTopFiles = 10
+
+// handoffActivityLines lists what the journal recorded the agent doing to
+// files: counts by operation and the most touched files.
+func handoffActivityLines(sum fileSummary) []string {
+	if !sum.Recorded {
+		return nil
+	}
+	var parts []string
+	for _, p := range []struct {
+		n    int
+		word string
+	}{{len(sum.Created), "created"}, {len(sum.Edited), "edited"}, {len(sum.Deleted), "deleted"}, {len(sum.Moved), "moved"}} {
+		if p.n > 0 {
+			parts = append(parts, fmt.Sprintf("%d %s", p.n, p.word))
+		}
+	}
+	if len(parts) == 0 {
+		return nil
+	}
+	lines := []string{"- Recorded file activity: " + strings.Join(parts, ", ")}
+	type touch struct {
+		path  string
+		count int
+		what  string
+	}
+	var all []touch
+	for _, group := range []struct {
+		list []fileEntry
+		what string
+	}{{sum.Edited, "edited"}, {sum.Created, "created"}, {sum.Deleted, "deleted"}, {sum.Moved, "moved"}} {
+		for _, e := range group.list {
+			all = append(all, touch{e.Path, e.Count, group.what})
+		}
+	}
+	sort.SliceStable(all, func(i, j int) bool { return all[i].count > all[j].count })
+	for i, t := range all {
+		if i >= handoffTopFiles {
+			break
+		}
+		line := "  - " + safeText(t.path) + " (" + t.what
+		if t.count > 1 {
+			line += fmt.Sprintf(" ×%d", t.count)
+		}
+		lines = append(lines, line+")")
+	}
+	return lines
 }
 
 // gitLive reads the working-tree state from git at render time only.

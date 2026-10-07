@@ -52,7 +52,7 @@ func groupKey(e journalEvent) string {
 func groupJournal(events []journalEvent) []timelineGroup {
 	var groups []timelineGroup
 	for _, e := range events {
-		if e.Class == journalSearch || e.Class == journalOther {
+		if e.Class == journalSearch || e.Class == journalOther || e.Class == journalFileOp {
 			continue
 		}
 		if n := len(groups); n > 0 && groupKey(groups[n-1].Event) == groupKey(e) && e.Class != journalStart && e.Class != journalEnd && e.Class != journalNote {

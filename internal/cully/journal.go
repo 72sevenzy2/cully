@@ -17,9 +17,24 @@ import (
 // agent edited, searched, ran checks, saved memory, or failed. Timeline,
 // handoff, rescue, loop detection and status are all derived from it.
 //
-// It is deliberately coarse. It never stores prompts, commands, tool output,
-// file names or file contents. A repeated failure is recognised by a one-way
-// hash of the normalized command, never by the command itself.
+// It is deliberately coarse. It never stores prompts, tool output, file
+// contents, diffs, command arguments, environment values or URLs. A repeated
+// failure is recognised by a one-way hash of the normalized command.
+//
+// Replay privacy guarantee. For each tool event the journal may additionally
+// store, and only these:
+//
+//	Path  a project-RELATIVE file path, at most 200 characters. Absolute paths
+//	      and paths outside the project root are dropped, never stored.
+//	To    the project-relative destination of a move, under the same rules.
+//	Op    one of read, write, edit, create, delete, move.
+//	Cmd   only the program and, for a known tool such as git or go, its first
+//	      subcommand (for example "go test", "git commit", "rm"), and only when
+//	      it matches ^[A-Za-z0-9._/-]+( [A-Za-z0-9._-]+)?$.
+//
+// Setting CULLY_JOURNAL_PATHS=0 turns off Path, To, Op and Cmd recording; the
+// event class and success are still recorded. Old journals without these
+// fields still parse. The whole session stays within journalMaxBytes.
 
 // Journal classes. The first four match the single-letter hook counters.
 const (
@@ -31,6 +46,7 @@ const (
 	journalNote   = "N" // a Cully observation; Note holds a fixed keyword
 	journalStart  = "B" // terminal session started
 	journalEnd    = "X" // terminal session ended
+	journalFileOp = "F" // extra file operation of a multi-file tool call (replay only)
 )
 
 // Fixed vocabulary for journalNote events. Free text is never recorded.
@@ -53,6 +69,11 @@ type journalEvent struct {
 	Tool   string    `json:"tool,omitempty"`
 	Sig    string    `json:"sig,omitempty"`
 	Note   string    `json:"n,omitempty"`
+	// Replay fields; see the privacy guarantee above.
+	Path string `json:"p,omitempty"`
+	To   string `json:"to,omitempty"`
+	Op   string `json:"op,omitempty"`
+	Cmd  string `json:"cmd,omitempty"`
 }
 
 func journalDir() string { return filepath.Join(cullyDir(), "journals") }
