@@ -208,12 +208,7 @@ func pickRescueAgent(want string) (string, error) {
 		}
 		return want, nil
 	}
-	for _, c := range []struct{ agent, bin string }{{"claude", "claude"}, {"codex", "codex"}, {"cursor", "cursor-agent"}} {
-		if commandExists(c.bin) {
-			return c.agent, nil
-		}
-	}
-	return "", fmt.Errorf("no claude, codex or cursor agent installed")
+	return installedAgentID()
 }
 
 // renderRescue prints the deterministic report, then the advisor opinion when

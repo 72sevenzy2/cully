@@ -94,7 +94,7 @@ func TestWorkflowHintInCombinedAdvice(t *testing.T) {
 		writeSession(t, currentDir(), s, "ET")
 	}
 	writeSession(t, currentDir(), "now", "E")
-	got := strings.Join(codexCombinedAdvice("now", codexToolStats{Tools: 1}, codexStatusView{}), "\n")
+	got := strings.Join(combinedAdvice("now", toolStats{Tools: 1}, sessionView{}), "\n")
 	if !strings.Contains(got, "You usually run checks after editing") {
 		t.Fatalf("advice = %s", got)
 	}

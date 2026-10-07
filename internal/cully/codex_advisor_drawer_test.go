@@ -8,13 +8,13 @@ import (
 )
 
 func TestAdvisorDrawerSelectionMouseAndReview(t *testing.T) {
-	var d codexAdvisorDrawer
+	var d advisorDrawer
 	d.open([]string{"ADV|Run focused checks.", "ADV|Plan the next task.", "MEMO|More details."})
 	d.move(1)
 	if d.Selected != 1 || d.Review != nil {
 		t.Fatal(d)
 	}
-	screen := d.render(80, 24, codexToolStats{}, codexStatusView{Project: "project"})
+	screen := d.render(80, 24, toolStats{}, sessionView{Project: "project"})
 	if !strings.Contains(screen, "▶ Next · Plan the next task.") || !strings.Contains(screen, "Preview selected action") {
 		t.Fatal(screen)
 	}
@@ -30,7 +30,7 @@ func TestAdvisorDrawerSelectionMouseAndReview(t *testing.T) {
 	review := advisorHandoff(d.Items[d.Selected])
 	d.Review = &review
 	d.Scroll = 0
-	screen = d.render(80, 24, codexToolStats{}, codexStatusView{})
+	screen = d.render(80, 24, toolStats{}, sessionView{})
 	if !strings.Contains(screen, "Add request to coding session") || !strings.Contains(screen, "press Enter to") || !strings.Contains(screen, "send.") {
 		t.Fatal(screen)
 	}
@@ -45,16 +45,16 @@ func TestAdvisorDrawerSelectionMouseAndReview(t *testing.T) {
 }
 
 func TestAdvisorDrawerSelectionVisibleAfterPagingAndResize(t *testing.T) {
-	var d codexAdvisorDrawer
+	var d advisorDrawer
 	d.open([]string{"ADV|one", "ADV|two", "ADV|three", "ADV|four", "ADV|five", "ADV|six", "ADV|seven", "ADV|eight"})
 	d.move(10000)
-	screen := d.render(40, 12, codexToolStats{}, codexStatusView{})
+	screen := d.render(40, 12, toolStats{}, sessionView{})
 	if !strings.Contains(screen, "▶ Next · eight") {
 		t.Fatal("selected item hidden", screen)
 	}
 	d.Details = true
 	d.Scroll = 10000
-	_ = d.render(40, 12, codexToolStats{}, codexStatusView{})
+	_ = d.render(40, 12, toolStats{}, sessionView{})
 	d.escape()
 	if d.Details || !d.Open {
 		t.Fatal(d)

@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Refactor the terminal core without changing behavior: one agent catalog replaces the scattered per-agent switches, shared Codex-named panel types use neutral names, and footer/snapshot feeds parse through explicit updates with a documented merge contract. On-disk paths, hook commands, panel output and goldens are unchanged.
+
 - Show researched tool suggestions only when the advisor's web scout reports a successful search.
 - Fix the compact panel in Claude and other non-Codex agents: it no longer shows a Fast row, and a Cully MCP result sent as a string of JSON text now counts as healthy and authenticated.
 - Add Subagents, Web and Commits counters to the panel's activity rows. Subagent (`Task`/`Agent`) calls, web fetches and searches, and `git commit` commands are counted from tool events without recording their arguments.

@@ -14,7 +14,7 @@ func withCodexMCPScope(ctx context.Context, session, origin string) context.Cont
 	return context.WithValue(ctx, codexMCPScopeKey{}, codexMCPScope{session, origin})
 }
 
-func codexCullySemantic(raw json.RawMessage) bool {
+func cullySemantic(raw json.RawMessage) bool {
 	var input struct {
 		Mode string `json:"mode"`
 	}

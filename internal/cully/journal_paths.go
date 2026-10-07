@@ -112,7 +112,7 @@ func toolBaseName(name string) string {
 
 // extractToolActivity returns file operations from structured file tools and a
 // command label from shell tools. Shell text is never scanned for paths.
-func extractToolActivity(event codexToolEvent) (ops []fileOp, cmd string) {
+func extractToolActivity(event toolEvent) (ops []fileOp, cmd string) {
 	name := toolBaseName(event.ToolName)
 	add := func(op, path, to string) {
 		if len(ops) >= journalOpsPerHit {

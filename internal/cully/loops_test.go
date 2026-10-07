@@ -184,16 +184,16 @@ func TestCombinedAdviceContainsLoopLine(t *testing.T) {
 		ev.Time = time.Now().UTC()
 		appendJournal(currentDir(), session, ev)
 	}
-	got := strings.Join(codexCombinedAdvice(session, codexToolStats{Tools: 5}, codexStatusView{}), "\n")
+	got := strings.Join(combinedAdvice(session, toolStats{Tools: 5}, sessionView{}), "\n")
 	if !strings.Contains(got, "CAUT|Cully noticed something: the same command failed 3 times after edits.") {
 		t.Fatalf("advice = %s", got)
 	}
-	view := codexStatusView{Loops: detectLoops(mkEvents("FEFEF"))}
-	rows := strings.Join(codexStatusRows(120, nil, codexToolStats{}, view), "\n")
+	view := sessionView{Loops: detectLoops(mkEvents("FEFEF"))}
+	rows := strings.Join(sessionStatusRows(120, nil, toolStats{}, view), "\n")
 	if !strings.Contains(rows, "Loops") {
 		t.Fatal("Loops row missing")
 	}
-	if strings.Contains(strings.Join(codexStatusRows(120, nil, codexToolStats{}, codexStatusView{}), "\n"), "Loops") {
+	if strings.Contains(strings.Join(sessionStatusRows(120, nil, toolStats{}, sessionView{}), "\n"), "Loops") {
 		t.Fatal("Loops row shown without data")
 	}
 }

@@ -93,11 +93,11 @@ func TestCursorPaneSignalEvents(t *testing.T) {
 	} {
 		RunPaneSignalHook("cursor", strings.NewReader(payload))
 	}
-	data, _ := os.ReadFile(codexSignalFile("cursor-pane"))
+	data, _ := os.ReadFile(signalFile("cursor-pane"))
 	if got, want := string(data), "T.\nS.\nS.\nE.\nO.\nO.\nT!\n"; got != want {
 		t.Fatalf("signals = %q, want %q", got, want)
 	}
-	stats := readCodexToolStats("cursor-pane")
+	stats := readToolStats("cursor-pane")
 	if stats.Tools != 7 || stats.Errors != 1 || stats.Checks != 2 {
 		t.Fatalf("unexpected stats: %+v", stats)
 	}
@@ -115,7 +115,7 @@ func TestStatuslineIsSilentDataFeedInsidePane(t *testing.T) {
 	if out.Len() != 0 {
 		t.Fatalf("status line must be silent inside the terminal: %q", out.String())
 	}
-	var view codexStatusView
+	var view sessionView
 	readClaudeContext("pane-claude", &view)
 	if !view.ContextKnown || view.ContextLeft != 70 {
 		t.Fatalf("context = %+v", view)
@@ -123,7 +123,7 @@ func TestStatuslineIsSilentDataFeedInsidePane(t *testing.T) {
 	if view.Model != "Opus" || view.Input != "300k" {
 		t.Fatalf("model and tokens must come from the Claude feed: %+v", view)
 	}
-	var unknown codexStatusView
+	var unknown sessionView
 	readClaudeContext("other", &unknown)
 	if unknown.ContextKnown {
 		t.Fatal("unknown session must not report context")
@@ -131,10 +131,10 @@ func TestStatuslineIsSilentDataFeedInsidePane(t *testing.T) {
 }
 
 func TestPanelWaitingTextNamesTheRunningAgent(t *testing.T) {
-	if got := waitingForAgent(codexStatusView{Agent: "claude"}, true); got != "waiting for Claude" {
+	if got := waitingForAgent(sessionView{Agent: "claude"}, true); got != "waiting for Claude" {
 		t.Fatalf("claude: %q", got)
 	}
-	if got := waitingForAgent(codexStatusView{Agent: "codex"}, true); got != "waiting for Codex footer" {
+	if got := waitingForAgent(sessionView{Agent: "codex"}, true); got != "waiting for Codex footer" {
 		t.Fatalf("codex: %q", got)
 	}
 }

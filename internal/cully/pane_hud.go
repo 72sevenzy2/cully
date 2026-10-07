@@ -15,7 +15,7 @@ import (
 //
 // It shows only measured values, so a segment with no data is left out. The
 // whole panel is clickable, and the bar ends with the advisor hint.
-func paneHUD(cols int, stats codexToolStats, view codexStatusView, now time.Time) string {
+func paneHUD(cols int, stats toolStats, view sessionView, now time.Time) string {
 	if cols < 24 {
 		return ""
 	}

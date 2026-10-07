@@ -10,18 +10,18 @@ import (
 
 func TestPaneHUDShowsOnlyMeasuredValues(t *testing.T) {
 	now := time.Date(2026, 10, 8, 12, 0, 0, 0, time.UTC)
-	view := codexStatusView{
+	view := sessionView{
 		Agent: "codex", Project: "/work/oauth-service", Branch: "main",
 		Started: now.Add(-27 * time.Minute), ContextKnown: true, ContextLeft: 37,
 		Loops: loopReport{Loops: []loopFinding{{Kind: loopRepeatFailure, Attempts: 3}}},
 	}
-	got := ansi.Strip(paneHUD(120, codexToolStats{EditsSinceCheck: 2}, view, now))
+	got := ansi.Strip(paneHUD(120, toolStats{EditsSinceCheck: 2}, view, now))
 	for _, want := range []string{"Codex", "oauth-service:main", "27m", "Context 63%", "⚠ Loop 3x", "● 2 unchecked"} {
 		if !strings.Contains(got, want) {
 			t.Fatalf("HUD missing %q: %s", want, got)
 		}
 	}
-	bare := ansi.Strip(paneHUD(120, codexToolStats{}, codexStatusView{Agent: "claude", Project: "/p/cully"}, now))
+	bare := ansi.Strip(paneHUD(120, toolStats{}, sessionView{Agent: "claude", Project: "/p/cully"}, now))
 	for _, banned := range []string{"Context", "Loop", "unchecked", "Task", "Progress"} {
 		if strings.Contains(bare, banned) {
 			t.Fatalf("HUD invented %q: %s", banned, bare)
@@ -30,7 +30,7 @@ func TestPaneHUDShowsOnlyMeasuredValues(t *testing.T) {
 	if !strings.Contains(bare, "Claude Code") {
 		t.Fatalf("agent name missing: %s", bare)
 	}
-	if paneHUD(10, codexToolStats{}, view, now) != "" {
+	if paneHUD(10, toolStats{}, view, now) != "" {
 		t.Fatal("a very narrow terminal gets no HUD")
 	}
 }
@@ -38,7 +38,7 @@ func TestPaneHUDShowsOnlyMeasuredValues(t *testing.T) {
 func TestPaneHUDContextColors(t *testing.T) {
 	now := time.Now()
 	for left, color := range map[int]string{5: red, 20: yellow, 60: ""} {
-		got := paneHUD(120, codexToolStats{}, codexStatusView{Agent: "codex", ContextKnown: true, ContextLeft: left}, now)
+		got := paneHUD(120, toolStats{}, sessionView{Agent: "codex", ContextKnown: true, ContextLeft: left}, now)
 		if color != "" && !strings.Contains(got, color) {
 			t.Fatalf("left %d%% should use %q", left, color)
 		}
@@ -49,7 +49,7 @@ func TestPaneHUDContextColors(t *testing.T) {
 }
 
 func TestHUDRuleFitsWidth(t *testing.T) {
-	hud := paneHUD(100, codexToolStats{}, codexStatusView{Agent: "cursor", Project: "/p/app", Branch: "feature/long-branch-name", Started: time.Now()}, time.Now())
+	hud := paneHUD(100, toolStats{}, sessionView{Agent: "cursor", Project: "/p/app", Branch: "feature/long-branch-name", Started: time.Now()}, time.Now())
 	for _, width := range []int{24, 40, 80, 100, 200} {
 		rule := hudRule(width, hud)
 		if got := ansi.StringWidth(ansi.Strip(rule)); got != width {

@@ -14,7 +14,7 @@ import (
 
 // These are reduced counters for directly observed Cully MCP calls. They
 // never contain tool arguments, responses, credentials or retrieved memory.
-type codexCullyStats struct {
+type cullyStats struct {
 	Calls, Log, Context, Recall, Search, Get, Other int
 	Health, Auth                                    string
 	CheckedAt                                       string
@@ -22,18 +22,18 @@ type codexCullyStats struct {
 	ByTool                                          map[string]int
 }
 
-var codexCullyToolName = regexp.MustCompile(`^cully_[a-z0-9_]{1,80}$`)
+var cullyToolName = regexp.MustCompile(`^cully_[a-z0-9_]{1,80}$`)
 
-func codexCullyStatsFile(session string) string {
+func cullyStatsFile(session string) string {
 	return filepath.Join(cullyDir(), safeSession(session)+".codex-mcp")
 }
 
-func codexCullyTool(name string) string {
+func cullyTool(name string) string {
 	name = strings.ToLower(name)
 	for _, prefix := range []string{"mcp__cully__", "mcp__cully.", "mcp.cully."} {
 		if index := strings.LastIndex(name, prefix); index >= 0 {
 			tool := name[index+len(prefix):]
-			if codexCullyToolName.MatchString(tool) {
+			if cullyToolName.MatchString(tool) {
 				return tool
 			}
 		}
@@ -43,7 +43,7 @@ func codexCullyTool(name string) string {
 
 // Health is the last observed response, not a background network probe. A
 // successful owner-scoped Cully tool establishes authentication at that time.
-func codexCullyResponseState(raw json.RawMessage) (health, auth string) {
+func cullyResponseState(raw json.RawMessage) (health, auth string) {
 	// Claude Code reports an MCP result as a bare array of content blocks;
 	// Codex reports an object. Read both through the object shape.
 	if trimmed := strings.TrimSpace(string(raw)); strings.HasPrefix(trimmed, "[") {
@@ -94,14 +94,14 @@ func codexCullyResponseState(raw json.RawMessage) (health, auth string) {
 	return "unknown", "unknown"
 }
 
-func readCodexCullyStats(session string) codexCullyStats {
-	if path := codexSessionStateFile(session); path != "" {
+func readCodexCullyStats(session string) cullyStats {
+	if path := sessionStateFile(session); path != "" {
 		if _, err := os.Stat(path); err == nil {
 			return readCodexSessionState(path).Stats.Cully
 		}
 	}
-	var stats codexCullyStats
-	data, err := os.ReadFile(codexCullyStatsFile(session))
+	var stats cullyStats
+	data, err := os.ReadFile(cullyStatsFile(session))
 	if err == nil && len(data) <= 128*1024 {
 		_ = json.Unmarshal(data, &stats)
 	}
@@ -113,18 +113,18 @@ func recordCodexCullyCall(session, tool, health, auth string) {
 }
 
 func recordCodexCullyOriginCall(session, tool, health, auth, origin string, semantic bool) {
-	if codexSessionStateFile(session) != "" {
-		updateCodexSessionState(session, func(state *codexSessionState) {
+	if sessionStateFile(session) != "" {
+		updateCodexSessionState(session, func(state *sessionState) {
 			incrementCodexCullyStats(&state.Stats.Cully, tool, health, auth)
 			incrementCodexCullyOrigin(&state.Stats.Cully, origin, tool, semantic)
 		})
 		return
 	}
 	// Late asynchronous hooks must not recreate a closed pane's telemetry.
-	if _, err := os.Stat(codexPaneRegistrationFile(session)); err != nil {
+	if _, err := os.Stat(paneRegistrationFile(session)); err != nil {
 		return
 	}
-	path := codexCullyStatsFile(session)
+	path := cullyStatsFile(session)
 	lock, err := os.OpenFile(path+".lock", os.O_CREATE|os.O_RDWR, 0o600)
 	if err != nil {
 		return
@@ -134,7 +134,7 @@ func recordCodexCullyOriginCall(session, tool, health, auth, origin string, sema
 		return
 	}
 	defer syscall.Flock(int(lock.Fd()), syscall.LOCK_UN) //nolint:errcheck
-	if _, err := os.Stat(codexPaneRegistrationFile(session)); err != nil {
+	if _, err := os.Stat(paneRegistrationFile(session)); err != nil {
 		return
 	}
 	stats := readCodexCullyStats(session)
@@ -156,7 +156,7 @@ func recordCodexCullyOriginCall(session, tool, health, auth, origin string, sema
 	}
 }
 
-func incrementCodexCullyStats(stats *codexCullyStats, tool, health, auth string) {
+func incrementCodexCullyStats(stats *cullyStats, tool, health, auth string) {
 	if stats.ByTool == nil {
 		stats.ByTool = map[string]int{}
 		if stats.SemanticRecall == 0 {
@@ -198,7 +198,7 @@ func incrementCodexCullyStats(stats *codexCullyStats, tool, health, auth string)
 	}
 }
 
-func incrementCodexCullyOrigin(stats *codexCullyStats, origin, tool string, semantic bool) {
+func incrementCodexCullyOrigin(stats *cullyStats, origin, tool string, semantic bool) {
 	switch origin {
 	case "advisor":
 		stats.Advisor++
@@ -215,8 +215,8 @@ func incrementCodexCullyOrigin(stats *codexCullyStats, origin, tool string, sema
 func clearCodexCullyStats(session string) {
 	// Stop accepting new events before waiting for any in-flight writer. This
 	// prevents a late rename from recreating telemetry after pane shutdown.
-	_ = os.Remove(codexPaneRegistrationFile(session))
-	path := codexCullyStatsFile(session)
+	_ = os.Remove(paneRegistrationFile(session))
+	path := cullyStatsFile(session)
 	lock, err := os.OpenFile(path+".lock", os.O_CREATE|os.O_RDWR, 0o600)
 	if err != nil {
 		_ = os.Remove(path)

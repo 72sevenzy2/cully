@@ -19,8 +19,8 @@ func TestLiveCullyAdvisorCounter(t *testing.T) {
 	}
 	t.Setenv("CLAUDE_CONFIG_DIR", t.TempDir())
 	cwd := currentDir()
-	registerCodexPane("live-counter", cwd)
-	bindCodexPane(cwd, "live-counter-thread")
+	registerPane("live-counter", cwd)
+	bindPane(cwd, "live-counter-thread")
 	defer clearCodexCullyStats("live-counter")
 	ctx, cancel := context.WithTimeout(context.Background(), 50*time.Second)
 	defer cancel()
@@ -30,7 +30,7 @@ func TestLiveCullyAdvisorCounter(t *testing.T) {
 		t.Fatal(err)
 	}
 	for i := 0; i < 20; i++ {
-		s := readCodexToolStats("live-counter")
+		s := readToolStats("live-counter")
 		if s.Cully.Advisor > 0 {
 			if s.Tools != 0 || s.Cully.ByTool["cully_context"] == 0 || s.Cully.SemanticRecall == 0 {
 				t.Fatal("incorrect live scope", s)
@@ -46,10 +46,10 @@ func TestLiveCullyAdvisorCounter(t *testing.T) {
 func TestCullyCounterUpgradeSurvivesOlderWrapperWrites(t *testing.T) {
 	t.Setenv("CLAUDE_CONFIG_DIR", t.TempDir())
 	cwd := t.TempDir()
-	registerCodexPane("upgrade", cwd)
-	bindCodexPane(cwd, "thread")
+	registerPane("upgrade", cwd)
+	bindPane(cwd, "thread")
 	recordCodexCullyOriginCall("upgrade", "cully_projects", "healthy", "authenticated", "advisor", false)
-	path := codexSessionStateFile("upgrade")
+	path := sessionStateFile("upgrade")
 	state := readCodexSessionState(path)
 	// Simulate an already running 0.8.1 wrapper preserving its known fields
 	// while dropping the newer named/source counters on its next footer save.
@@ -57,11 +57,11 @@ func TestCullyCounterUpgradeSurvivesOlderWrapperWrites(t *testing.T) {
 	state.Stats.Cully.Advisor = 0
 	data, _ := json.Marshal(state)
 	os.WriteFile(path, data, 0o600)
-	if got := readCodexToolStats("upgrade"); got.Cully.Advisor != 1 || got.Cully.ByTool["cully_projects"] != 1 {
+	if got := readToolStats("upgrade"); got.Cully.Advisor != 1 || got.Cully.ByTool["cully_projects"] != 1 {
 		t.Fatal("older wrapper erased richer counts", got)
 	}
 	recordCodexCullyOriginCall("upgrade", "cully_context", "healthy", "authenticated", "startup", false)
-	got := readCodexToolStats("upgrade")
+	got := readToolStats("upgrade")
 	if got.Cully.Calls != 2 || got.Cully.Advisor != 1 || got.Cully.Startup != 1 {
 		t.Fatal("upgrade stopped accumulating", got)
 	}
@@ -70,18 +70,18 @@ func TestCullyCounterUpgradeSurvivesOlderWrapperWrites(t *testing.T) {
 		t.Fatal("counter snapshot not private")
 	}
 	clearCodexCullyStats("upgrade")
-	os.Remove(codexPaneBindingFile("upgrade"))
-	registerCodexPane("upgrade-resumed", cwd)
-	bindCodexPane(cwd, "thread")
-	if readCodexToolStats("upgrade-resumed").Cully.Advisor != 1 {
+	os.Remove(paneBindingFile("upgrade"))
+	registerPane("upgrade-resumed", cwd)
+	bindPane(cwd, "thread")
+	if readToolStats("upgrade-resumed").Cully.Advisor != 1 {
 		t.Fatal("upgrade details did not survive resume")
 	}
 }
 
 func TestCullyScopePanelKeepsBothCommentsAndCompleteDetails(t *testing.T) {
-	s := codexToolStats{Cully: codexCullyStats{Calls: 30, Foreground: 20, Advisor: 8, Startup: 2, SemanticRecall: 6, Health: "healthy", Auth: "authenticated", CheckedAt: "2026-10-07T12:34:56Z", ByTool: map[string]int{"cully_update": 4, "cully_recent": 3, "cully_projects": 2}}}
+	s := toolStats{Cully: cullyStats{Calls: 30, Foreground: 20, Advisor: 8, Startup: 2, SemanticRecall: 6, Health: "healthy", Auth: "authenticated", CheckedAt: "2026-10-07T12:34:56Z", ByTool: map[string]int{"cully_update": 4, "cully_recent": 3, "cully_projects": 2}}}
 	advice := []string{"CAUT|" + strings.Repeat("Inspect failures before repeating work. ", 4), "ADV|" + strings.Repeat("Run verification before finishing. ", 4)}
-	rows := codexCompactStatusRows(149, 43, advice, s, codexStatusView{})
+	rows := compactSessionStatusRows(149, 43, advice, s, sessionView{})
 	text := normalizedCodexPanel(strings.Join(rows, "\n"))
 	for _, want := range []string{"Calls 30 observed", "Foreground 20", "Advisor 8", "Startup 2", "Semantic recall 6", "Inspect failures", "Run verification", "Open advisor"} {
 		if !strings.Contains(text, want) {
@@ -91,7 +91,7 @@ func TestCullyScopePanelKeepsBothCommentsAndCompleteDetails(t *testing.T) {
 	if len(rows)+1 > 22 {
 		t.Fatal("panel grew beyond cap")
 	}
-	details := strings.Join(codexCullyToolRows(s.Cully, 144), "\n")
+	details := strings.Join(cullyToolRows(s.Cully, 144), "\n")
 	for _, want := range []string{"cully_update  4", "cully_recent  3", "cully_projects  2", "cully_delete  0"} {
 		if !strings.Contains(details, want) {
 			t.Fatal("tool details lost", want)
@@ -104,31 +104,31 @@ func TestCullyEveryToolAndOriginPersist(t *testing.T) {
 	t.Setenv("CULLY_PANE_SESSION", "every")
 	t.Setenv("MODEL_HINT_GUARD", "")
 	cwd := t.TempDir()
-	registerCodexPane("every", cwd)
-	bindCodexPane(cwd, "native-thread")
+	registerPane("every", cwd)
+	bindPane(cwd, "native-thread")
 	for _, tool := range []string{"cully_log", "cully_context", "cully_search", "cully_recall", "cully_get", "cully_update", "cully_delete", "cully_recent", "cully_projects", "cully_future_tool"} {
-		RunCodexSignalHook(strings.NewReader(`{"tool_name":"mcp__cully__` + tool + `","tool_response":{"content":[{"text":"private-result"}]}}`))
+		RunSignalHook(strings.NewReader(`{"tool_name":"mcp__cully__` + tool + `","tool_response":{"content":[{"text":"private-result"}]}}`))
 	}
-	RunCodexSignalHook(strings.NewReader(`{"tool_name":"mcp__other__cully_log","tool_response":{}}`))
+	RunSignalHook(strings.NewReader(`{"tool_name":"mcp__other__cully_log","tool_response":{}}`))
 	t.Setenv("MODEL_HINT_GUARD", "1")
 	t.Setenv("CULLY_MCP_METRICS_SESSION", "every")
 	t.Setenv("CULLY_MCP_ORIGIN", "advisor")
-	RunCodexSignalHook(strings.NewReader(`{"tool_name":"mcp__cully__cully_context","tool_input":{"mode":"semantic","query":"private-query"},"tool_response":{"structuredContent":{"notes":[]}}}`))
+	RunSignalHook(strings.NewReader(`{"tool_name":"mcp__cully__cully_context","tool_input":{"mode":"semantic","query":"private-query"},"tool_response":{"structuredContent":{"notes":[]}}}`))
 	t.Setenv("CULLY_MCP_ORIGIN", "startup")
-	RunCodexSignalHook(strings.NewReader(`{"tool_name":"mcp__cully__cully_context","tool_response":{"structuredContent":{"notes":[]}}}`))
-	got := readCodexToolStats("every")
+	RunSignalHook(strings.NewReader(`{"tool_name":"mcp__cully__cully_context","tool_response":{"structuredContent":{"notes":[]}}}`))
+	got := readToolStats("every")
 	if got.Tools != 11 || got.Cully.Calls != 12 || got.Cully.Foreground != 10 || got.Cully.Advisor != 1 || got.Cully.Startup != 1 || got.Cully.SemanticRecall != 2 || got.Cully.ByTool["cully_future_tool"] != 1 || got.Cully.ByTool["cully_context"] != 3 {
 		t.Fatal(got)
 	}
-	data, _ := os.ReadFile(codexSessionStateFile("every"))
+	data, _ := os.ReadFile(sessionStateFile("every"))
 	if strings.Contains(string(data), "private-") || strings.Contains(string(data), "mcp__other") {
 		t.Fatal("payload/other server saved")
 	}
 	clearCodexCullyStats("every")
-	os.Remove(codexPaneBindingFile("every"))
-	registerCodexPane("resumed", cwd)
-	bindCodexPane(cwd, "native-thread")
-	if after := readCodexToolStats("resumed"); after.Cully.Calls != 12 || after.Cully.ByTool["cully_projects"] != 1 || after.Cully.Advisor != 1 {
+	os.Remove(paneBindingFile("every"))
+	registerPane("resumed", cwd)
+	bindPane(cwd, "native-thread")
+	if after := readToolStats("resumed"); after.Cully.Calls != 12 || after.Cully.ByTool["cully_projects"] != 1 || after.Cully.Advisor != 1 {
 		t.Fatal("resume lost counts", after)
 	}
 }
@@ -136,9 +136,9 @@ func TestCullyEveryToolAndOriginPersist(t *testing.T) {
 func TestCullyScopedConcurrentOriginsAndLegacyCounts(t *testing.T) {
 	t.Setenv("CLAUDE_CONFIG_DIR", t.TempDir())
 	cwd := t.TempDir()
-	registerCodexPane("origins", cwd)
-	bindCodexPane(cwd, "thread")
-	updateCodexSessionState("origins", func(s *codexSessionState) { s.Stats.Cully = codexCullyStats{Calls: 5, Log: 2, Context: 1, Other: 2} })
+	registerPane("origins", cwd)
+	bindPane(cwd, "thread")
+	updateCodexSessionState("origins", func(s *sessionState) { s.Stats.Cully = cullyStats{Calls: 5, Log: 2, Context: 1, Other: 2} })
 	var wg sync.WaitGroup
 	for _, origin := range []string{"foreground", "advisor", "startup"} {
 		for i := 0; i < 20; i++ {
@@ -155,7 +155,7 @@ func TestCullyScopedConcurrentOriginsAndLegacyCounts(t *testing.T) {
 		t.Fatal(s)
 	}
 	for _, name := range []string{"mcp__cully__cully_log\nsecret", "mcp__other__cully_log", "mcp__cully__cully_log;private"} {
-		if codexCullyTool(name) != "" {
+		if cullyTool(name) != "" {
 			t.Fatal("invalid name accepted", name)
 		}
 	}

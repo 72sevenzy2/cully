@@ -22,17 +22,21 @@ type paneAgent struct {
 	ResumeID func(args []string) string
 }
 
-var paneAgents = map[string]paneAgent{
-	"claude": {Name: "claude", Binary: "claude"},
-	"codex": {
-		Name:         "codex",
-		Binary:       "codex",
-		Launch:       func(args []string) []string { return append([]string{"-c", codexStatusConfig}, args...) },
-		NativeFooter: true,
-		ResumeID:     codexExplicitResumeID,
-	},
-	"cursor": {Name: "cursor", Binary: "cursor-agent"},
-}
+// paneAgents resolves launch entries from the single agent catalog, so the
+// wrapper never repeats per-agent launch knowledge.
+var paneAgents = func() map[string]paneAgent {
+	m := make(map[string]paneAgent, len(agentCatalog()))
+	for _, spec := range agentCatalog() {
+		m[spec.ID] = paneAgent{
+			Name:         spec.ID,
+			Binary:       spec.Binary,
+			Launch:       spec.Launch,
+			NativeFooter: spec.NativeFooter,
+			ResumeID:     spec.ResumeID,
+		}
+	}
+	return m
+}()
 
 // lookupPaneAgent resolves a registered agent, or treats any other name as a
 // generic agent whose executable has that name. This lets a coding agent that

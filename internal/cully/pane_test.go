@@ -20,8 +20,8 @@ func TestCodexPaneConfinesChildScreen(t *testing.T) {
 	emulator := vt.NewEmulator(60, 12)
 	defer emulator.Close()
 	_, _ = emulator.WriteString("\x1b[2J\x1b[1;1HCODEX\x1b[12;1Hlower edge")
-	content := codexStatusRows(60, []string{"ADV|Run a focused check."}, codexToolStats{Tools: 3}, codexStatusView{Project: "/work/cully"})
-	frame := renderCodexPane(emulator, 60, 24, content, true, "")
+	content := sessionStatusRows(60, []string{"ADV|Run a focused check."}, toolStats{Tools: 3}, sessionView{Project: "/work/cully"})
+	frame := renderTerminalPane(emulator, 60, 24, content, true, "")
 	for _, want := range []string{"CODEX", "lower edge", "Cully", "Run a focused check.", "\x1b[13;1H"} {
 		if !strings.Contains(frame, want) {
 			t.Fatalf("pane frame missing %q", want)
@@ -33,7 +33,7 @@ func TestCodexPaneConfinesChildScreen(t *testing.T) {
 	if strings.Contains(frame, "\x1b[48;") || strings.Contains(frame, "\x1b[40m") {
 		t.Fatal("panel must inherit the terminal background")
 	}
-	if codexPaneTop(10, 10) != 10 || codexPaneTop(40, 10) != 29 || codexPaneTop(24, 40) != 12 {
+	if paneTop(10, 10) != 10 || paneTop(40, 10) != 29 || paneTop(24, 40) != 12 {
 		t.Fatal("unexpected pane sizing")
 	}
 }
@@ -239,7 +239,7 @@ func TestCodexPaneAcceptHandoffPreservesDraftAndChildSize(t *testing.T) {
 	t.Setenv("CLAUDE_CONFIG_DIR", dir)
 	t.Setenv("PATH", dir+string(os.PathListSeparator)+os.Getenv("PATH"))
 	received := filepath.Join(dir, "received")
-	line := codexAdvice(codexToolStats{Tools: 1, Edits: 1, EditsSinceCheck: 1})[0]
+	line := statsAdvice(toolStats{Tools: 1, Edits: 1, EditsSinceCheck: 1})[0]
 	expected := "draft\x1b[200~\n" + advisorHandoff(line).Handoff + "\x1b[201~"
 	t.Setenv("CULLY_TEST_RECEIVED", received)
 	t.Setenv("CULLY_TEST_BYTES", fmt.Sprint(len(expected)))

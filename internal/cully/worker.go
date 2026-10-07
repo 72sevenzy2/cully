@@ -73,7 +73,8 @@ func RunWorker(sigPath, session, cwd string) {
 			strings.Join(tail, "\n- ")
 	}
 	workerContext := context.Background()
-	if agent == "codex" {
+	spec, _ := lookupAgentSpec(agent)
+	if spec.AdvisorMCPScope {
 		workerContext = withCodexMCPScope(workerContext, session, "advisor")
 	}
 	out1, err := runAdvisorAgentContext(workerContext, agent, cwd, false, prompt)
@@ -131,8 +132,8 @@ func RunWorker(sigPath, session, cwd string) {
 		return
 	}
 	// An ended pane must not be recreated by a late worker result.
-	if agent == "codex" {
-		if _, err := os.Stat(codexPaneRegistrationFile(session)); err != nil {
+	if spec.PaneRegistration {
+		if _, err := os.Stat(paneRegistrationFile(session)); err != nil {
 			return
 		}
 	}

@@ -86,7 +86,7 @@ func RunContinuityHook(agent, event string, r io.Reader, w io.Writer) {
 		case "claude":
 			out = map[string]any{"hookSpecificOutput": map[string]any{"hookEventName": "SessionStart", "additionalContext": continuityPrompt(continuityStart, agent, in)}}
 		case "codex":
-			bindCodexPane(in.Cwd, in.SessionID)
+			bindPane(in.Cwd, in.SessionID)
 			out = map[string]any{"hookSpecificOutput": map[string]any{"hookEventName": "SessionStart", "additionalContext": continuityPrompt(continuityStart, agent, in)}}
 		case "cursor":
 			out = map[string]any{"additional_context": continuityPrompt(continuityStart, agent, in)}

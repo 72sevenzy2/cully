@@ -10,7 +10,7 @@ import (
 
 // Combine native context pressure with the bounded hook counters. Advice is
 // limited to what these two sources actually observe, never a transcript.
-func codexAdviceWithStatus(stats codexToolStats, view codexStatusView) []string {
+func statsAdviceWithStatus(stats toolStats, view sessionView) []string {
 	var advice []string
 	if stats.Cully.Auth == "unauthenticated" {
 		advice = append(advice, "WARN|Cully MCP needs authentication. Reconnect Cully in this coding agent before using memory tools.")
@@ -22,7 +22,7 @@ func codexAdviceWithStatus(stats codexToolStats, view codexStatusView) []string 
 	} else if view.ContextKnown && view.ContextLeft <= 25 {
 		advice = append(advice, fmt.Sprintf("CAUT|Context is getting tight (%d%% left). Save a concise handoff and consider /compact.", view.ContextLeft))
 	}
-	workflow := codexAdvice(stats)
+	workflow := statsAdvice(stats)
 	if len(advice) > 0 && stats.Tools > 0 && len(workflow) == 1 && strings.HasPrefix(workflow[0], "MEMO|") {
 		return advice
 	}
@@ -32,7 +32,7 @@ func codexAdviceWithStatus(stats codexToolStats, view codexStatusView) []string 
 	return append(advice, workflow...)
 }
 
-func codexAdvisorSignals(stats codexToolStats, view codexStatusView) string {
+func advisorSignals(stats toolStats, view sessionView) string {
 	ctx := "context_used_pct=unknown"
 	if view.ContextKnown {
 		ctx = fmt.Sprintf("context_used_pct=%d", 100-view.ContextLeft)
@@ -40,8 +40,8 @@ func codexAdvisorSignals(stats codexToolStats, view codexStatusView) string {
 	return fmt.Sprintf("agent=codex\n%s\ntools=%d searches=%d edits=%d checks=%d tool_errors=%d edits_since_check=%d\ncully_mcp_calls=%d cully_log_calls=%d cully_context_calls=%d cully_recall_calls=%d cully_search_calls=%d cully_get_calls=%d cully_mcp_health=%s cully_mcp_auth=%s\nsignal_scope=aggregate_counters_and_footer; task_intent=unknown\n", ctx, stats.Tools, stats.Searches, stats.Edits, stats.Checks, stats.Errors, stats.EditsSinceCheck, stats.Cully.Calls, stats.Cully.Log, stats.Cully.Context, stats.Cully.Recall, stats.Cully.Search, stats.Cully.Get, fallback(stats.Cully.Health, "unknown"), fallback(stats.Cully.Auth, "unknown")) + view.Terminal.signals()
 }
 
-func codexCombinedAdvice(session string, stats codexToolStats, view codexStatusView) []string {
-	local := codexAdviceWithStatus(stats, view)
+func combinedAdvice(session string, stats toolStats, view sessionView) []string {
+	local := statsAdviceWithStatus(stats, view)
 	cwd := currentDir()
 	loops, events := sessionLoops(cwd, session)
 	loopLines, hints := loops.Advice(), workflowHints(cwd, events)

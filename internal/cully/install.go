@@ -96,7 +96,10 @@ func installMemorySkill(target string) error {
 }
 
 func detectedInstallTargets(cwd string) []string {
-	ordered := []string{"claude", "codex", "cursor"}
+	var ordered []string
+	for _, spec := range agentCatalog() {
+		ordered = append(ordered, spec.ID)
+	}
 	var out []string
 	for _, id := range ordered {
 		if codingAgentPresent(id, cwd) {
@@ -111,24 +114,11 @@ func detectedInstallTargets(cwd string) []string {
 }
 
 func codingAgentPresent(id, cwd string) bool {
-	switch id {
-	case "claude":
-		return commandExists("claude") ||
-			dirExists(ConfigDir()) ||
-			fileExists(filepath.Join(cwd, "CLAUDE.md")) ||
-			dirExists(filepath.Join(cwd, ".claude"))
-	case "codex":
-		return commandExists("codex") ||
-			dirExists(CodexConfigDir()) ||
-			fileExists(filepath.Join(cwd, "AGENTS.md")) ||
-			dirExists(filepath.Join(cwd, ".codex"))
-	case "cursor":
-		return commandExists("cursor") ||
-			dirExists(CursorConfigDir()) ||
-			dirExists(filepath.Join(cwd, ".cursor"))
-	default:
+	spec, ok := lookupAgentSpec(id)
+	if !ok {
 		return false
 	}
+	return spec.Present(cwd)
 }
 
 func commandExists(name string) bool {

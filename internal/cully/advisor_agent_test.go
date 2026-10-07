@@ -27,7 +27,7 @@ printf 'SOURCE|MEMORY|checked\nCAUT|🔍 Narrow repeated searches.\nTOOLGAP: bro
 		t.Fatal(err)
 	}
 	session := "adapter-test"
-	if err := registerCodexPane(session, root); err != nil {
+	if err := registerPane(session, root); err != nil {
 		t.Fatal(err)
 	}
 	path := sessionSignalsFile(session)
@@ -63,7 +63,7 @@ printf 'SOURCE|MEMORY|checked\nCAUT|🔍 Narrow repeated searches.\nTOOLGAP: bro
 		t.Fatal(err)
 	}
 	const session = "unavailable-research"
-	if err := registerCodexPane(session, root); err != nil {
+	if err := registerPane(session, root); err != nil {
 		t.Fatal(err)
 	}
 	path := sessionSignalsFile(session)
@@ -90,7 +90,7 @@ func TestWorkerStartupFailureDoesNotBlameMemory(t *testing.T) {
 		t.Fatal(err)
 	}
 	session := "startup-failure"
-	if err := registerCodexPane(session, root); err != nil {
+	if err := registerPane(session, root); err != nil {
 		t.Fatal(err)
 	}
 	path := sessionSignalsFile(session)
@@ -218,7 +218,7 @@ func TestAdvisorScopesConfiguredIntegrations(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(root, "config.toml"), []byte("[mcp_servers.cully]\nurl=\"https://example.org/cully\"\n[mcp_servers.\"other-server\"]\ncommand=\"unrelated\"\n"), 0600); err != nil {
 		t.Fatal(err)
 	}
-	args := strings.Join(codexAdvisorMCPArgs(root), " ")
+	args := strings.Join(advisorMCPArgs(root), " ")
 	if !strings.Contains(args, `mcp_servers.other-server.enabled=false`) || strings.Contains(args, "cully.enabled=false") || strings.Contains(args, `"other-server"`) {
 		t.Fatal(args)
 	}
