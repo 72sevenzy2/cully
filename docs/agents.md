@@ -14,7 +14,7 @@ Pick your agent and use the URL printed by your server. Restart your agent after
 | Agent | Local Cully controls | OAuth sign-in, when enabled |
 | --- | --- | --- |
 | Claude Code | Status line and `/cully suggestions` | Use `/mcp`. |
-| Codex | `/prompts:cully suggestions` or ask Codex to check suggestions | Run `codex mcp login cully`. |
+| Codex | Run `cully codex` for a live advisor pane, or use `/prompts:cully suggestions`. | Run `codex mcp login cully`. |
 | Cursor | Project `/cully suggestions` or ask Cursor to check suggestions | Use Cursor's MCP settings. |
 
 The [local advisor guide](/advisor) shows what each integration can display. The [memory guide](/memory) explains what the MCP tools save and retrieve.
@@ -25,7 +25,9 @@ Run `cully agent setup claude --mcp-url URL`, using the URL printed by your priv
 
 ### Codex
 
-Run `cully agent setup codex --mcp-url URL`, then restart Codex. Cully installs session and stop hooks, a `/prompts:cully` prompt, managed `AGENTS.md` guidance and the skill; native status fields show session information. Review Cully's hooks in `/hooks` when Codex asks you to trust them. With an OAuth server, add `--oauth` and run `codex mcp login cully`.
+Run `cully agent setup codex --mcp-url URL`, then restart Codex. Cully installs a session-start hook, an asynchronous tool-count hook, a `/prompts:cully` prompt, managed `AGENTS.md` guidance and the skill. Codex's native footer settings remain yours. Review Cully's hooks in `/hooks` when Codex asks you to trust them. With an OAuth server, add `--oauth` and run `codex mcp login cully`.
+
+For the single live Cully display in Codex, start `cully codex` (pass any normal Codex options after `codex`). Cully places Codex in the upper half and suggestions in the lower half. The launcher needs an interactive terminal and uses a full-screen view; terminal windows shorter than 16 rows give Codex the whole screen. Setup also installs an asynchronous `PostToolUse` hook that counts searches, edits, checks and failures while this pane is open. It saves only counters, not prompts, commands, tool output or transcripts. Codex's own footer settings remain under your control.
 
 ### Cursor
 

@@ -190,8 +190,10 @@ func installCodex(cwd string) error {
 	if err := writeSharedSkill(cwd, "cully", cullySkill()); err != nil {
 		return err
 	}
-	if err := upsertCodexStatusLine(codexConfigPath()); err != nil {
-		return fmt.Errorf("configure Codex status line: %w", err)
+	// Older Cully installs added a managed native footer. The advisor pane is
+	// now the only Cully display for Codex; preserve user-owned footer settings.
+	if err := removeCodexStatusLine(codexConfigPath()); err != nil {
+		return fmt.Errorf("remove legacy Codex status line: %w", err)
 	}
 	if err := installCodexContinuityHooks(); err != nil {
 		return fmt.Errorf("configure Codex continuity hooks: %w", err)
@@ -202,9 +204,9 @@ func installCodex(cwd string) error {
 		fmt.Printf("Preserved existing Codex prompt -> %s\n", codexPromptPath())
 	}
 	fmt.Printf("\033[32mInstalled.\033[0m Registered Cully for Codex in %s\n", cwd)
-	fmt.Printf("Codex status line configured in %s\n", codexConfigPath())
 	fmt.Printf("Codex continuity hooks configured in %s; review them with /hooks.\n", codexHooksPath())
 	fmt.Printf("Codex cully prompt available as /prompts:cully -> %s\n", codexPromptPath())
+	fmt.Println("For the live advisor pane, start Codex with: cully codex")
 	return nil
 }
 

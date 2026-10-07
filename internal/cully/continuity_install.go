@@ -32,7 +32,14 @@ func installCodexContinuityHooks() error {
 		return err
 	}
 	setEventHook(m, "SessionStart", continuityCommand(exe, "codex", "start"), "continuity codex start")
-	setEventHook(m, "Stop", continuityCommand(exe, "codex", "stop"), "continuity codex stop")
+	removeEventHook(m, "Stop", "", "continuity codex stop") // migrate older blocking installs
+	setEventHook(m, "PostToolUse", quote(exe)+" _internal codex-signal", "codex-signal")
+	hooks := m["hooks"].(map[string]any)
+	groups := toList(hooks["PostToolUse"])
+	group := groups[len(groups)-1].(map[string]any)
+	handler := toList(group["hooks"])[0].(map[string]any)
+	handler["async"] = true
+	handler["timeout"] = 5
 	return writeSettings(path, m)
 }
 
@@ -47,6 +54,7 @@ func uninstallCodexContinuityHooks() error {
 	}
 	removeEventHook(m, "SessionStart", "", "continuity codex start")
 	removeEventHook(m, "Stop", "", "continuity codex stop")
+	removeEventHook(m, "PostToolUse", "", "codex-signal")
 	return writeSettings(path, m)
 }
 

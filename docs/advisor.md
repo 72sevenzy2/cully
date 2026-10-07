@@ -12,7 +12,7 @@ The installer runs agent setup, which starts the advisor daemon automatically. A
 | Agent | In the agent |
 | --- | --- |
 | Claude Code | Watch the Cully status line or run `/cully suggestions`. |
-| Codex | Run `/prompts:cully suggestions` or ask Codex to run `cully suggestions`. |
+| Codex | Start `cully codex` for a live lower advisor pane, or run `/prompts:cully suggestions`. |
 | Cursor | Run the project `/cully suggestions` command or ask Cursor to check Cully suggestions. |
 
 You can always run these in a terminal:
@@ -22,15 +22,15 @@ cully status
 cully suggestions
 ```
 
-`cully status` shows whether the daemon is running. If setup printed `Advisor unavailable`, run `cully agent setup codex` to retry with your agent name. Claude Code provides live hook signals and a Cully status line. Codex and Cursor use their own supported status displays, commands and skills, so the advice may differ between agents.
+`cully status` shows whether the daemon is running. If setup printed `Advisor unavailable`, run `cully agent setup codex` to retry with your agent name. Claude Code provides live hook signals and a Cully status line. Codex shows Cully advice in the optional `cully codex` pane; Cursor uses its supported command and status surfaces. The available advice may differ between agents.
 
 | Agent | Installed local integration |
 | --- | --- |
 | Claude Code | Live Cully status line, session and stop hooks, `/cully` command and skill. |
-| Codex | Native status fields, session and stop hooks, `/prompts:cully`, managed `AGENTS.md` pointer and skill. |
+| Codex | Optional `cully codex` advisor pane, session-start and asynchronous tool-count hooks, `/prompts:cully`, managed `AGENTS.md` pointer and skill. Setup leaves Codex's native footer settings to the user. |
 | Cursor | Session and response hooks, project `/cully` command and skill. |
 
-Claude Code supplies the richest live signals to the background advisor. It can identify high context pressure, repeated tool faults or searches, cost and rate pressure, and a missing verifier, then suggest a native control or a useful MCP integration. Codex and Cursor still get continuity prompts and Cully commands, but advisor suggestions depend on the session data those clients expose. The [session optimization guide](/session-optimization) explains the difference.
+Claude Code supplies the richest live signals to the background advisor. It can identify high context pressure, repeated tool faults or searches, cost and rate pressure, and a missing verifier, then suggest a native control or a useful MCP integration. The optional Codex pane uses bounded tool counters to flag repeated failures, broad searching and edits without a check. It does not inspect prompt or tool content. Cursor still gets continuity prompts and Cully commands. The [session optimization guide](/session-optimization) explains the difference.
 
 ## Preview a suggestion
 

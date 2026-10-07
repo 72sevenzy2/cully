@@ -101,7 +101,7 @@ func RunContinuityHook(agent, event string, r io.Reader, w io.Writer) {
 		}
 	case "stop":
 		switch agent {
-		case "claude", "codex":
+		case "claude":
 			if !in.StopHookActive && usefulResponse(in.LastAssistantMessage) {
 				out = map[string]any{"decision": "block", "reason": continuityPrompt(continuityFinish, agent, in)}
 			}

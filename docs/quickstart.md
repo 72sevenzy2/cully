@@ -35,7 +35,7 @@ Setup prints each stage, including image pulls and builds, database startup, mig
 | --- | --- | --- |
 | Start without rereading an old conversation | `cully_context` gives the agent three short note previews by default. It opens a full record with `cully_get` only if needed. | [Bounded context](/session-optimization#what-cully-optimizes) |
 | Find a decision phrased differently | Mem0 indexes authored note fields by meaning. Cully checks recall results against the owner’s live PostgreSQL records. | [Mem0 recall](/mem0#what-to-expect) |
-| Leave a usable handoff | Session and stop hooks ask the connected agent to look up relevant work and save one `cully_log` note with the task, approach, result, checks, gaps and next step. No transcript is uploaded. | [Saved notes](/memory#what-you-can-save) |
+| Leave a usable handoff | The session hook asks the agent to look up relevant work. The Cully skill asks for one `cully_log` note with the task, approach, result, checks, gaps and next step. Claude Code and Cursor also have turn-end reminders; Codex has no blocking stop hook. No transcript is uploaded. | [Saved notes](/memory#what-you-can-save) |
 | Catch repeated effort in the current session | The local advisor uses available agent signals to suggest context controls, narrower searches, useful tools or a missing check. You review changes before applying them. | [Advisor suggestions](/advisor#preview-a-suggestion) |
 
 These can reduce repeated reading and material in the model’s input. They are not a measured promise of lower billed tokens or faster work; MCP and advisor calls also have a cost. The [session optimization guide](/session-optimization) explains the full flow and each agent’s limits.
@@ -70,7 +70,7 @@ You can also use Cully inside your agent:
 | Agent | In-session control |
 | --- | --- |
 | Claude Code | Look at the Cully status line or run `/cully suggestions`. |
-| Codex | Run `/prompts:cully suggestions` or ask Codex to check suggestions. |
+| Codex | Start `cully codex` for the live advisor pane, or run `/prompts:cully suggestions`. |
 | Cursor | Run the project `/cully suggestions` command or ask Cursor to check suggestions. |
 
 If Cully lists a numbered improvement, use its number with `cully apply 1 --dry-run` to inspect the proposed change. Review it before applying. `cully status` also shows whether the advisor daemon is running; if startup failed, run `cully agent setup codex` with your agent name to retry. See the [advisor commands](/advisor#commands) for the rest.

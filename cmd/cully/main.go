@@ -22,6 +22,7 @@ Usage:
   cully uninstall [claude|codex|cursor|all] Remove one or all agent integrations
   cully status [directory]                Show session and agent status
   cully suggestions                       Review suggested improvements
+  cully codex [ARGS...]                   Run Codex with a live Cully advisor pane
   cully apply <n> [--dry-run] [--yes] [--cwd DIR]
   cully mcp add --url URL [--agent claude|codex|cursor] [--oauth]
   cully version
@@ -68,6 +69,8 @@ func run(args []string) error {
 		cully.RunStatus(os.Stdout, cwd)
 	case "suggestions":
 		cully.RunList(os.Stdout)
+	case "codex":
+		return cully.RunCodexPane(args[1:], os.Stdin, os.Stdout)
 	case "apply":
 		n, yes, dryRun, cwd, err := parseApply(args[1:])
 		if err != nil {
@@ -223,6 +226,8 @@ func runInternal(args []string) error {
 			return fmt.Errorf("internal continuity requires agent and event")
 		}
 		cully.RunContinuityHook(args[1], args[2], os.Stdin, os.Stdout)
+	case "codex-signal":
+		cully.RunCodexSignalHook(os.Stdin)
 	case "daemon":
 		cully.RunDaemon()
 	case "worker":
