@@ -1,8 +1,7 @@
 ALTER TABLE cully_entries DROP CONSTRAINT IF EXISTS cully_entries_entry_type_check;
--- NOT VALID avoids scanning existing rows under an exclusive lock; VALIDATE
--- then checks them while reads and writes continue.
+-- Add without scanning existing rows while this migration holds an exclusive
+-- lock. Migration 005 validates after this transaction commits.
 ALTER TABLE cully_entries ADD CONSTRAINT cully_entries_entry_type_check CHECK (entry_type IN ('work','issue','learning','decision','task')) NOT VALID;
-ALTER TABLE cully_entries VALIDATE CONSTRAINT cully_entries_entry_type_check;
 CREATE TABLE cully_sessions (
   owner_subject text NOT NULL,
   session_ref text NOT NULL,

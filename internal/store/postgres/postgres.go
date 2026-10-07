@@ -54,6 +54,9 @@ func (s *Store) Execute(ctx context.Context, owner string, r memory.Request) (me
 	defer tx.Rollback(ctx)
 	result, err := s.execute(ctx, tx, owner, r)
 	if err != nil {
+		if errors.Is(err, memory.ErrInvalid) {
+			return memory.Result{}, err
+		}
 		return memory.Result{}, fmt.Errorf("%w: database operation failed", memory.ErrUnavailable)
 	}
 	if s.Mem0Enabled && (r.Operation == "log" || (r.Operation == "session" && result.Entry != nil) || (r.Operation == "update" && result.Entry != nil) || (r.Operation == "delete" && result.Deleted)) {
@@ -224,13 +227,21 @@ func loadSession(ctx context.Context, tx pgx.Tx, owner, ref string) (*memory.Ses
 // names cannot both insert and leave an orphan behind.
 func (s *Store) session(ctx context.Context, tx pgx.Tx, owner string, v *memory.SessionInput) (memory.Result, error) {
 	out := memory.Result{}
-	if _, err := tx.Exec(ctx, `SELECT pg_advisory_xact_lock(hashtextextended($1, 0))`, owner+"\x00"+v.SessionRef); err != nil {
+	if _, err := tx.Exec(ctx, `SELECT pg_advisory_xact_lock(hashtextextended($1, hashtextextended($2, 0)))`, owner, v.SessionRef); err != nil {
 		return out, err
+	}
+	var existingSection string
+	err := tx.QueryRow(ctx, "SELECT section FROM cully_sessions WHERE owner_subject=$1 AND session_ref=$2", owner, v.SessionRef).Scan(&existingSection)
+	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+		return out, err
+	}
+	if err == nil && existingSection != v.Section {
+		return out, fmt.Errorf("%w: session section cannot change", memory.ErrInvalid)
 	}
 	var taskID *string
 	if v.Task != nil && *v.Task != "" {
 		var current *string
-		err := tx.QueryRow(ctx, "SELECT t.summary FROM cully_sessions s JOIN cully_entries t ON t.id=s.task_id AND t.owner_subject=s.owner_subject WHERE s.owner_subject=$1 AND s.session_ref=$2", owner, v.SessionRef).Scan(&current)
+		err = tx.QueryRow(ctx, "SELECT t.summary FROM cully_sessions s JOIN cully_entries t ON t.id=s.task_id AND t.owner_subject=s.owner_subject WHERE s.owner_subject=$1 AND s.session_ref=$2", owner, v.SessionRef).Scan(&current)
 		if err != nil && !errors.Is(err, pgx.ErrNoRows) {
 			return out, err
 		}
@@ -242,7 +253,7 @@ func (s *Store) session(ctx context.Context, tx pgx.Tx, owner string, v *memory.
 			out.Entry, taskID = e, &e.ID
 		}
 	}
-	_, err := tx.Exec(ctx, `INSERT INTO cully_sessions AS s (owner_subject,session_ref,section,project_url,assistant,branch,task_id) VALUES ($1,$2,$3,$4,$5,$6,$7::uuid)
+	_, err = tx.Exec(ctx, `INSERT INTO cully_sessions AS s (owner_subject,session_ref,section,project_url,assistant,branch,task_id) VALUES ($1,$2,$3,$4,$5,$6,$7::uuid)
 ON CONFLICT (owner_subject,session_ref) DO UPDATE SET project_url=COALESCE(EXCLUDED.project_url,s.project_url), branch=COALESCE(EXCLUDED.branch,s.branch), task_id=COALESCE(EXCLUDED.task_id,s.task_id), assistant=EXCLUDED.assistant, last_seen_at=now()`,
 		owner, v.SessionRef, v.Section, v.ProjectURL, v.Assistant, v.Branch, taskID)
 	if err != nil {

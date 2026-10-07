@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"crypto/rsa"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -320,6 +321,14 @@ func TestDatabaseSessionsAndTasks(t *testing.T) {
 	again := start("owner-a", &task)
 	if again.Entry != nil || again.Session.TaskID == nil || *again.Session.TaskID != *first.Session.TaskID {
 		t.Fatal("same task name must not create a second entry")
+	}
+	personalTask := "Private work"
+	wrongSection := memory.SessionInput{SessionRef: ref, Assistant: "claude", Section: "personal", Task: &personalTask}
+	if _, err := (memory.Service{Store: s}).Execute(context.Background(), "owner-a", memory.Request{Operation: "session", Session: &wrongSection}); !errors.Is(err, memory.ErrInvalid) {
+		t.Fatalf("section change must be rejected as invalid: %v", err)
+	}
+	if got := start("owner-a", nil); got.Session.TaskID == nil || *got.Session.TaskID != *first.Session.TaskID {
+		t.Fatal("rejected section change altered the session task")
 	}
 	kind := "task"
 	tasks := execute(t, s, "owner-a", memory.Request{Operation: "recent", Recent: &memory.RecentInput{EntryType: &kind, Limit: 10}})
