@@ -33,7 +33,7 @@ func add[I any](server *sdk.Server, service memory.Service, identity func(contex
 	})
 }
 func Handler(service memory.Service, cfg AuthConfig, path, version string) http.Handler {
-	server := sdk.NewServer(&sdk.Implementation{Name: "Cully", Version: version}, &sdk.ServerOptions{Instructions: "Intelligence around your coding agents. At the start of substantive work, use cully_context with a relevant project and query to get a few concise prior-work previews. Use semantic mode when text search misses, and cully_get only for a record whose full details matter. Before finishing substantive work, use cully_log to save one concise task summary with approach, outcome, issues or missed steps, and next steps. Include the opaque session_ref supplied by an installed Cully hook when available. Avoid duplicate records, raw transcripts and credentials. Search before answering history questions. Remember personal context when the user asks. Local session controls use the cully CLI."})
+	server := sdk.NewServer(&sdk.Implementation{Name: "Cully", Version: version}, &sdk.ServerOptions{Instructions: "Intelligence around your coding agents. At the start of substantive work, use cully_context with a relevant project and query to get a few concise prior-work previews. Use semantic mode when text search misses, and cully_get only for a record whose full details matter. Before finishing substantive work, use cully_log to save one concise task summary with approach, outcome, issues or missed steps, and next steps. Include the opaque session_ref supplied by an installed Cully hook when available. When the user accepts a task, call cully_session with that session_ref and the task name. Avoid duplicate records, raw transcripts and credentials. Search before answering history questions. Remember personal context when the user asks. Local session controls use the cully CLI."})
 	identity := func(ctx context.Context, write bool) (string, error) {
 		if cfg.Mode == "none" {
 			return cfg.Owner, nil
@@ -62,6 +62,10 @@ func Handler(service memory.Service, cfg AuthConfig, path, version string) http.
 		}
 		out, err := compactContext(ctx, service, owner, input)
 		return nil, out, err
+	})
+	add(server, service, identity, "cully_session", "Start or update the current agent session with its project, branch and an optional task name. A new task name saves one task record linked to the session; the same name again changes nothing.", true, func(v memory.SessionInput) memory.Request { return memory.Request{Operation: "session", Session: &v} })
+	add(server, service, identity, "cully_session_get", "Get one session by its opaque session_ref, including its task.", false, func(v memory.SessionRefInput) memory.Request {
+		return memory.Request{Operation: "session_get", SessionGet: &v}
 	})
 	add(server, service, identity, "cully_get", "Get one owned memory record.", false, func(v memory.IDInput) memory.Request { return memory.Request{Operation: "get", ID: &v} })
 	add(server, service, identity, "cully_update", "Update selected fields. Empty optional text clears a field.", true, func(v memory.UpdateInput) memory.Request { return memory.Request{Operation: "update", Update: &v} })

@@ -138,7 +138,7 @@ func codexStatusContent(cols int, advice []string, stats codexToolStats, view co
 	}
 	grid([]string{cyan + bold + "✦ Cully" + rst + "    " + formatPhaseBadge(phase)}, []string{dim + "⏱️ elapsed " + rst + elapsed})
 	rows = append(rows, "")
-	context := dim + "waiting for Codex footer" + rst
+	context := dim + waitingForAgent(view, true) + rst
 	if view.ContextKnown {
 		used := 100 - view.ContextLeft
 		context = pctColor(used) + gauge(used) + bold + fmt.Sprintf("  %d%% used  ·  %d%% left", used, view.ContextLeft) + rst
@@ -155,7 +155,7 @@ func codexStatusContent(cols int, advice []string, stats codexToolStats, view co
 	}
 	model := blue + bold + view.Model + rst
 	if view.Model == "" {
-		model = dim + "waiting for Codex footer" + rst
+		model = dim + waitingForAgent(view, true) + rst
 	}
 	grid(codexMetricRows("📁 Project", location, cellWidth), codexMetricRows("🤖 Model", model, cellWidth))
 	if view.Terminal.Program != "" || view.Terminal.Type != "" {
@@ -175,7 +175,9 @@ func codexStatusContent(cols int, advice []string, stats codexToolStats, view co
 		weekly = strings.TrimPrefix(weekly, prefix)
 	}
 	metric(&left, "Weekly", codexInstrument(weekly))
-	metric(&left, "Fast", codexInstrument(strings.TrimPrefix(view.Fast, "Fast ")))
+	if view.Agent == "" || view.Agent == "codex" {
+		metric(&left, "Fast", codexInstrument(strings.TrimPrefix(view.Fast, "Fast ")))
+	}
 	changes := codexInstrument("")
 	if view.ChangesKnown {
 		changes = green + fmt.Sprintf("+%d", view.LinesAdded) + rst + " / " + red + fmt.Sprintf("-%d", view.LinesRemoved) + rst + fmt.Sprintf("  ·  %d tracked files", view.ChangedFiles)
@@ -564,7 +566,7 @@ func codexCompactInstrumentRows(cols int, stats codexToolStats, view codexStatus
 	rows = append(rows, "")
 	model := blue + bold + view.Model + rst
 	if view.Model == "" {
-		model = dim + "waiting for Codex" + rst
+		model = dim + waitingForAgent(view, false) + rst
 	}
 	errors := fmt.Sprint(stats.Errors)
 	if stats.Errors > 0 {
@@ -587,7 +589,7 @@ func codexCompactInstrumentRows(cols int, stats codexToolStats, view codexStatus
 	if view.Branch != "" {
 		location += " / " + magenta + view.Branch + rst
 	}
-	context := dim + "waiting for Codex footer" + rst
+	context := dim + waitingForAgent(view, true) + rst
 	if view.ContextKnown {
 		used := 100 - view.ContextLeft
 		context = pctColor(used) + gauge(used) + fmt.Sprintf(" %d%% used · %d%% left", used, view.ContextLeft) + rst
@@ -698,7 +700,7 @@ func codexCullyToolRows(stats codexCullyStats, width int) []string {
 		counts = map[string]int{"cully_log": stats.Log, "cully_context": stats.Context, "cully_recall": stats.Recall, "cully_search": stats.Search, "cully_get": stats.Get, "earlier_other": stats.Other}
 	}
 	names := map[string]bool{}
-	for _, name := range []string{"cully_log", "cully_context", "cully_search", "cully_recall", "cully_get", "cully_update", "cully_delete", "cully_recent", "cully_projects"} {
+	for _, name := range []string{"cully_log", "cully_context", "cully_search", "cully_recall", "cully_get", "cully_update", "cully_delete", "cully_recent", "cully_projects", "cully_session", "cully_session_get"} {
 		names[name] = true
 	}
 	for name := range counts {
@@ -843,4 +845,18 @@ func codexPanelLines(cols, height int, content []string, hud string) []string {
 		lines[i] = ansi.Truncate(content[i-1], width, "…")
 	}
 	return lines
+}
+
+// waitingForAgent names the agent the panel is waiting on. Codex supplies a
+// terminal footer; other agents feed the panel through their statusline hook.
+func waitingForAgent(view codexStatusView, footer bool) string {
+	name := agentDisplayName(view.Agent)
+	if view.Agent == "" || view.Agent == "codex" {
+		name = "Codex"
+		if footer {
+			return "waiting for Codex footer"
+		}
+		return "waiting for Codex"
+	}
+	return "waiting for " + name
 }

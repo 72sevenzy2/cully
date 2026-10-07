@@ -108,16 +108,44 @@ type Project struct {
 	EntryCount   int       `json:"entry_count"`
 	LastActivity time.Time `json:"last_activity"`
 }
+
+// SessionInput starts or updates one agent session. A non-empty Task creates
+// the session's task entry once and links it; repeating the same task is a no-op.
+type SessionInput struct {
+	SessionRef string  `json:"session_ref"`
+	Assistant  string  `json:"assistant"`
+	Section    string  `json:"section"`
+	ProjectURL *string `json:"project_url,omitempty"`
+	Branch     *string `json:"branch,omitempty"`
+	Task       *string `json:"task,omitempty"`
+}
+type SessionRefInput struct {
+	SessionRef string `json:"session_ref"`
+}
+type Session struct {
+	SessionRef string    `json:"session_ref"`
+	Section    string    `json:"section"`
+	ProjectURL *string   `json:"project_url"`
+	Assistant  string    `json:"assistant"`
+	Branch     *string   `json:"branch"`
+	TaskID     *string   `json:"task_id"`
+	Task       *string   `json:"task"`
+	StartedAt  time.Time `json:"started_at"`
+	LastSeenAt time.Time `json:"last_seen_at"`
+}
 type Request struct {
-	Operation string         `json:"operation"`
-	Log       *LogInput      `json:"log,omitempty"`
-	Search    *SearchInput   `json:"search,omitempty"`
-	Recent    *RecentInput   `json:"recent,omitempty"`
-	ID        *IDInput       `json:"id,omitempty"`
-	Update    *UpdateInput   `json:"update,omitempty"`
-	Projects  *ProjectsInput `json:"projects,omitempty"`
+	Operation  string           `json:"operation"`
+	Session    *SessionInput    `json:"session,omitempty"`
+	SessionGet *SessionRefInput `json:"session_get,omitempty"`
+	Log        *LogInput        `json:"log,omitempty"`
+	Search     *SearchInput     `json:"search,omitempty"`
+	Recent     *RecentInput     `json:"recent,omitempty"`
+	ID         *IDInput         `json:"id,omitempty"`
+	Update     *UpdateInput     `json:"update,omitempty"`
+	Projects   *ProjectsInput   `json:"projects,omitempty"`
 }
 type Result struct {
+	Session  *Session  `json:"session,omitempty"`
 	Entry    *Entry    `json:"entry,omitempty"`
 	Entries  []Entry   `json:"entries,omitempty"`
 	Projects []Project `json:"projects,omitempty"`
@@ -206,7 +234,7 @@ func section(v *string) error {
 	return nil
 }
 func entryType(v *string) error {
-	if v != nil && *v != "work" && *v != "issue" && *v != "learning" && *v != "decision" {
+	if v != nil && *v != "work" && *v != "issue" && *v != "learning" && *v != "decision" && *v != "task" {
 		return fmt.Errorf("%w: invalid entry_type", ErrInvalid)
 	}
 	return nil
@@ -276,7 +304,7 @@ func limit(v *int, max int) {
 }
 func (r *Request) Validate() error {
 	n := 0
-	for _, b := range []bool{r.Log != nil, r.Search != nil, r.Recent != nil, r.ID != nil, r.Update != nil, r.Projects != nil} {
+	for _, b := range []bool{r.Log != nil, r.Search != nil, r.Recent != nil, r.ID != nil, r.Update != nil, r.Projects != nil, r.Session != nil, r.SessionGet != nil} {
 		if b {
 			n++
 		}
@@ -344,6 +372,27 @@ func (r *Request) Validate() error {
 		if v.Tags != nil {
 			checks = append(checks, tags(v.Tags))
 		}
+	case "session":
+		v := r.Session
+		if v == nil {
+			break
+		}
+		v.Assistant = strings.ToLower(strings.TrimSpace(v.Assistant))
+		if !assistantRE.MatchString(v.Assistant) {
+			return fmt.Errorf("%w: invalid assistant", ErrInvalid)
+		}
+		checks = append(checks, sessionRef(&v.SessionRef), section(&v.Section), project(v.ProjectURL), text(v.Branch, false), text(v.Task, false))
+		if v.Task != nil && utf8.RuneCountInString(*v.Task) > 200 {
+			return fmt.Errorf("%w: task exceeds 200 characters", ErrInvalid)
+		}
+		if v.Branch != nil && utf8.RuneCountInString(*v.Branch) > 200 {
+			return fmt.Errorf("%w: branch exceeds 200 characters", ErrInvalid)
+		}
+	case "session_get":
+		if r.SessionGet == nil {
+			break
+		}
+		checks = append(checks, sessionRef(&r.SessionGet.SessionRef))
 	case "projects":
 		if r.Projects == nil {
 			break
@@ -353,7 +402,7 @@ func (r *Request) Validate() error {
 	default:
 		return fmt.Errorf("%w: unknown operation", ErrInvalid)
 	}
-	valid := (r.Operation == "log" && r.Log != nil) || ((r.Operation == "search" || r.Operation == "recall") && r.Search != nil) || (r.Operation == "recent" && r.Recent != nil) || ((r.Operation == "get" || r.Operation == "delete") && r.ID != nil) || (r.Operation == "update" && r.Update != nil) || (r.Operation == "projects" && r.Projects != nil)
+	valid := (r.Operation == "log" && r.Log != nil) || ((r.Operation == "search" || r.Operation == "recall") && r.Search != nil) || (r.Operation == "recent" && r.Recent != nil) || ((r.Operation == "get" || r.Operation == "delete") && r.ID != nil) || (r.Operation == "update" && r.Update != nil) || (r.Operation == "projects" && r.Projects != nil) || (r.Operation == "session" && r.Session != nil) || (r.Operation == "session_get" && r.SessionGet != nil)
 	if !valid {
 		return fmt.Errorf("%w: mismatched operation input", ErrInvalid)
 	}

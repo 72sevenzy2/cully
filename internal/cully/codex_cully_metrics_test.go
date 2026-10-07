@@ -58,6 +58,8 @@ func TestCullyMetricsResponseEvidenceAndRecovery(t *testing.T) {
 		{`{"status_code":401}`, "unhealthy", "unauthenticated"},
 		{`{"error":{"code":-32001,"message":"Unauthorized"}}`, "unhealthy", "unauthenticated"},
 		{`{"structuredContent":{"notes":[]}}`, "healthy", "authenticated"},
+		{`[{"type":"text","text":"{\"entries\":[]}"}]`, "healthy", "authenticated"},
+		{`[]`, "unknown", "unknown"},
 	} {
 		health, auth := codexCullyResponseState(json.RawMessage(tc.raw))
 		if health != tc.health || auth != tc.auth {

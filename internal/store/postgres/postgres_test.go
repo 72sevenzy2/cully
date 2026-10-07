@@ -299,3 +299,53 @@ func TestDurableMem0Projection(t *testing.T) {
 		t.Fatal("Mem0 deletion not propagated")
 	}
 }
+
+func TestDatabaseSessionsAndTasks(t *testing.T) {
+	s := testStore(t)
+	project := "https://github.com/mcp-runtime/cully"
+	branch := "feat/oauth-validation"
+	task := "Oauth validation"
+	ref := "claude-0123456789abcdef"
+	start := func(owner string, task *string) memory.Result {
+		in := memory.SessionInput{SessionRef: ref, Assistant: "claude", Section: "company", ProjectURL: &project, Branch: &branch, Task: task}
+		return execute(t, s, owner, memory.Request{Operation: "session", Session: &in})
+	}
+	first := start("owner-a", &task)
+	if first.Session == nil || first.Session.Task == nil || *first.Session.Task != task || first.Entry == nil || first.Entry.EntryType != "task" {
+		t.Fatalf("task not created and linked: %+v", first)
+	}
+	if first.Session.TaskID == nil || *first.Session.TaskID != first.Entry.ID {
+		t.Fatal("session not linked to its task entry")
+	}
+	again := start("owner-a", &task)
+	if again.Entry != nil || again.Session.TaskID == nil || *again.Session.TaskID != *first.Session.TaskID {
+		t.Fatal("same task name must not create a second entry")
+	}
+	kind := "task"
+	tasks := execute(t, s, "owner-a", memory.Request{Operation: "recent", Recent: &memory.RecentInput{EntryType: &kind, Limit: 10}})
+	if len(tasks.Entries) != 1 {
+		t.Fatalf("task entries = %d", len(tasks.Entries))
+	}
+	renamed := "Token audience checks"
+	if second := start("owner-a", &renamed); second.Entry == nil || *second.Session.Task != renamed {
+		t.Fatal("a new task name must replace the link")
+	}
+	metaOnly := start("owner-a", nil)
+	if metaOnly.Session.Task == nil || *metaOnly.Session.Task != renamed {
+		t.Fatal("updating without a task must keep the existing one")
+	}
+	get := func(owner string) *memory.Session {
+		return execute(t, s, owner, memory.Request{Operation: "session_get", SessionGet: &memory.SessionRefInput{SessionRef: ref}}).Session
+	}
+	if got := get("owner-a"); got == nil || got.Branch == nil || *got.Branch != branch {
+		t.Fatalf("session_get = %+v", got)
+	}
+	if get("owner-b") != nil {
+		t.Fatal("cross-owner session read")
+	}
+	id := memory.IDInput{EntryID: *metaOnly.Session.TaskID}
+	execute(t, s, "owner-a", memory.Request{Operation: "delete", ID: &id})
+	if got := get("owner-a"); got == nil || got.TaskID != nil || got.Task != nil {
+		t.Fatalf("deleting the task entry must unlink it: %+v", got)
+	}
+}

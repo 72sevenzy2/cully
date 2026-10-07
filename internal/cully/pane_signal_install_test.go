@@ -120,9 +120,21 @@ func TestStatuslineIsSilentDataFeedInsidePane(t *testing.T) {
 	if !view.ContextKnown || view.ContextLeft != 70 {
 		t.Fatalf("context = %+v", view)
 	}
+	if view.Model != "Opus" || view.Input != "300k" {
+		t.Fatalf("model and tokens must come from the Claude feed: %+v", view)
+	}
 	var unknown codexStatusView
 	readClaudeContext("other", &unknown)
 	if unknown.ContextKnown {
 		t.Fatal("unknown session must not report context")
+	}
+}
+
+func TestPanelWaitingTextNamesTheRunningAgent(t *testing.T) {
+	if got := waitingForAgent(codexStatusView{Agent: "claude"}, true); got != "waiting for Claude" {
+		t.Fatalf("claude: %q", got)
+	}
+	if got := waitingForAgent(codexStatusView{Agent: "codex"}, true); got != "waiting for Codex footer" {
+		t.Fatalf("codex: %q", got)
 	}
 }

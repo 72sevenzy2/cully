@@ -28,6 +28,8 @@ Both sections belong to the same owner. `company` is a label for organizing your
 | `cully_update` | Correct a note. |
 | `cully_delete` | Remove a note. |
 | `cully_projects` | List projects with recent activity. |
+| `cully_session` | Start or update the current agent session with its project, branch and an optional task name. A new task name saves one `task` record linked to the session; the same name again changes nothing. |
+| `cully_session_get` | Get one session by its `session_ref`, including its task. |
 
 Tool results contain `entry`, `entries`, `projects` or `deleted`, depending on the operation. Read tools require `tools:read` and mutations require `tools:write` when OAuth is enabled.
 

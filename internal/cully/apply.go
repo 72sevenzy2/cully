@@ -47,6 +47,9 @@ Rules:
 func RunList(w io.Writer) {
 	cwd, _ := os.Getwd()
 	session := resolveSession(cwd)
+	if sess, evs, ok := latestJournal(cwd); ok && sess.Session == session {
+		ensureTaskSuggestion(session, cwd, evs)
+	}
 	lines := readSuggestionsLimit(session, maxReportLines)
 	if len(lines) == 0 {
 		fmt.Fprintln(w, "No cully suggestions for this session.")
@@ -139,6 +142,17 @@ func RunApply(n int, cwd string, yes, dryRun bool) error {
 		return err
 	}
 	suggestion := stripSeverityPrefix(applyable[n-1])
+	if name, ok := taskNameFromSuggestion(suggestion); ok {
+		if err := writeTask(session, name); err != nil {
+			return err
+		}
+		if err := removeSuggestion(session, reportIdx); err != nil {
+			debugLog("apply: remove suggestion %d: %v", reportIdx, err)
+		}
+		fmt.Println("Task set:", name)
+		fmt.Println("Agent: record this task with cully_session (task name, current session_ref).")
+		return nil
+	}
 
 	signals := readSessionSignals(session)
 	prompt := applyInstr + "\n\nSUGGESTION:\n" + suggestion

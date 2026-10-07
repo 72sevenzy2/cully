@@ -230,6 +230,9 @@ func isApplyable(c classifiedSuggestion) bool {
 			return false
 		}
 	}
+	if strings.Contains(lower, strings.ToLower(taskSuggestionPrefix)) {
+		return true
+	}
 	if c.Level == AlertAdv {
 		return true
 	}

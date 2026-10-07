@@ -56,7 +56,7 @@ func (s *Store) Execute(ctx context.Context, owner string, r memory.Request) (me
 	if err != nil {
 		return memory.Result{}, fmt.Errorf("%w: database operation failed", memory.ErrUnavailable)
 	}
-	if s.Mem0Enabled && (r.Operation == "log" || (r.Operation == "update" && result.Entry != nil) || (r.Operation == "delete" && result.Deleted)) {
+	if s.Mem0Enabled && (r.Operation == "log" || (r.Operation == "session" && result.Entry != nil) || (r.Operation == "update" && result.Entry != nil) || (r.Operation == "delete" && result.Deleted)) {
 		entryID := ""
 		if result.Entry != nil {
 			entryID = result.Entry.ID
@@ -84,6 +84,12 @@ func (s *Store) execute(ctx context.Context, tx pgx.Tx, owner string, r memory.R
 		}
 		e, err := one(ctx, tx, `INSERT INTO cully_entries AS e (id,owner_subject,section,project_url,session_ref,category,entry_type,summary,approach,outcome,issue,learning,next_steps,assistant,tags,occurred_at) VALUES ($1::uuid,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16) RETURNING `+record, uuid.NewString(), owner, v.Section, v.ProjectURL, v.SessionRef, v.Category, v.EntryType, v.Summary, v.Approach, v.Outcome, v.Issue, v.Learning, v.NextSteps, v.Assistant, v.Tags, when)
 		out.Entry = e
+		return out, err
+	case "session":
+		return s.session(ctx, tx, owner, r.Session)
+	case "session_get":
+		sess, err := loadSession(ctx, tx, owner, r.SessionGet.SessionRef)
+		out.Session = sess
 		return out, err
 	case "get":
 		e, err := one(ctx, tx, "SELECT "+record+" FROM cully_entries e WHERE owner_subject=$1 AND id=$2::uuid", owner, r.ID.EntryID)
@@ -191,4 +197,52 @@ func rows(ctx context.Context, tx pgx.Tx, sql string, args ...any) (memory.Resul
 		out.Entries = append(out.Entries, *e)
 	}
 	return out, rs.Err()
+}
+
+const sessionRecord = "to_jsonb(s) - 'owner_subject' || jsonb_build_object('task', t.summary)"
+
+func loadSession(ctx context.Context, tx pgx.Tx, owner, ref string) (*memory.Session, error) {
+	var data []byte
+	err := tx.QueryRow(ctx, "SELECT "+sessionRecord+" FROM cully_sessions s LEFT JOIN cully_entries t ON t.id=s.task_id AND t.owner_subject=s.owner_subject WHERE s.owner_subject=$1 AND s.session_ref=$2", owner, ref).Scan(&data)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	var sess memory.Session
+	if err = json.Unmarshal(data, &sess); err != nil {
+		return nil, err
+	}
+	sess.StartedAt, sess.LastSeenAt = sess.StartedAt.In(memory.IST), sess.LastSeenAt.In(memory.IST)
+	return &sess, nil
+}
+
+// session upserts one session. A new task name creates a task entry and links
+// it; the same task name again leaves the existing entry in place.
+func (s *Store) session(ctx context.Context, tx pgx.Tx, owner string, v *memory.SessionInput) (memory.Result, error) {
+	out := memory.Result{}
+	var taskID *string
+	if v.Task != nil && *v.Task != "" {
+		var current *string
+		err := tx.QueryRow(ctx, "SELECT t.summary FROM cully_sessions s JOIN cully_entries t ON t.id=s.task_id AND t.owner_subject=s.owner_subject WHERE s.owner_subject=$1 AND s.session_ref=$2", owner, v.SessionRef).Scan(&current)
+		if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+			return out, err
+		}
+		if current == nil || *current != *v.Task {
+			e, err := one(ctx, tx, `INSERT INTO cully_entries AS e (id,owner_subject,section,project_url,session_ref,entry_type,summary,assistant,tags,occurred_at) VALUES ($1::uuid,$2,$3,$4,$5,'task',$6,$7,'{}',now()) RETURNING `+record, uuid.NewString(), owner, v.Section, v.ProjectURL, v.SessionRef, *v.Task, v.Assistant)
+			if err != nil {
+				return out, err
+			}
+			out.Entry, taskID = e, &e.ID
+		}
+	}
+	_, err := tx.Exec(ctx, `INSERT INTO cully_sessions AS s (owner_subject,session_ref,section,project_url,assistant,branch,task_id) VALUES ($1,$2,$3,$4,$5,$6,$7::uuid)
+ON CONFLICT (owner_subject,session_ref) DO UPDATE SET project_url=COALESCE(EXCLUDED.project_url,s.project_url), branch=COALESCE(EXCLUDED.branch,s.branch), task_id=COALESCE(EXCLUDED.task_id,s.task_id), assistant=EXCLUDED.assistant, last_seen_at=now()`,
+		owner, v.SessionRef, v.Section, v.ProjectURL, v.Assistant, v.Branch, taskID)
+	if err != nil {
+		return out, err
+	}
+	out.Session, err = loadSession(ctx, tx, owner, v.SessionRef)
+	return out, err
 }

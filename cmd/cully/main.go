@@ -26,6 +26,7 @@ Usage:
   cully rescue [--cwd DIR] [--agent claude|codex|cursor] [--no-ai]
                                           Diagnose a stuck session from recorded evidence
   cully suggestions                       Review suggested improvements
+  cully task [NAME]                       Show or set the session task (--clear removes it)
   cully run AGENT [ARGS...]               Run any coding agent in the Cully terminal
   cully claude|codex|cursor [ARGS...]     Shortcuts for cully run claude, codex and cursor-agent
   cully timeline [--all] [--session ID] [--cwd DIR]
@@ -76,6 +77,8 @@ func run(args []string) error {
 		cully.RunStatus(os.Stdout, cwd)
 	case "rescue":
 		return cully.RunRescue(os.Stdout, args[1:])
+	case "task":
+		return cully.RunTask(os.Stdout, args[1:])
 	case "suggestions":
 		cully.RunList(os.Stdout)
 	case "run":

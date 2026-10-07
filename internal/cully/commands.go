@@ -163,8 +163,10 @@ func RunStatus(w io.Writer, cwd string) {
 	}
 	_, gitFiles := gitChangedFiles(cwd, 0)
 	healthSession, _, _ := latestJournal(cwd)
+	ensureTaskSuggestion(healthSession.Session, cwd, events)
 	fmt.Fprintln(w, renderSessionHealth(events, healthInputs{
 		Branch:      gitBranch(cwd),
+		Task:        readTask(healthSession.Session),
 		GitFiles:    gitFiles,
 		ContextUsed: sessionContextUsed(healthSession.Session),
 		Now:         time.Now(),

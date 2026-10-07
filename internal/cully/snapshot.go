@@ -21,6 +21,10 @@ type cullySnapshot struct {
 	CtxSize            int64   `json:"ctx_size,omitempty"`
 	CtxTokens          int64   `json:"ctx_tokens,omitempty"`
 	CostUSD            float64 `json:"cost_usd,omitempty"`
+	Model              string  `json:"model,omitempty"`
+	TokensOut          int64   `json:"tokens_out,omitempty"`
+	LinesAdded         int64   `json:"lines_added,omitempty"`
+	LinesRemoved       int64   `json:"lines_removed,omitempty"`
 	Rate5hPct          int     `json:"rate_5h_pct"`
 	Rate7dPct          int     `json:"rate_7d_pct"`
 	Searches           int     `json:"searches"`

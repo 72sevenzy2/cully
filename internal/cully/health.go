@@ -94,8 +94,9 @@ func memoryWrite(tool string) bool {
 // healthInputs are the live values that the journal cannot supply.
 type healthInputs struct {
 	Branch      string
-	GitFiles    int // negative when Git could not be read
-	ContextUsed int // percent of the context window used; negative when unknown
+	Task        string // the session's accepted task; empty when none
+	GitFiles    int    // negative when Git could not be read
+	ContextUsed int    // percent of the context window used; negative when unknown
 	Now         time.Time
 }
 
@@ -139,6 +140,9 @@ func renderSessionHealth(events []journalEvent, in healthInputs) string {
 	row("Agent", journalAgentName(h.Agent))
 	if in.Branch != "" {
 		row("Branch", in.Branch)
+	}
+	if in.Task != "" {
+		row("Task", in.Task)
 	}
 	if h.End.IsZero() {
 		row("Session", healthDuration(in.Now.Sub(h.Start))+" (running)")
