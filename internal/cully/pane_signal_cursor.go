@@ -53,12 +53,12 @@ func cursorRawJSON(raw json.RawMessage) json.RawMessage {
 
 // cursorToolEvent maps a Cursor hook payload onto the shared tool event. It
 // reports false for payloads that carry no recognizable tool call.
-func cursorToolEvent(data []byte) (codexToolEvent, bool) {
+func cursorToolEvent(data []byte) (toolEvent, bool) {
 	var p cursorHookPayload
 	if json.Unmarshal(data, &p) != nil {
-		return codexToolEvent{}, false
+		return toolEvent{}, false
 	}
-	event := codexToolEvent{Cwd: p.Cwd, SessionID: p.ConversationID, ToolResponse: json.RawMessage(`{}`)}
+	event := toolEvent{Cwd: p.Cwd, SessionID: p.ConversationID, ToolResponse: json.RawMessage(`{}`)}
 	if event.Cwd == "" && len(p.WorkspaceRoots) > 0 {
 		event.Cwd = p.WorkspaceRoots[0]
 	}
@@ -71,13 +71,13 @@ func cursorToolEvent(data []byte) (codexToolEvent, bool) {
 		event.ToolInput, _ = json.Marshal(map[string]string{"file_path": p.FilePath})
 	case "afterMCPExecution":
 		if p.ToolName == "" {
-			return codexToolEvent{}, false
+			return toolEvent{}, false
 		}
 		event.ToolName = "mcp__" + p.MCPServer + "__" + p.ToolName
 		event.ToolInput, event.ToolResponse = cursorRawJSON(p.ToolInput), cursorRawJSON(p.ResultJSON)
 	case "postToolUse", "postToolUseFailure":
 		if p.ToolName == "" {
-			return codexToolEvent{}, false
+			return toolEvent{}, false
 		}
 		event.ToolName = cursorNormalToolName(p.ToolName)
 		if strings.EqualFold(p.ToolName, "delete") {
@@ -88,7 +88,7 @@ func cursorToolEvent(data []byte) (codexToolEvent, bool) {
 			event.ToolResponse = json.RawMessage(`{"is_error":true}`)
 		}
 	default:
-		return codexToolEvent{}, false
+		return toolEvent{}, false
 	}
 	return event, true
 }

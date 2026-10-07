@@ -30,8 +30,8 @@ func TestCodexGitChangesIncludesIndexAndWorkingTree(t *testing.T) {
 	write("binary", "one\x00two")
 	git("add", ".")
 	git("-c", "user.name=Cully Test", "-c", "user.email=test@example.invalid", "-c", "commit.gpgsign=false", "-c", "core.hooksPath=/dev/null", "commit", "-qm", "base")
-	view := codexStatusView{Project: dir}
-	readCodexGitChanges(&view)
+	view := sessionView{Project: dir}
+	readGitChanges(&view)
 	if !view.ChangesKnown || view.ChangedFiles != 0 || view.LinesAdded != 0 || view.LinesRemoved != 0 {
 		t.Fatalf("clean repository: %+v", view)
 	}
@@ -40,12 +40,12 @@ func TestCodexGitChangesIncludesIndexAndWorkingTree(t *testing.T) {
 	write(name, "one\nreplacement\nthree\nfour\n")
 	write("binary", "different\x00bytes")
 	write("untracked", "not a tracked diff\n")
-	readCodexGitChanges(&view)
+	readGitChanges(&view)
 	if !view.ChangesKnown || view.ChangedFiles != 2 || view.LinesAdded != 3 || view.LinesRemoved != 1 {
 		t.Fatalf("tracked aggregate against HEAD: %+v", view)
 	}
 	view.Project = t.TempDir()
-	readCodexGitChanges(&view)
+	readGitChanges(&view)
 	if view.ChangesKnown || view.LinesAdded != 0 || view.LinesRemoved != 0 || view.ChangedFiles != 0 {
 		t.Fatalf("non-Git directory should clear stale metrics: %+v", view)
 	}

@@ -15,26 +15,26 @@ func TestCullyMetricsCountOnlyObservedSessionTools(t *testing.T) {
 	t.Setenv("CLAUDE_CONFIG_DIR", t.TempDir())
 	t.Setenv("CULLY_PANE_SESSION", "mcp-pane")
 	t.Setenv("MODEL_HINT_GUARD", "")
-	if err := registerCodexPane("mcp-pane", t.TempDir()); err != nil {
+	if err := registerPane("mcp-pane", t.TempDir()); err != nil {
 		t.Fatal(err)
 	}
 	for _, name := range []string{"mcp__cully__cully_log", "functions.mcp__cully__cully_context", "mcp__cully.cully_recall", "mcp.cully.cully_search", "mcp__cully__cully_get", "mcp__cully__cully_projects"} {
 		input := fmt.Sprintf(`{"tool_name":%q,"tool_input":{"query":"private-query"},"tool_response":{"content":[{"type":"text","text":"private-memory-body"}]}}`, name)
-		RunCodexSignalHook(strings.NewReader(input))
+		RunSignalHook(strings.NewReader(input))
 	}
-	RunCodexSignalHook(strings.NewReader(`{"tool_name":"functions.exec","tool_input":{"code":"await tools.mcp__cully__cully_log({summary:'not necessarily executed'})"},"tool_response":{}}`))
-	stats := readCodexToolStats("mcp-pane")
+	RunSignalHook(strings.NewReader(`{"tool_name":"functions.exec","tool_input":{"code":"await tools.mcp__cully__cully_log({summary:'not necessarily executed'})"},"tool_response":{}}`))
+	stats := readToolStats("mcp-pane")
 	if stats.Cully.Calls != 6 || stats.Cully.Log != 1 || stats.Cully.Context != 1 || stats.Cully.Recall != 1 || stats.Cully.Search != 1 || stats.Cully.Get != 1 || stats.Cully.Other != 1 {
 		t.Fatal(stats.Cully)
 	}
 	if stats.Cully.Health != "healthy" || stats.Cully.Auth != "authenticated" || stats.Cully.CheckedAt == "" {
 		t.Fatal(stats.Cully)
 	}
-	data, _ := os.ReadFile(codexCullyStatsFile("mcp-pane"))
+	data, _ := os.ReadFile(cullyStatsFile("mcp-pane"))
 	if strings.Contains(string(data), "private-") || strings.Contains(string(data), "not necessarily") {
 		t.Fatal("payload persisted", string(data))
 	}
-	info, _ := os.Stat(codexCullyStatsFile("mcp-pane"))
+	info, _ := os.Stat(cullyStatsFile("mcp-pane"))
 	if info.Mode().Perm() != 0o600 {
 		t.Fatal(info.Mode())
 	}
@@ -42,8 +42,8 @@ func TestCullyMetricsCountOnlyObservedSessionTools(t *testing.T) {
 		t.Fatal("cross-session metrics", got)
 	}
 	// These counters are cumulative, separate from the rolling generic window.
-	os.WriteFile(codexSignalFile("mcp-pane"), []byte(strings.Repeat("O.\n", 5000)), 0o600)
-	if got := readCodexToolStats("mcp-pane"); got.Cully.Calls != 6 {
+	os.WriteFile(signalFile("mcp-pane"), []byte(strings.Repeat("O.\n", 5000)), 0o600)
+	if got := readToolStats("mcp-pane"); got.Cully.Calls != 6 {
 		t.Fatal("session totals lost", got.Cully)
 	}
 }
@@ -62,13 +62,13 @@ func TestCullyMetricsResponseEvidenceAndRecovery(t *testing.T) {
 		{`[]`, "unknown", "unknown"},
 		{`"{\"entries\":[]}"`, "healthy", "authenticated"},
 	} {
-		health, auth := codexCullyResponseState(json.RawMessage(tc.raw))
+		health, auth := cullyResponseState(json.RawMessage(tc.raw))
 		if health != tc.health || auth != tc.auth {
 			t.Fatalf("%s: %s/%s", tc.raw, health, auth)
 		}
 	}
 	t.Setenv("CLAUDE_CONFIG_DIR", t.TempDir())
-	if err := registerCodexPane("recovery", t.TempDir()); err != nil {
+	if err := registerPane("recovery", t.TempDir()); err != nil {
 		t.Fatal(err)
 	}
 	recordCodexCullyCall("recovery", "cully_context", "unhealthy", "unauthenticated")
@@ -83,7 +83,7 @@ func TestCullyMetricsResponseEvidenceAndRecovery(t *testing.T) {
 
 func TestCullyMetricsConcurrentHooksAndEndedPane(t *testing.T) {
 	t.Setenv("CLAUDE_CONFIG_DIR", t.TempDir())
-	if err := registerCodexPane("concurrent", t.TempDir()); err != nil {
+	if err := registerPane("concurrent", t.TempDir()); err != nil {
 		t.Fatal(err)
 	}
 	var wg sync.WaitGroup
@@ -97,14 +97,14 @@ func TestCullyMetricsConcurrentHooksAndEndedPane(t *testing.T) {
 	}
 	clearCodexCullyStats("concurrent")
 	recordCodexCullyCall("concurrent", "cully_log", "healthy", "authenticated")
-	if _, err := os.Stat(codexCullyStatsFile("concurrent")); !os.IsNotExist(err) {
+	if _, err := os.Stat(cullyStatsFile("concurrent")); !os.IsNotExist(err) {
 		t.Fatal("closed pane recreated")
 	}
 }
 
 func TestCullyMetricsShutdownDuringConcurrentEvents(t *testing.T) {
 	t.Setenv("CLAUDE_CONFIG_DIR", t.TempDir())
-	if err := registerCodexPane("closing", t.TempDir()); err != nil {
+	if err := registerPane("closing", t.TempDir()); err != nil {
 		t.Fatal(err)
 	}
 	var wg sync.WaitGroup
@@ -114,7 +114,7 @@ func TestCullyMetricsShutdownDuringConcurrentEvents(t *testing.T) {
 	}
 	clearCodexCullyStats("closing")
 	wg.Wait()
-	if _, err := os.Stat(codexCullyStatsFile("closing")); !os.IsNotExist(err) {
+	if _, err := os.Stat(cullyStatsFile("closing")); !os.IsNotExist(err) {
 		t.Fatal("late hook recreated metrics", err)
 	}
 }
@@ -123,10 +123,10 @@ func TestCullyMetricsBackgroundWorkerDoesNotCount(t *testing.T) {
 	t.Setenv("CLAUDE_CONFIG_DIR", t.TempDir())
 	t.Setenv("CULLY_PANE_SESSION", "worker")
 	t.Setenv("MODEL_HINT_GUARD", "1")
-	if err := registerCodexPane("worker", t.TempDir()); err != nil {
+	if err := registerPane("worker", t.TempDir()); err != nil {
 		t.Fatal(err)
 	}
-	RunCodexSignalHook(strings.NewReader(`{"tool_name":"mcp__cully__cully_context","tool_response":{"content":[{"text":"success"}]}}`))
+	RunSignalHook(strings.NewReader(`{"tool_name":"mcp__cully__cully_context","tool_response":{"content":[{"text":"success"}]}}`))
 	if got := readCodexCullyStats("worker"); got.Calls != 0 {
 		t.Fatal("worker activity counted", got)
 	}

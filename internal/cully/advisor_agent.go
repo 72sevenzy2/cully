@@ -150,7 +150,7 @@ func runAdvisorAgentProbeContext(parent context.Context, agent, cwd string, rese
 		args = append(args, "--strict-mcp-config", "--mcp-config", config)
 	}
 	if agent == "codex" {
-		args = append(args[:len(args)-1], append(codexAdvisorMCPArgs(cwd), "-")...)
+		args = append(args[:len(args)-1], append(advisorMCPArgs(cwd), "-")...)
 	}
 	ctx, cancel := context.WithTimeout(parent, 2*time.Minute)
 	defer cancel()
@@ -239,7 +239,10 @@ func advisorFailureReason(err error) string {
 func claudeAdvisorMCP(cwd string, research bool) (string, func(), error) {
 	servers := map[string]json.RawMessage{}
 	if !research {
-		for _, path := range codingAgents(cwd)[0].MCPFiles {
+		// Claude's files only: this config is handed to the Claude CLI.
+		// Look the agent up explicitly so a catalog reorder cannot retarget it.
+		claude, _ := lookupAgentSpec("claude")
+		for _, path := range claude.ConfigPaths(cwd).MCPFiles {
 			data, err := os.ReadFile(path)
 			if err != nil || len(data) > 512*1024 {
 				continue
@@ -283,7 +286,7 @@ func claudeAdvisorMCP(cwd string, research bool) (string, func(), error) {
 	return file.Name(), cleanup, nil
 }
 
-func codexAdvisorMCPArgs(cwd string) []string {
+func advisorMCPArgs(cwd string) []string {
 	paths := []string{filepath.Join(CodexConfigDir(), "config.toml")}
 	for dir := cwd; dir != ""; dir = filepath.Dir(dir) {
 		paths = append(paths, filepath.Join(dir, ".codex", "config.toml"))

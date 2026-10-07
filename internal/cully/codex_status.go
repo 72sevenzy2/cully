@@ -12,14 +12,13 @@ import (
 	"time"
 
 	"github.com/charmbracelet/x/ansi"
-	"github.com/charmbracelet/x/vt"
 )
 
 // Request public native instruments for this child only. The user's config file
 // is untouched. Codex omits instruments it cannot supply (including rate limits).
 const codexStatusConfig = `tui.status_line=["model-with-reasoning","context-remaining","total-input-tokens","total-output-tokens","five-hour-limit","weekly-limit","fast-mode"]`
 
-type codexStatusView struct {
+type sessionView struct {
 	Project, Branch, Model, Input, Output, FiveHour, Weekly, Fast string
 	ContextLeft                                                   int
 	ContextKnown                                                  bool
@@ -37,18 +36,13 @@ type codexStatusView struct {
 
 var codexContextLeft = regexp.MustCompile(`^Context ([0-9]{1,3})% left$`)
 
-// Read only the native footer in the bottom three terminal rows. Never open a
-// transcript or persist screen text. Require a model segment and the exact
-// context instrument; token and quota instruments can be clipped on narrow screens.
-func readCodexFooter(emulator *vt.Emulator, view *codexStatusView) int {
-	for y := max(0, emulator.Height()-3); y < emulator.Height(); y++ {
-		var text strings.Builder
-		for x := 0; x < emulator.Width(); x++ {
-			if cell := emulator.CellAt(x, y); cell != nil {
-				text.WriteString(cell.Content)
-			}
-		}
-		parts := strings.Split(strings.TrimSpace(text.String()), " · ")
+// parseFooterRows decodes bounded terminal rows into instruments. It is pure:
+// no emulator, no filesystem. Only rows the shell bounds-checked may be
+// passed in. The match metadata keeps native footer suppression correct.
+func parseFooterRows(rows []string, base int) (InstrumentUpdate, FooterMatch) {
+	upd := InstrumentUpdate{Source: sourceFooter}
+	for i, text := range rows {
+		parts := strings.Split(strings.TrimSpace(text), " · ")
 		if len(parts) < 2 || parts[0] == "" || codexContextLeft.FindStringSubmatch(parts[1]) == nil {
 			continue
 		}
@@ -56,42 +50,48 @@ func readCodexFooter(emulator *vt.Emulator, view *codexStatusView) int {
 		if left > 100 {
 			continue
 		}
-		view.Model, view.ContextLeft, view.ContextKnown = parts[0], left, true
-		// Narrow native footers omit instruments. Keep their last observed
-		// values until Codex supplies an update instead of erasing them.
+		model := parts[0]
+		upd.Model, upd.ContextLeft = &model, &left
+		// Narrow native footers omit instruments. Absent fields stay nil so
+		// the merge keeps their last observed values instead of erasing them.
 		for _, part := range parts[2:] {
 			switch {
 			case strings.HasSuffix(part, " in"):
-				view.Input = strings.TrimSuffix(part, " in")
+				s := strings.TrimSuffix(part, " in")
+				upd.Input = &s
 			case strings.HasSuffix(part, " out"):
-				view.Output = strings.TrimSuffix(part, " out")
+				s := strings.TrimSuffix(part, " out")
+				upd.Output = &s
 			case strings.HasPrefix(part, "5h"):
-				view.FiveHour = part
+				s := part
+				upd.FiveHour = &s
 			case strings.HasPrefix(part, "Weekly"), strings.HasPrefix(part, "Week"), strings.HasPrefix(part, "7d"):
-				view.Weekly = part
+				s := part
+				upd.Weekly = &s
 			case strings.HasPrefix(part, "Fast "):
-				view.Fast = part
+				s := part
+				upd.Fast = &s
 			}
 		}
-		return y
+		return upd, FooterMatch{Row: base + i, Found: true}
 	}
-	return -1
+	return upd, FooterMatch{Row: -1}
 }
 
-type codexPanelContent struct {
+type panelContent struct {
 	status, advice, controls []string
 	heading                  string
 }
 
-func codexStatusRows(cols int, advice []string, stats codexToolStats, view codexStatusView) []string {
-	content := codexStatusContent(cols, advice, stats, view)
+func sessionStatusRows(cols int, advice []string, stats toolStats, view sessionView) []string {
+	content := sessionStatusContent(cols, advice, stats, view)
 	rows := append(content.status, content.heading, "")
 	rows = append(rows, content.advice...)
 	rows = append(rows, "")
 	return append(rows, content.controls...)
 }
 
-func codexStatusContent(cols int, advice []string, stats codexToolStats, view codexStatusView) codexPanelContent {
+func sessionStatusContent(cols int, advice []string, stats toolStats, view sessionView) panelContent {
 	width := max(1, cols-5)
 	var rows []string
 	add := func(line string) {
@@ -131,7 +131,7 @@ func codexStatusContent(cols int, advice []string, stats codexToolStats, view co
 	if cols >= 110 {
 		cellWidth = (width - 8) / 2
 	}
-	phase := codexSessionPhase(stats, view)
+	phase := sessionPhase(stats, view)
 	elapsed := "unavailable"
 	if !view.Started.IsZero() {
 		elapsed = time.Since(view.Started).Truncate(time.Second).String()
@@ -157,7 +157,7 @@ func codexStatusContent(cols int, advice []string, stats codexToolStats, view co
 	if view.Model == "" {
 		model = dim + waitingForAgent(view, true) + rst
 	}
-	grid(codexMetricRows("📁 Project", location, cellWidth), codexMetricRows("🤖 Model", model, cellWidth))
+	grid(metricRows("📁 Project", location, cellWidth), metricRows("🤖 Model", model, cellWidth))
 	if view.Terminal.Program != "" || view.Terminal.Type != "" {
 		add(dim + "Terminal     " + rst + view.Terminal.label())
 	}
@@ -166,19 +166,19 @@ func codexStatusContent(cols int, advice []string, stats codexToolStats, view co
 	left := []string{bold + "Session instruments" + rst, ""}
 	right := []string{bold + "🔧 Activity" + rst + dim + "  ·  recent tool window" + rst, ""}
 	metric := func(target *[]string, label, value string) {
-		*target = append(*target, codexMetricRows(label, value, cellWidth)...)
+		*target = append(*target, metricRows(label, value, cellWidth)...)
 	}
-	metric(&left, "Tokens", "Input "+codexInstrument(view.Input)+"  ·  Output "+codexInstrument(view.Output))
-	metric(&left, "5h limit", codexInstrument(strings.TrimPrefix(view.FiveHour, "5h ")))
+	metric(&left, "Tokens", "Input "+instrument(view.Input)+"  ·  Output "+instrument(view.Output))
+	metric(&left, "5h limit", instrument(strings.TrimPrefix(view.FiveHour, "5h ")))
 	weekly := view.Weekly
 	for _, prefix := range []string{"Weekly ", "Week ", "7d "} {
 		weekly = strings.TrimPrefix(weekly, prefix)
 	}
-	metric(&left, "Weekly", codexInstrument(weekly))
+	metric(&left, "Weekly", instrument(weekly))
 	if view.Agent == "" || view.Agent == "codex" {
-		metric(&left, "Fast", codexInstrument(strings.TrimPrefix(view.Fast, "Fast ")))
+		metric(&left, "Fast", instrument(strings.TrimPrefix(view.Fast, "Fast ")))
 	}
-	changes := codexInstrument("")
+	changes := instrument("")
 	if view.ChangesKnown {
 		changes = green + fmt.Sprintf("+%d", view.LinesAdded) + rst + " / " + red + fmt.Sprintf("-%d", view.LinesRemoved) + rst + fmt.Sprintf("  ·  %d tracked files", view.ChangedFiles)
 	}
@@ -203,7 +203,7 @@ func codexStatusContent(cols int, advice []string, stats codexToolStats, view co
 	}
 	grid(left, right)
 	rows = append(rows, "")
-	for _, line := range codexCullyInstrumentRows(stats, max(1, cols-5)) {
+	for _, line := range cullyInstrumentRows(stats, max(1, cols-5)) {
 		add(line)
 	}
 	rows = append(rows, "")
@@ -227,7 +227,7 @@ func codexStatusContent(cols int, advice []string, stats codexToolStats, view co
 		}
 		// Keep the hook message without decorative prefixes whose widths vary.
 		text = strings.TrimSpace(strings.TrimLeft(text, "⚠️🔎✓ "))
-		color, badge := codexAdviceBadge(suggestion)
+		color, badge := adviceBadge(suggestion)
 		prefix := color + badge + rst + strings.Repeat(" ", 8-len(badge))
 		for i, wrapped := range strings.Split(ansi.Wrap(text, max(1, width-10), ""), "\n") {
 			indent := "        "
@@ -242,18 +242,18 @@ func codexStatusContent(cols int, advice []string, stats codexToolStats, view co
 	}
 	rows = nil
 	add(dim + "Controls    " + rst + cyan + "/prompts:cully" + rst + dim + "    ·    " + rst + cyan + "cully suggestions" + rst)
-	return codexPanelContent{status: statusRows, heading: headingRow, advice: adviceRows, controls: rows}
+	return panelContent{status: statusRows, heading: headingRow, advice: adviceRows, controls: rows}
 }
 
-type codexAdvisorViewport struct {
+type advisorViewport struct {
 	status           []string
 	pageSize         int
 	spaced, controls bool
 }
 
-func codexAdvisorViewportForHeight(availableRows int, content codexPanelContent) codexAdvisorViewport {
-	capacity := max(0, availableRows-1) // panel divider belongs to codexPanelLines
-	viewport := codexAdvisorViewport{controls: capacity >= 4, spaced: capacity >= 6}
+func advisorViewportForHeight(availableRows int, content panelContent) advisorViewport {
+	capacity := max(0, availableRows-1) // panel divider belongs to panelLines
+	viewport := advisorViewport{controls: capacity >= 4, spaced: capacity >= 6}
 	reserved := 2 // heading plus at least one advice row
 	if viewport.controls {
 		reserved++
@@ -286,13 +286,13 @@ func codexAdvisorViewportForHeight(availableRows int, content codexPanelContent)
 
 // availableRows includes the divider row. Only wrapped advisor messages scroll;
 // instruments retain their position while content expands to the panel budget.
-func codexStatusRowsForHeight(cols, availableRows int, advice []string, stats codexToolStats, view codexStatusView) []string {
+func sessionStatusRowsForHeight(cols, availableRows int, advice []string, stats toolStats, view sessionView) []string {
 	capacity := max(0, availableRows-1)
 	if capacity == 0 {
 		return nil
 	}
-	content := codexStatusContent(cols, advice, stats, view)
-	viewport := codexAdvisorViewportForHeight(availableRows, content)
+	content := sessionStatusContent(cols, advice, stats, view)
+	viewport := advisorViewportForHeight(availableRows, content)
 	if viewport.pageSize == 0 {
 		return []string{content.heading}
 	}
@@ -358,23 +358,23 @@ func codexStatusRowsForHeight(cols, availableRows int, advice []string, stats co
 	return rows[:min(capacity, len(rows))]
 }
 
-func codexAdvisorScrollMax(cols, availableRows int, advice []string, stats codexToolStats, view codexStatusView) int {
+func advisorScrollMax(cols, availableRows int, advice []string, stats toolStats, view sessionView) int {
 	if availableRows <= 2 {
 		return 0
 	}
-	content := codexStatusContent(cols, advice, stats, view)
-	viewport := codexAdvisorViewportForHeight(availableRows, content)
+	content := sessionStatusContent(cols, advice, stats, view)
+	viewport := advisorViewportForHeight(availableRows, content)
 	return max(0, len(content.advice)-max(1, viewport.pageSize))
 }
 
-func codexAdvisorPageSize(cols, availableRows int, advice []string, stats codexToolStats, view codexStatusView) int {
-	content := codexStatusContent(cols, advice, stats, view)
-	return max(1, codexAdvisorViewportForHeight(availableRows, content).pageSize)
+func advisorPageSize(cols, availableRows int, advice []string, stats toolStats, view sessionView) int {
+	content := sessionStatusContent(cols, advice, stats, view)
+	return max(1, advisorViewportForHeight(availableRows, content).pageSize)
 }
 
 // Keep values aligned while wrapping each column independently. Continuations
 // stay under the value, never under its label or an adjacent instrument.
-func codexMetricRows(label, value string, width int) []string {
+func metricRows(label, value string, width int) []string {
 	labelWidth := min(15, max(6, width/3))
 	prefix := dim + label + rst + strings.Repeat(" ", max(2, labelWidth-ansi.StringWidth(label)))
 	prefixWidth := ansi.StringWidth(prefix)
@@ -396,7 +396,7 @@ func codexMetricRows(label, value string, width int) []string {
 	return rows
 }
 
-func codexInstrument(value string) string {
+func instrument(value string) string {
 	if value == "" {
 		return dim + "unavailable" + rst
 	}
@@ -405,7 +405,7 @@ func codexInstrument(value string) string {
 
 // Busy work and context pressure alone do not establish a messy workflow.
 // Use explicit failures and unresolved verification, both supplied by hooks.
-func codexSessionPhase(stats codexToolStats, view codexStatusView) string {
+func sessionPhase(stats toolStats, view sessionView) string {
 	if workflowMessy(stats.Tools, stats.Errors, stats.EditsSinceCheck) {
 		return "messy"
 	}
@@ -420,7 +420,7 @@ func codexSessionPhase(stats codexToolStats, view codexStatusView) string {
 
 // Share these visible categories with the expanded drawer. Configuration and
 // tool changes expose Apply; ordinary workflow guidance remains Next.
-func codexAdviceBadge(suggestion string) (color, badge string) {
+func adviceBadge(suggestion string) (color, badge string) {
 	classified := classifySuggestion(suggestion, cullySnapshot{}, cullyState{})
 	switch classified.Level {
 	case AlertWarn:
@@ -444,15 +444,15 @@ func codexAdviceBadge(suggestion string) (color, badge string) {
 // The default panel keeps the full terminal width, condenses related metrics
 // and previews two actionable comments. The expanded renderer retains every
 // instrument and the complete advice text.
-func codexCompactStatusRows(cols, availableRows int, advice []string, stats codexToolStats, view codexStatusView) []string {
+func compactSessionStatusRows(cols, availableRows int, advice []string, stats toolStats, view sessionView) []string {
 	availableRows = min(availableRows, 22)
 	capacity := max(0, availableRows-1)
 	if capacity == 0 {
 		return nil
 	}
 	width := max(1, cols-5)
-	status, context := codexCompactInstrumentRows(cols, stats, view)
-	selected := codexCompactAdvice(advice)
+	status, context := compactInstrumentRows(cols, stats, view)
+	selected := compactAdvice(advice)
 	var preview []string
 	for _, suggestion := range selected {
 		_, text, ok := strings.Cut(suggestion, "|")
@@ -460,7 +460,7 @@ func codexCompactStatusRows(cols, availableRows int, advice []string, stats code
 			text = suggestion
 		}
 		text = strings.TrimSpace(strings.TrimLeft(text, "⚠️🔎✓ℹ️ "))
-		color, badge := codexAdviceBadge(suggestion)
+		color, badge := adviceBadge(suggestion)
 		textWidth := max(1, width-10)
 		wrapped := strings.Split(ansi.Wrap(text, textWidth, ""), "\n")
 		for i := 0; i < min(2, len(wrapped)); i++ {
@@ -544,7 +544,7 @@ func codexCompactStatusRows(cols, availableRows int, advice []string, stats code
 	return rows[:min(capacity, len(rows))]
 }
 
-func codexCompactInstrumentRows(cols int, stats codexToolStats, view codexStatusView) ([]string, string) {
+func compactInstrumentRows(cols int, stats toolStats, view sessionView) ([]string, string) {
 	width := max(1, cols-5)
 	var rows []string
 	add := func(text string) { rows = append(rows, "  "+ansi.Truncate(text, width, "…")+rst) }
@@ -556,7 +556,7 @@ func codexCompactInstrumentRows(cols int, stats codexToolStats, view codexStatus
 	if view.Daemon {
 		daemon = green + "● daemon online" + rst
 	}
-	title := cyan + bold + "✦ Cully" + rst + "  " + formatPhaseBadge(codexSessionPhase(stats, view))
+	title := cyan + bold + "✦ Cully" + rst + "  " + formatPhaseBadge(sessionPhase(stats, view))
 	state := daemon + dim + " · elapsed " + elapsed + rst
 	if cols >= 120 {
 		add(title + strings.Repeat(" ", max(2, width-ansi.StringWidth(title)-ansi.StringWidth(state))) + state)
@@ -599,7 +599,7 @@ func codexCompactInstrumentRows(cols int, stats codexToolStats, view codexStatus
 	}
 	tokens := "Tokens " + dim + "unavailable" + rst
 	if view.Input != "" || view.Output != "" {
-		tokens = "Tokens in " + codexInstrument(view.Input) + " / out " + codexInstrument(view.Output)
+		tokens = "Tokens in " + instrument(view.Input) + " / out " + instrument(view.Output)
 	}
 	quota := dim + "5h / Weekly unavailable" + rst
 	if view.FiveHour != "" || view.Weekly != "" {
@@ -607,7 +607,7 @@ func codexCompactInstrumentRows(cols int, stats codexToolStats, view codexStatus
 		for _, prefix := range []string{"Weekly ", "Week ", "7d "} {
 			weekly = strings.TrimPrefix(weekly, prefix)
 		}
-		quota = "5h " + codexInstrument(strings.TrimPrefix(view.FiveHour, "5h ")) + " · Week " + codexInstrument(weekly)
+		quota = "5h " + instrument(strings.TrimPrefix(view.FiveHour, "5h ")) + " · Week " + instrument(weekly)
 	}
 	changes := dim + "unavailable" + rst
 	if view.ChangesKnown {
@@ -616,7 +616,7 @@ func codexCompactInstrumentRows(cols int, stats codexToolStats, view codexStatus
 	showFast := view.Agent == "" || view.Agent == "codex"
 	work := "Git " + changes
 	if showFast {
-		work = "Fast " + codexInstrument(strings.TrimPrefix(view.Fast, "Fast ")) + " · " + work
+		work = "Fast " + instrument(strings.TrimPrefix(view.Fast, "Fast ")) + " · " + work
 	}
 	if !view.ChangesKnown && (!showFast || view.Fast == "") {
 		work = dim + "Git unavailable" + rst
@@ -625,7 +625,7 @@ func codexCompactInstrumentRows(cols int, stats codexToolStats, view codexStatus
 		}
 	}
 	usage := []string{bold + "Project & usage" + rst, "", location, "Context " + context, tokens, quota, work}
-	cully := codexCullyInstrumentRows(stats, width)
+	cully := cullyInstrumentRows(stats, width)
 	groups := [][]string{activity, usage, cully}
 	if cols >= 120 {
 		const gap = 6
@@ -657,7 +657,7 @@ func codexCompactInstrumentRows(cols int, stats codexToolStats, view codexStatus
 		groups = [][]string{
 			{activity[0], "Model " + model, fmt.Sprintf("Tools %d · Searches %d · Subagents %d · Web %d", stats.Tools, stats.Searches, stats.Agents, stats.Web), fmt.Sprintf("Edits %d · Checks %d · Commits %d · Errors %s", stats.Edits, stats.Checks, stats.Commits, errors), "Verification " + verification, loopRow},
 			{usage[0], location, "Context " + context, tokens + " · " + quota, work},
-			{cully[0], fmt.Sprintf("Calls %d observed", stats.Cully.Calls) + " · Auth " + codexObservedState(stats.Cully.Auth, true), fmt.Sprintf("Log %d · Context %d · Recall %d · Search %d · Get %d · Other %d", stats.Cully.Log, stats.Cully.Context, stats.Cully.Recall, stats.Cully.Search, stats.Cully.Get, stats.Cully.Other)},
+			{cully[0], fmt.Sprintf("Calls %d observed", stats.Cully.Calls) + " · Auth " + observedState(stats.Cully.Auth, true), fmt.Sprintf("Log %d · Context %d · Recall %d · Search %d · Get %d · Other %d", stats.Cully.Log, stats.Cully.Context, stats.Cully.Recall, stats.Cully.Search, stats.Cully.Get, stats.Cully.Other)},
 		}
 		for i, group := range groups {
 			if i > 0 {
@@ -676,7 +676,7 @@ func codexCompactInstrumentRows(cols int, stats codexToolStats, view codexStatus
 	return rows, context
 }
 
-func codexCullyInstrumentRows(stats codexToolStats, width int) []string {
+func cullyInstrumentRows(stats toolStats, width int) []string {
 	c := stats.Cully
 	health := dim + "Awaiting first MCP response" + rst
 	if c.Health == "healthy" {
@@ -686,7 +686,7 @@ func codexCullyInstrumentRows(stats codexToolStats, width int) []string {
 	} else if c.Calls > 0 {
 		health = dim + "Awaiting response evidence" + rst
 	}
-	auth := codexObservedState(c.Auth, true)
+	auth := observedState(c.Auth, true)
 	rows := []string{bold + "Cully MCP" + rst + " · " + health, "", fmt.Sprintf("Calls %d observed", c.Calls), fmt.Sprintf("Log %d · Context %d · Recall %d", c.Log, c.Context, c.Recall), fmt.Sprintf("Search %d · Get %d · Other %d", c.Search, c.Get, c.Other), "Auth " + auth}
 	if c.Foreground+c.Advisor+c.Startup > 0 {
 		rows = append(rows, fmt.Sprintf("Foreground %d · Advisor %d · Startup %d", c.Foreground, c.Advisor, c.Startup))
@@ -700,7 +700,7 @@ func codexCullyInstrumentRows(stats codexToolStats, width int) []string {
 	return rows
 }
 
-func codexCullyToolRows(stats codexCullyStats, width int) []string {
+func cullyToolRows(stats cullyStats, width int) []string {
 	rows := []string{bold + "Cully MCP tools · entire session" + rst, ""}
 	counts := stats.ByTool
 	if counts == nil {
@@ -727,7 +727,7 @@ func codexCullyToolRows(stats codexCullyStats, width int) []string {
 	return rows
 }
 
-func codexObservedState(state string, auth bool) string {
+func observedState(state string, auth bool) string {
 	if auth {
 		switch state {
 		case "authenticated":
@@ -746,7 +746,7 @@ func codexObservedState(state string, auth bool) string {
 	return dim + "unknown" + rst
 }
 
-func codexCompactAdvice(advice []string) []string {
+func compactAdvice(advice []string) []string {
 	var selected []string
 	for priority := 0; priority < 4 && len(selected) < 2; priority++ {
 		for _, suggestion := range advice {
@@ -779,9 +779,9 @@ func pluralSuffix(count int) string {
 }
 
 // Expand to fit wrapped content while leaving enough space for the
-// conversation. RunCodexPane retains growth until a real terminal resize
+// conversation. RunPane retains growth until a real terminal resize
 // so advice clearing does not repeatedly expand and shrink the child viewport.
-func codexPaneTop(rows, statusRows int) int {
+func paneTop(rows, statusRows int) int {
 	if rows < 12 {
 		return rows
 	}
@@ -793,7 +793,7 @@ func codexPaneTop(rows, statusRows int) int {
 	return rows - min(max(0, statusRows)+1, budget)
 }
 
-func codexPanelLines(cols, height int, content []string, hud string) []string {
+func panelLines(cols, height int, content []string, hud string) []string {
 	lines := make([]string, max(0, height))
 	if height <= 0 {
 		return lines
@@ -856,7 +856,7 @@ func codexPanelLines(cols, height int, content []string, hud string) []string {
 
 // waitingForAgent names the agent the panel is waiting on. Codex supplies a
 // terminal footer; other agents feed the panel through their statusline hook.
-func waitingForAgent(view codexStatusView, footer bool) string {
+func waitingForAgent(view sessionView, footer bool) string {
 	name := agentDisplayName(view.Agent)
 	if view.Agent == "" || view.Agent == "codex" {
 		name = "Codex"

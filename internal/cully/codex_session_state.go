@@ -16,9 +16,9 @@ import (
 
 // Only reduced instruments live here: never prompts, screen text, tool payloads,
 // credentials, or retrieved memory. The opaque key follows the native thread.
-type codexSessionState struct {
+type sessionState struct {
 	Version                                      int
-	Stats                                        codexToolStats
+	Stats                                        toolStats
 	Model, Input, Output, FiveHour, Weekly, Fast string
 	ContextLeft                                  int
 	ContextKnown                                 bool
@@ -37,8 +37,8 @@ func codexExplicitResumeID(args []string) string {
 	return ""
 }
 
-func codexSessionStateFile(session string) string {
-	b, err := os.ReadFile(codexPaneBindingFile(session))
+func sessionStateFile(session string) string {
+	b, err := os.ReadFile(paneBindingFile(session))
 	if err != nil || len(b) != 32 {
 		return ""
 	}
@@ -48,24 +48,24 @@ func codexSessionStateFile(session string) string {
 	return filepath.Join(cullyDir(), "codex-session-"+string(b)+".json")
 }
 
-func readCodexSessionState(path string) codexSessionState {
-	var state codexSessionState
+func readCodexSessionState(path string) sessionState {
+	var state sessionState
 	b, err := os.ReadFile(path)
 	if err != nil || len(b) > 128*1024 || json.Unmarshal(b, &state) != nil || state.Version != 1 {
-		return codexSessionState{Version: 1}
+		return sessionState{Version: 1}
 	}
 	// Older running wrappers rewrite the original schema and discard fields
 	// they do not know. Keep the richer Cully breakdown in its own private
 	// snapshot, under the same thread lock, until those wrappers are reopened.
-	var cully codexCullyStats
+	var cully cullyStats
 	if data, err := os.ReadFile(path + ".cully-mcp"); err == nil && len(data) <= 128*1024 && json.Unmarshal(data, &cully) == nil && cully.ByTool != nil && cully.Calls >= state.Stats.Cully.Calls {
 		state.Stats.Cully = cully
 	}
 	return state
 }
 
-func updateCodexSessionState(session string, update func(*codexSessionState)) {
-	path := codexSessionStateFile(session)
+func updateCodexSessionState(session string, update func(*sessionState)) {
+	path := sessionStateFile(session)
 	if path == "" {
 		return
 	}
@@ -78,13 +78,13 @@ func updateCodexSessionState(session string, update func(*codexSessionState)) {
 		return
 	}
 	defer syscall.Flock(int(lock.Fd()), syscall.LOCK_UN) //nolint:errcheck
-	if _, err := os.Stat(codexPaneRegistrationFile(session)); err != nil {
+	if _, err := os.Stat(paneRegistrationFile(session)); err != nil {
 		return
 	}
 	state := readCodexSessionState(path)
 	if _, err := os.Stat(path); os.IsNotExist(err) {
 		// Upgrade an already open pane without discarding its available counters.
-		state.Stats = readCodexToolStats(session)
+		state.Stats = readToolStats(session)
 	}
 	update(&state)
 	if state.Stats.Cully.ByTool != nil {
@@ -111,7 +111,7 @@ func writeCodexPrivateJSON(path string, value any) bool {
 }
 
 func recordCodexSessionTool(session string, class, failure byte) {
-	updateCodexSessionState(session, func(state *codexSessionState) {
+	updateCodexSessionState(session, func(state *sessionState) {
 		state.Stats.Tools++
 		switch class {
 		case 'S':
@@ -137,8 +137,8 @@ func recordCodexSessionTool(session string, class, failure byte) {
 	})
 }
 
-func restoreCodexSessionView(session string, view *codexStatusView) bool {
-	path := codexSessionStateFile(session)
+func restoreCodexSessionView(session string, view *sessionView) bool {
+	path := sessionStateFile(session)
 	if path == "" {
 		return false
 	}
@@ -170,8 +170,8 @@ func restoreCodexSessionView(session string, view *codexStatusView) bool {
 	return true
 }
 
-func saveCodexSessionView(session string, view codexStatusView) {
-	updateCodexSessionState(session, func(state *codexSessionState) {
+func saveCodexSessionView(session string, view sessionView) {
+	updateCodexSessionState(session, func(state *sessionState) {
 		if state.Started.IsZero() {
 			state.Started = view.Started
 		}

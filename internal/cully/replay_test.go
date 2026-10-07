@@ -334,9 +334,9 @@ func TestRunReplayEndToEndAndPrivacy(t *testing.T) {
 	utcLocal(t)
 	cwd := journalTestEnv(t)
 	secret := "TOPSECRET-BODY"
-	recordJournalTool("claude", "s1", toolEvent(cwd, "Write", map[string]string{"file_path": "a.go", "content": secret}), 'E', false)
-	recordJournalTool("claude", "s1", toolEvent(cwd, "Bash", map[string]string{"command": "go test -run " + secret + " ./..."}), 'T', true)
-	recordJournalTool("claude", "s1", toolEvent(cwd, "Bash", map[string]string{"command": "rm old.go"}), 'O', false)
+	recordJournalTool("claude", "s1", makeToolEvent(cwd, "Write", map[string]string{"file_path": "a.go", "content": secret}), 'E', false)
+	recordJournalTool("claude", "s1", makeToolEvent(cwd, "Bash", map[string]string{"command": "go test -run " + secret + " ./..."}), 'T', true)
+	recordJournalTool("claude", "s1", makeToolEvent(cwd, "Bash", map[string]string{"command": "rm old.go"}), 'O', false)
 	for _, args := range [][]string{{"--cwd", cwd}, {"--cwd", cwd, "--steps"}, {"--cwd", cwd, "--files"}, {"--cwd", cwd, "--json"}, {"--cwd", cwd, "--instant"}} {
 		var out bytes.Buffer
 		if err := RunReplay(&out, args); err != nil {

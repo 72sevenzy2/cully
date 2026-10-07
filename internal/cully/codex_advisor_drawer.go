@@ -9,7 +9,7 @@ import (
 	"github.com/charmbracelet/x/ansi"
 )
 
-type codexAdvisorDrawer struct {
+type advisorDrawer struct {
 	Open, Details, Busy bool
 	Items               []string
 	Selected, Scroll    int
@@ -20,7 +20,7 @@ type codexAdvisorDrawer struct {
 	Generation          int
 }
 
-func (d *codexAdvisorDrawer) open(advice []string) {
+func (d *advisorDrawer) open(advice []string) {
 	d.Generation++
 	d.Open = true
 	d.Details = false
@@ -32,9 +32,9 @@ func (d *codexAdvisorDrawer) open(advice []string) {
 	d.Items = append([]string(nil), advice...)
 }
 
-func (d *codexAdvisorDrawer) close() { d.Open = false; d.Generation++; d.Busy = false }
+func (d *advisorDrawer) close() { d.Open = false; d.Generation++; d.Busy = false }
 
-func (d *codexAdvisorDrawer) move(delta int) {
+func (d *advisorDrawer) move(delta int) {
 	if d.Busy {
 		return
 	}
@@ -46,7 +46,7 @@ func (d *codexAdvisorDrawer) move(delta int) {
 	d.Message = ""
 }
 
-func (d *codexAdvisorDrawer) escape() {
+func (d *advisorDrawer) escape() {
 	if d.Busy {
 		d.Generation++
 		d.Busy = false
@@ -63,7 +63,7 @@ func (d *codexAdvisorDrawer) escape() {
 
 // The full advisor is an overlay: opening it never resizes the child PTY or
 // reflows the conversation. Mouse targets correspond to visible screen rows.
-func (d *codexAdvisorDrawer) render(cols, rows int, stats codexToolStats, view codexStatusView) string {
+func (d *advisorDrawer) render(cols, rows int, stats toolStats, view sessionView) string {
 	width := max(1, cols-5)
 	var lines []string
 	add := func(text string) {
@@ -78,9 +78,9 @@ func (d *codexAdvisorDrawer) render(cols, rows int, stats codexToolStats, view c
 	d.AcceptRow = 0
 	budget := max(1, rows-4-len(lines))
 	if d.Details {
-		info := codexStatusContent(cols, nil, stats, view).status
+		info := sessionStatusContent(cols, nil, stats, view).status
 		info = append(info, "")
-		info = append(info, codexCullyToolRows(stats.Cully, max(1, cols-5))...)
+		info = append(info, cullyToolRows(stats.Cully, max(1, cols-5))...)
 		d.Scroll = min(d.Scroll, max(0, len(info)-budget))
 		lines = append(lines, info[d.Scroll:min(len(info), d.Scroll+budget)]...)
 	} else if d.Review != nil {
@@ -99,7 +99,7 @@ func (d *codexAdvisorDrawer) render(cols, rows int, stats codexToolStats, view c
 		d.Scroll = max(0, first)
 		for i := d.Scroll; i < len(d.Items); i++ {
 			prefix := "  "
-			colour, badge := codexAdviceBadge(d.Items[i])
+			colour, badge := adviceBadge(d.Items[i])
 			if i == d.Selected {
 				prefix = "▶ "
 				colour += bold

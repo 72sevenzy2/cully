@@ -153,35 +153,6 @@ func hasStatuslinePayload(data []byte, in slInput) bool {
 		in.ContextWindow.UsedPercentage > 0
 }
 
-func statuslineAgent() string {
-	if v := strings.TrimSpace(os.Getenv("CULLY_AGENT")); v != "" {
-		return v
-	}
-	switch {
-	case os.Getenv("CURSOR_TRACE_ID") != "", os.Getenv("CURSOR_SESSION_ID") != "", os.Getenv("CURSOR_WORKSPACE_ID") != "":
-		return "cursor"
-	case os.Getenv("CODEX_HOME") != "", os.Getenv("CODEX_SANDBOX") != "", os.Getenv("CODEX_SESSION_ID") != "":
-		return "codex"
-	default:
-		return "agent"
-	}
-}
-
-func agentDisplayName(agent string) string {
-	switch strings.ToLower(strings.TrimSpace(agent)) {
-	case "claude", "claude-code", "claude code":
-		return "Claude"
-	case "codex":
-		return "Codex"
-	case "cursor":
-		return "Cursor"
-	case "":
-		return "Agent"
-	default:
-		return strings.TrimSpace(agent)
-	}
-}
-
 func patchSnapshotFromStatusline(in slInput, session string) {
 	if session == "" {
 		return
@@ -597,22 +568,28 @@ func gitBranch(dir string) string {
 // readClaudeContext fills the panel's context gauge from the snapshot written
 // by Claude's statusline data feed. It leaves the view unchanged until Claude
 // has reported a context window.
-func readClaudeContext(session string, view *codexStatusView) {
-	snap := readSnapshot(session)
+func readClaudeContext(session string, view *sessionView) {
+	view.mergeUpdate(decodeSnapshot(readSnapshot(session)))
+}
+
+// decodeSnapshot maps an already-read session snapshot to instruments. It
+// performs no filesystem access; the shell supplies the snapshot.
+func decodeSnapshot(snap cullySnapshot) InstrumentUpdate {
+	upd := InstrumentUpdate{Source: sourceSnapshot}
 	if snap.Model != "" {
-		view.Model = snap.Model
+		upd.Model = &snap.Model
 	}
 	if snap.CtxSize <= 0 {
-		return
+		return upd
 	}
-	view.ContextKnown = true
-	view.ContextLeft = min(100, max(0, 100-snap.ContextUsedPct))
-	view.Input, view.Output = fmtTokens(snap.CtxTokens), fmtTokens(snap.TokensOut)
-	view.FiveHour = fmt.Sprintf("%d%% used", snap.Rate5hPct)
-	view.Weekly = fmt.Sprintf("%d%% used", snap.Rate7dPct)
+	left := min(100, max(0, 100-snap.ContextUsedPct))
+	in, out := fmtTokens(snap.CtxTokens), fmtTokens(snap.TokensOut)
+	five, weekly := fmt.Sprintf("%d%% used", snap.Rate5hPct), fmt.Sprintf("%d%% used", snap.Rate7dPct)
+	upd.ContextLeft, upd.Input, upd.Output, upd.FiveHour, upd.Weekly = &left, &in, &out, &five, &weekly
 	if snap.LinesAdded > 0 || snap.LinesRemoved > 0 {
-		view.LinesAdded, view.LinesRemoved = snap.LinesAdded, snap.LinesRemoved
+		upd.LinesAdded, upd.LinesRemoved = &snap.LinesAdded, &snap.LinesRemoved
 	}
+	return upd
 }
 
 // sessionContextUsed returns the percent of the context window a terminal
@@ -624,7 +601,7 @@ func sessionContextUsed(session string) int {
 	if snap := readSnapshot(session); snap.CtxSize > 0 {
 		return min(100, max(0, snap.ContextUsedPct))
 	}
-	if path := codexSessionStateFile(session); path != "" {
+	if path := sessionStateFile(session); path != "" {
 		if state := readCodexSessionState(path); state.ContextKnown {
 			return min(100, max(0, 100-state.ContextLeft))
 		}

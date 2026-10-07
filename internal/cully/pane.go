@@ -53,19 +53,19 @@ func RunPane(agentName string, args []string, input, output *os.File) error {
 	defer cancelReviews()
 
 	session := uuid.NewString()
-	if err := registerCodexPane(session, currentDir()); err != nil {
+	if err := registerPane(session, currentDir()); err != nil {
 		return fmt.Errorf("register Codex advisor pane: %w", err)
 	}
-	defer os.Remove(codexPaneRegistrationFile(session)) //nolint:errcheck
-	defer os.Remove(codexPaneBindingFile(session))      //nolint:errcheck
-	defer os.Remove(codexSignalFile(session))           //nolint:errcheck
-	defer os.Remove(sessionReportFile(session))         //nolint:errcheck
-	defer os.Remove(sessionSnapshotFile(session))       //nolint:errcheck
-	defer os.Remove(sessionSignalsFile(session))        //nolint:errcheck
-	defer os.Remove(sessionSeenFile(session))           //nolint:errcheck
+	defer os.Remove(paneRegistrationFile(session)) //nolint:errcheck
+	defer os.Remove(paneBindingFile(session))      //nolint:errcheck
+	defer os.Remove(signalFile(session))           //nolint:errcheck
+	defer os.Remove(sessionReportFile(session))    //nolint:errcheck
+	defer os.Remove(sessionSnapshotFile(session))  //nolint:errcheck
+	defer os.Remove(sessionSignalsFile(session))   //nolint:errcheck
+	defer os.Remove(sessionSeenFile(session))      //nolint:errcheck
 	defer clearCodexCullyStats(session)
 	if id := agent.resumeID(args); id != "" {
-		bindCodexPane(currentDir(), id)
+		bindPane(currentDir(), id)
 	}
 	if _, err := exec.LookPath(agent.Binary); err != nil {
 		return fmt.Errorf("%s is not installed or not on PATH", agent.Binary)
@@ -75,7 +75,7 @@ func RunPane(agentName string, args []string, input, output *os.File) error {
 	defer pruneJournals()
 	cmd := exec.Command(agent.Binary, agent.args(args)...)
 	cmd.Env = append(os.Environ(), "CULLY_PANE_SESSION="+session, "CULLY_SESSION="+session, "CULLY_AGENT="+agent.Name)
-	view := codexStatusView{Agent: agent.Name, Project: currentDir(), Branch: gitBranch(currentDir()), Started: time.Now(), Daemon: isDaemonRunning()}
+	view := sessionView{Agent: agent.Name, Project: currentDir(), Branch: gitBranch(currentDir()), Started: time.Now(), Daemon: isDaemonRunning()}
 	view.Terminal = detectTerminalProfile()
 	restoredSession := false
 	lastSessionSave := time.Time{}
@@ -92,14 +92,14 @@ func RunPane(agentName string, args []string, input, output *os.File) error {
 		lastSessionSave = time.Now()
 	}
 	refreshSession()
-	readCodexGitChanges(&view)
-	stats := readCodexToolStats(session)
+	readGitChanges(&view)
+	stats := readToolStats(session)
 	view.Loops, _ = sessionLoops(currentDir(), session)
-	advice := codexCombinedAdvice(session, stats, view)
-	panelBudget := func() int { return rows - codexPaneTop(rows, rows) }
-	statusRows := func() []string { return codexCompactStatusRows(cols, panelBudget(), advice, stats, view) }
+	advice := combinedAdvice(session, stats, view)
+	panelBudget := func() int { return rows - paneTop(rows, rows) }
+	statusRows := func() []string { return compactSessionStatusRows(cols, panelBudget(), advice, stats, view) }
 	content := statusRows()
-	top := codexPaneTop(rows, len(content))
+	top := paneTop(rows, len(content))
 	child, err := pty.StartWithSize(cmd, &pty.Winsize{Rows: uint16(top), Cols: uint16(cols)})
 	if err != nil {
 		return fmt.Errorf("start %s: %w", agent.Name, err)
@@ -116,7 +116,9 @@ func RunPane(agentName string, args []string, input, output *os.File) error {
 	emulator := vt.NewEmulator(cols, top)
 	readFooter := func() {
 		if agent.NativeFooter {
-			readCodexFooter(emulator, &view)
+			rows, base := footerRows(emulator)
+			upd, _ := parseFooterRows(rows, base)
+			view.mergeUpdate(upd)
 		}
 	}
 	repliesDone := make(chan struct{})
@@ -194,9 +196,9 @@ func RunPane(agentName string, args []string, input, output *os.File) error {
 	lastBeat := time.Now()
 	lastAnalysis := time.Time{}
 	lastAnalysisTools := 0
-	var panelInput codexPanelInput
+	var keyFeed panelInput
 	lastInput := time.Now()
-	var drawer codexAdvisorDrawer
+	var drawer advisorDrawer
 	var cancelPreview context.CancelFunc
 	defer func() {
 		if cancelPreview != nil {
@@ -213,7 +215,7 @@ func RunPane(agentName string, args []string, input, output *os.File) error {
 		if drawer.Open {
 			return drawer.render(cols, rows, stats, view)
 		}
-		return renderCodexPane(emulator, cols, rows, content, agent.NativeFooter, paneHUD(cols, stats, view, time.Now()))
+		return renderTerminalPane(emulator, cols, rows, content, agent.NativeFooter, paneHUD(cols, stats, view, time.Now()))
 	}
 	preview := func() {
 		if drawer.Busy || drawer.Details || len(drawer.Items) == 0 {
@@ -243,7 +245,7 @@ func RunPane(agentName string, args []string, input, output *os.File) error {
 		}
 		// Routine workflow actions belong in the coding session. Configuration
 		// advice can produce a small local-file preview using this agent's adapter.
-		_, category := codexAdviceBadge(line)
+		_, category := adviceBadge(line)
 		if category != "Apply" {
 			review := advisorHandoff(line)
 			drawer.Review = &review
@@ -269,7 +271,7 @@ func RunPane(agentName string, args []string, input, output *os.File) error {
 			}
 		}()
 	}
-	handleKeys := func(keys []codexPanelKey) {
+	handleKeys := func(keys []panelKey) {
 		for _, key := range keys {
 			if key.Action == "focus" {
 				if drawer.Open {
@@ -351,9 +353,9 @@ func RunPane(agentName string, args []string, input, output *os.File) error {
 		refreshSession()
 		readFooter()
 		persistSession()
-		stats = readCodexToolStats(session)
+		stats = readToolStats(session)
 		view.Loops, _ = sessionLoops(currentDir(), session)
-		advice = codexCombinedAdvice(session, stats, view)
+		advice = combinedAdvice(session, stats, view)
 		content = statusRows()
 		_, _ = io.WriteString(output, paint())
 	}
@@ -372,7 +374,7 @@ func RunPane(agentName string, args []string, input, output *os.File) error {
 		case chunk, ok := <-inputChunks:
 			if !ok {
 				inputChunks = nil
-				handleKeys(panelInput.feed(nil, true))
+				handleKeys(keyFeed.feed(nil, true))
 				_ = syscall.Kill(-cmd.Process.Pid, syscall.SIGTERM)
 				if shutdown == nil {
 					shutdown = time.After(2 * time.Second)
@@ -380,7 +382,7 @@ func RunPane(agentName string, args []string, input, output *os.File) error {
 				continue
 			}
 			lastInput = time.Now()
-			handleKeys(panelInput.feed(chunk, false))
+			handleKeys(keyFeed.feed(chunk, false))
 		case <-waitDone:
 			// Preserve any output already delivered before the child exited.
 			for {
@@ -400,9 +402,9 @@ func RunPane(agentName string, args []string, input, output *os.File) error {
 			if !ok {
 				if dirty {
 					readFooter()
-					stats = readCodexToolStats(session)
+					stats = readToolStats(session)
 					view.Loops, _ = sessionLoops(currentDir(), session)
-					advice = codexCombinedAdvice(session, stats, view)
+					advice = combinedAdvice(session, stats, view)
 					content = statusRows()
 					_, _ = io.WriteString(output, paint())
 				}
@@ -415,7 +417,7 @@ func RunPane(agentName string, args []string, input, output *os.File) error {
 			if width, height, sizeErr := term.GetSize(int(output.Fd())); sizeErr == nil && width > 0 && height > 0 {
 				cols, rows = width, height
 				content = statusRows()
-				top = codexPaneTop(rows, len(content))
+				top = paneTop(rows, len(content))
 				emulator.Resize(cols, top)
 				_ = pty.Setsize(child, &pty.Winsize{Rows: uint16(top), Cols: uint16(cols)})
 				dirty = true
@@ -431,16 +433,16 @@ func RunPane(agentName string, args []string, input, output *os.File) error {
 		case <-ticker.C:
 			refreshSession()
 			if time.Since(lastInput) >= 80*time.Millisecond {
-				handleKeys(panelInput.feed(nil, true))
+				handleKeys(keyFeed.feed(nil, true))
 			}
 			if time.Since(lastBeat) >= 2*time.Second {
-				_ = os.Chtimes(codexPaneRegistrationFile(session), time.Now(), time.Now())
+				_ = os.Chtimes(paneRegistrationFile(session), time.Now(), time.Now())
 				view.Daemon = isDaemonRunning()
 				view.Branch = gitBranch(view.Project)
-				readCodexGitChanges(&view)
+				readGitChanges(&view)
 				lastBeat = time.Now()
 			}
-			stats = readCodexToolStats(session)
+			stats = readToolStats(session)
 			readFooter()
 			if agent.Name == "claude" {
 				readClaudeContext(session, &view)
@@ -456,11 +458,11 @@ func RunPane(agentName string, args []string, input, output *os.File) error {
 					snap.ContextUsedPct = 100 - view.ContextLeft
 				}
 				writeSnapshot(session, snap)
-				dispatchAdvisor(codexAdvisorSignals(stats, view), session, view.Project)
+				dispatchAdvisor(advisorSignals(stats, view), session, view.Project)
 				lastAnalysis, lastAnalysisTools = time.Now(), stats.Tools
 			}
 			view.Loops, _ = sessionLoops(currentDir(), session)
-			advice = codexCombinedAdvice(session, stats, view)
+			advice = combinedAdvice(session, stats, view)
 			joined := strings.Join(advice, "\n")
 			if joined != lastAdvice {
 				lastAdvice = joined
@@ -472,7 +474,7 @@ func RunPane(agentName string, args []string, input, output *os.File) error {
 			}
 			// Expand for new content, but do not keep reflowing Codex when
 			// temporary advice clears. A physical resize recalculates both areas.
-			if nextTop := codexPaneTop(rows, len(content)); nextTop < top {
+			if nextTop := paneTop(rows, len(content)); nextTop < top {
 				top = nextTop
 				emulator.Resize(cols, top)
 				_ = pty.Setsize(child, &pty.Winsize{Rows: uint16(top), Cols: uint16(cols)})
@@ -496,14 +498,15 @@ func currentDir() string {
 	return cwd
 }
 
-func renderCodexPane(emulator *vt.Emulator, cols, rows int, content []string, nativeFooter bool, hud string) string {
+func renderTerminalPane(emulator *vt.Emulator, cols, rows int, content []string, nativeFooter bool, hud string) string {
 	var out strings.Builder
 	limit := max(0, cols-1) // avoid triggering automatic terminal wrap
 	top := min(emulator.Height(), rows)
-	var native codexStatusView
 	footerRow := -1
 	if nativeFooter {
-		footerRow = readCodexFooter(emulator, &native)
+		rows, base := footerRows(emulator)
+		_, match := parseFooterRows(rows, base)
+		footerRow = match.Row
 	}
 	out.WriteString("\x1b[?25l")
 	for y := 0; y < top; y++ {
@@ -520,7 +523,7 @@ func renderCodexPane(emulator *vt.Emulator, cols, rows int, content []string, na
 		out.WriteString(line.Render())
 	}
 	if top < rows {
-		panel := codexPanelLines(cols, rows-top, content, hud)
+		panel := panelLines(cols, rows-top, content, hud)
 		for i, line := range panel {
 			fmt.Fprintf(&out, "\x1b[%d;1H\x1b[0m\x1b[2K%s\x1b[0m", top+i+1, line)
 		}

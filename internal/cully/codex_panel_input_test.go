@@ -8,7 +8,7 @@ import (
 )
 
 func TestPanelInputSplitControlsAndEscape(t *testing.T) {
-	var input codexPanelInput
+	var input panelInput
 	if got := input.feed([]byte("\x1b["), false); len(got) != 0 {
 		t.Fatal(got)
 	}
@@ -24,7 +24,7 @@ func TestPanelInputSplitControlsAndEscape(t *testing.T) {
 }
 
 func TestPanelInputPreservesPasteAndOtherBytes(t *testing.T) {
-	var input codexPanelInput
+	var input panelInput
 	text := []byte("hello\x1b[200~pasted\x1ba\x1b[A\x1d\x1b[17~\x1b[201~\x1b[Zé")
 	var forwarded []byte
 	for _, b := range text {
@@ -45,8 +45,8 @@ func TestPanelInputPreservesPasteAndOtherBytes(t *testing.T) {
 
 func TestPanelFocusWithoutMetaSetting(t *testing.T) {
 	for _, sequence := range []string{"\x1d", "\x1b[17~"} {
-		var input codexPanelInput
-		var actions []codexPanelKey
+		var input panelInput
+		var actions []panelKey
 		for _, b := range []byte("typing" + sequence + "after") {
 			actions = append(actions, input.feed([]byte{b}, false)...)
 		}
@@ -66,8 +66,8 @@ func TestPanelFocusWithoutMetaSetting(t *testing.T) {
 }
 
 func TestPanelInputMouseEnterAndPaste(t *testing.T) {
-	var input codexPanelInput
-	var got []codexPanelKey
+	var input panelInput
+	var got []panelKey
 	for _, b := range []byte("\x1b[<0;22;18M\r\t") {
 		got = append(got, input.feed([]byte{b}, false)...)
 	}

@@ -19,21 +19,6 @@ const timelineRecent = 10
 
 const emptyTimeline = "No session recorded for this project yet. Run your agent with `cully run AGENT`."
 
-// journalAgentName maps a journal agent id to a friendly name.
-func journalAgentName(agent string) string {
-	switch agent {
-	case "claude":
-		return "Claude Code"
-	case "codex":
-		return "Codex"
-	case "cursor", "cursor-agent":
-		return "Cursor"
-	case "":
-		return "The agent"
-	}
-	return agent
-}
-
 // timelineGroup is a run of consecutive events that read as one line.
 type timelineGroup struct {
 	Time  time.Time

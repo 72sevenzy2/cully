@@ -13,7 +13,7 @@ import (
 // Read only Git's aggregate diff statistics. These are tracked working-tree
 // changes against HEAD, not Claude's per-session edit totals. No diff contents
 // or filenames are retained in the status view.
-func readCodexGitChanges(view *codexStatusView) {
+func readGitChanges(view *sessionView) {
 	view.ChangesKnown = false
 	view.LinesAdded, view.LinesRemoved, view.ChangedFiles = 0, 0, 0
 	ctx, cancel := context.WithTimeout(context.Background(), 500*time.Millisecond)

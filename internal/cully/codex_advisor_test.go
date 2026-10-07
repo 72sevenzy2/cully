@@ -15,7 +15,7 @@ func TestCodexAdviceContextPressure(t *testing.T) {
 	}{
 		{0, "WARN|"}, {10, "WARN|"}, {11, "CAUT|"}, {25, "CAUT|"}, {26, "MEMO|"},
 	} {
-		got := codexAdviceWithStatus(codexToolStats{Tools: 1}, codexStatusView{ContextKnown: true, ContextLeft: tc.left})
+		got := statsAdviceWithStatus(toolStats{Tools: 1}, sessionView{ContextKnown: true, ContextLeft: tc.left})
 		if len(got) != 1 || !strings.HasPrefix(got[0], tc.prefix) {
 			t.Fatalf("context %d%% produced %v", tc.left, got)
 		}
@@ -29,7 +29,7 @@ func TestCodexCombinedAdviceKeepsWarningsAndDeepFindings(t *testing.T) {
 		t.Fatal(err)
 	}
 	writeSnapshot(session, cullySnapshot{AdvisorOK: true, AdvisorAgent: "codex", AdvisorAt: time.Now().UTC().Format(time.RFC3339), AdvisorMemory: "checked", AdvisorResearch: "skipped"})
-	got := codexCombinedAdvice(session, codexToolStats{Tools: 5, EditsSinceCheck: 2}, codexStatusView{ContextKnown: true, ContextLeft: 8})
+	got := combinedAdvice(session, toolStats{Tools: 5, EditsSinceCheck: 2}, sessionView{ContextKnown: true, ContextLeft: 8})
 	joined := strings.Join(got, "\n")
 	for _, want := range []string{"nearly full", "focused check", "Audit a relevant integration", "memory checked"} {
 		if !strings.Contains(joined, want) {
@@ -42,22 +42,22 @@ func TestCodexCombinedAdviceKeepsWarningsAndDeepFindings(t *testing.T) {
 }
 
 func TestCodexAdvicePreservesWorkflowWarnings(t *testing.T) {
-	got := codexAdviceWithStatus(codexToolStats{Tools: 20, Errors: 3, Searches: 11, EditsSinceCheck: 2}, codexStatusView{ContextKnown: true, ContextLeft: 8})
+	got := statsAdviceWithStatus(toolStats{Tools: 20, Errors: 3, Searches: 11, EditsSinceCheck: 2}, sessionView{ContextKnown: true, ContextLeft: 8})
 	if len(got) != 4 || !strings.HasPrefix(got[0], "WARN|") || !strings.Contains(got[1], "failed") || !strings.Contains(got[2], "searches") || !strings.Contains(got[3], "check") {
 		t.Fatalf("missing source-specific warnings: %v", got)
 	}
 }
 
 func TestCodexAdviceReportsUnavailableSignals(t *testing.T) {
-	got := codexAdviceWithStatus(codexToolStats{}, codexStatusView{ContextKnown: true, ContextLeft: 80})
+	got := statsAdviceWithStatus(toolStats{}, sessionView{ContextKnown: true, ContextLeft: 80})
 	if len(got) != 1 || !strings.Contains(got[0], "Awaiting Codex tool signals") || strings.Contains(got[0], "steady") {
 		t.Fatalf("no events must not imply healthy workflow: %v", got)
 	}
-	got = codexAdviceWithStatus(codexToolStats{Tools: 1}, codexStatusView{})
+	got = statsAdviceWithStatus(toolStats{Tools: 1}, sessionView{})
 	if len(got) != 1 || !strings.Contains(got[0], "Context pressure is unavailable") {
 		t.Fatalf("missing context should be explicit: %v", got)
 	}
-	got = codexAdviceWithStatus(codexToolStats{}, codexStatusView{ContextKnown: true, ContextLeft: 8})
+	got = statsAdviceWithStatus(toolStats{}, sessionView{ContextKnown: true, ContextLeft: 8})
 	if len(got) != 2 || !strings.HasPrefix(got[0], "WARN|") || !strings.Contains(got[1], "Awaiting") {
 		t.Fatalf("known pressure must survive missing workflow signals: %v", got)
 	}

@@ -364,7 +364,7 @@ func TestWriteReplayHTMLFile(t *testing.T) {
 
 func TestRunReplayHTMLDefaultsAndPrintsPath(t *testing.T) {
 	cwd := journalTestEnv(t)
-	recordJournalTool("claude", "sess/1", toolEvent(cwd, "Edit", map[string]string{"file_path": "a.go"}), 'E', false)
+	recordJournalTool("claude", "sess/1", makeToolEvent(cwd, "Edit", map[string]string{"file_path": "a.go"}), 'E', false)
 	work := t.TempDir()
 	old, _ := os.Getwd()
 	if err := os.Chdir(work); err != nil {

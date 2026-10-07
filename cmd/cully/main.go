@@ -241,7 +241,7 @@ func runInternal(args []string) error {
 		}
 		cully.RunContinuityHook(args[1], args[2], os.Stdin, os.Stdout)
 	case "codex-signal":
-		cully.RunCodexSignalHook(os.Stdin)
+		cully.RunSignalHook(os.Stdin)
 	case "pane-signal":
 		if len(args) != 2 {
 			return fmt.Errorf("internal pane-signal requires an agent")
