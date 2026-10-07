@@ -100,7 +100,7 @@ Every agent runs in the same wrapper with the same health bar and advisor panel.
 
 ## What stays private
 
-The journal keeps coarse facts: time, agent, kind of tool, pass or fail, project-relative file paths with the operation, and the program and subcommand of a command. It never keeps prompts, file contents, command arguments or tool output. See [privacy](/privacy).
+The journal keeps coarse facts: time, agent, kind of tool, pass or fail, project-relative file paths with the operation, and the program and recognized subcommand of a command. It never keeps prompts, file contents, command arguments or tool output. See [privacy](/privacy).
 
 ## Read next
 

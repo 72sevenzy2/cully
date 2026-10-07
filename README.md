@@ -96,7 +96,7 @@ See the [architecture](https://docs.cully.net/architecture) and [how Cully works
 
 ## Privacy
 
-Your conversations are not Cully's database. The local session journal keeps the time, agent, kind of tool, pass or fail, project-relative file paths with the operation, and the program and subcommand of a command. It never keeps prompts, file contents, command arguments or tool output. Set `CULLY_JOURNAL_PATHS=0` to stop recording paths and commands. See [privacy](https://docs.cully.net/privacy).
+Your conversations are not Cully's database. The local session journal keeps the time, agent, kind of tool, pass or fail, project-relative file paths with the operation, and the program and recognized subcommand of a command. It never keeps prompts, file contents, command arguments or tool output. Set `CULLY_JOURNAL_PATHS=0` to stop recording paths and commands. See [privacy](https://docs.cully.net/privacy).
 
 ## Documentation
 

@@ -31,8 +31,8 @@ import (
 //	      contribute paths.
 //	To    the project-relative destination of a move, under the same rules.
 //	Op    one of read, write, edit, create, delete, move.
-//	Cmd   only the program and, for a known tool such as git or go, its first
-//	      subcommand (for example "go test", "git commit"), and only when it
+//	Cmd   only the program and, for a known tool such as git or go, a
+//	      recognized subcommand (for example "go test", "git commit"), when it
 //	      matches ^[A-Za-z0-9._/-]+( [A-Za-z0-9._-]+)?$.
 //
 // Setting CULLY_JOURNAL_PATHS=0 turns off Path, To, Op and Cmd recording; the

@@ -27,7 +27,7 @@ One journal file per session, in your Cully directory, readable only by you. Eac
 | Kind | edit, check, search, other tool, Cully memory call, note, start, end |
 | Result | passed or failed |
 | File path and operation | `internal/auth/resource.go`, edited (project-relative; read, write, edit, create, delete or move) |
-| Command | `go test` (program and subcommand only) |
+| Command | `go test` (program and recognized subcommand only) |
 | Command hash | a one-way hash, so the same failing command is recognized without keeping it |
 
 It never holds prompts, file contents, command arguments or tool output. It is bounded in size, pruned after 30 days, and path and command recording can be turned off. See [privacy](/privacy) for the full guarantee.
@@ -100,7 +100,7 @@ Replay is a step list of what the agent did, plus the files those steps touched 
 10:47  Ran      go test  ✓ passed
 ```
 
-File paths come from structured file tools (read, write, edit, delete, apply_patch). A shell command shows up as its program and subcommand, such as `go test`, and does not invent a file list from the command text.
+File paths come from structured file tools (read, write, edit, delete, apply_patch). A shell command shows up as its program and recognized subcommand, such as `go test`, and does not invent a file list from the command text.
 
 In a terminal, replay is a step player beside the file list:
 

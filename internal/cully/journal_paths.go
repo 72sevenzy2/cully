@@ -236,6 +236,32 @@ var subcommandPrograms = map[string]bool{
 	"mvn": true, "gradle": true, "poetry": true, "brew": true,
 }
 
+// Only fixed CLI verbs may enter a command label. A first positional argument
+// can be a make target, script name, resource, or secret, even when it looks
+// like a subcommand. Programs without a bounded verb vocabulary keep only
+// their program name.
+var journalSubcommands = map[string]map[string]bool{
+	"git":       {"add": true, "branch": true, "checkout": true, "clean": true, "clone": true, "commit": true, "diff": true, "fetch": true, "init": true, "log": true, "merge": true, "mv": true, "pull": true, "push": true, "rebase": true, "remote": true, "reset": true, "restore": true, "rm": true, "show": true, "stash": true, "status": true, "switch": true, "tag": true, "worktree": true},
+	"go":        {"build": true, "clean": true, "doc": true, "env": true, "fmt": true, "generate": true, "get": true, "install": true, "list": true, "mod": true, "run": true, "test": true, "tool": true, "vet": true, "version": true, "work": true},
+	"npm":       {"audit": true, "ci": true, "exec": true, "install": true, "publish": true, "run": true, "test": true, "uninstall": true, "update": true},
+	"pnpm":      {"add": true, "audit": true, "build": true, "exec": true, "install": true, "publish": true, "remove": true, "run": true, "test": true, "update": true},
+	"yarn":      {"add": true, "build": true, "install": true, "remove": true, "run": true, "test": true, "up": true},
+	"cargo":     {"add": true, "build": true, "check": true, "clean": true, "clippy": true, "doc": true, "fmt": true, "install": true, "publish": true, "run": true, "test": true, "update": true},
+	"docker":    {"build": true, "compose": true, "exec": true, "images": true, "inspect": true, "logs": true, "pull": true, "push": true, "run": true, "stop": true},
+	"kubectl":   {"apply": true, "create": true, "delete": true, "describe": true, "exec": true, "get": true, "logs": true, "rollout": true, "scale": true},
+	"pip":       {"check": true, "download": true, "freeze": true, "install": true, "list": true, "show": true, "uninstall": true},
+	"pip3":      {"check": true, "download": true, "freeze": true, "install": true, "list": true, "show": true, "uninstall": true},
+	"uv":        {"add": true, "build": true, "lock": true, "pip": true, "publish": true, "remove": true, "run": true, "sync": true, "tool": true},
+	"bun":       {"add": true, "build": true, "install": true, "remove": true, "run": true, "test": true},
+	"deno":      {"add": true, "check": true, "compile": true, "fmt": true, "lint": true, "run": true, "task": true, "test": true},
+	"helm":      {"dependency": true, "install": true, "lint": true, "list": true, "package": true, "rollback": true, "template": true, "test": true, "uninstall": true, "upgrade": true},
+	"gh":        {"api": true, "auth": true, "issue": true, "pr": true, "release": true, "repo": true, "run": true, "workflow": true},
+	"terraform": {"apply": true, "destroy": true, "fmt": true, "init": true, "output": true, "plan": true, "show": true, "validate": true},
+	"dotnet":    {"add": true, "build": true, "clean": true, "new": true, "publish": true, "restore": true, "run": true, "test": true},
+	"poetry":    {"add": true, "build": true, "check": true, "install": true, "lock": true, "publish": true, "remove": true, "run": true, "update": true},
+	"brew":      {"doctor": true, "install": true, "list": true, "outdated": true, "uninstall": true, "update": true, "upgrade": true},
+}
+
 var skippedPrefixes = map[string]bool{"sudo": true, "time": true, "nohup": true, "command": true, "env": true, "exec": true}
 
 // noiseCommands are shell setup, not the work the label should name.
@@ -249,9 +275,9 @@ func commandLabel(prog string, args []string) string {
 		return ""
 	}
 	label := prog
-	if subcommandPrograms[prog] && len(args) > 0 {
+	if len(args) > 0 {
 		sub := args[0]
-		if !strings.HasPrefix(sub, "-") && subcmdPattern.MatchString(sub) {
+		if journalSubcommands[prog][sub] && subcmdPattern.MatchString(sub) {
 			label += " " + sub
 		}
 	}

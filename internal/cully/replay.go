@@ -384,7 +384,7 @@ func readGitStatus(cwd string) ([]gitEntry, bool) {
 	if err != nil {
 		return nil, false
 	}
-	out, err := run("status", "--porcelain", "-z")
+	out, err := run("status", "--porcelain", "-z", "--untracked-files=all")
 	if err != nil {
 		return nil, false
 	}
@@ -446,22 +446,10 @@ func reconcileWithGit(sum fileSummary, read gitReader, cwd string, exists func(s
 	if !sum.Recorded {
 		return res
 	}
-	covered := func(p string) bool {
-		if p == "" {
-			return false
-		}
-		if sum.touched[p] {
-			return true
-		}
-		for t := range sum.touched {
-			if strings.HasPrefix(t, strings.TrimSuffix(p, "/")+"/") {
-				return true
-			}
-		}
-		return false
-	}
 	for _, e := range entries {
-		if covered(e.Path) || covered(e.Orig) {
+		// A recorded child does not cover an entire untracked directory, and
+		// editing the old side of a rename does not cover its new path.
+		if sum.touched[e.Path] {
 			continue
 		}
 		res.Unseen = append(res.Unseen, e.Path)

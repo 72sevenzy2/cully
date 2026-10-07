@@ -1,6 +1,6 @@
 ---
 title: Use cases
-description: What teams use Cully for: a flight recorder for agent sessions, audit-grade review of AI-assisted work, and playbooks new engineers can replay.
+description: "What teams use Cully for: a flight recorder for agent sessions, audit-grade review of AI-assisted work, and playbooks new engineers can replay."
 ---
 
 # Use cases

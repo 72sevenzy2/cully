@@ -115,6 +115,8 @@ func TestCodexSignalClassifiesShellToolsWithoutGuessingNestedCalls(t *testing.T)
 		{"functions.exec_command", `{"cmd":"go test ./internal/cully"}`, 'T'},
 		{"exec_command", `{"cmd":"rg -n Context internal/cully"}`, 'S'},
 		{"functions.apply_patch", `{}`, 'E'},
+		{"functions.create_file", `{"file_path":"new.go"}`, 'E'},
+		{"NotebookEdit", `{"notebook_path":"analysis.ipynb"}`, 'E'},
 		{"Bash", `{"command":"go vet ./..."}`, 'T'},
 		{"shell", `{"command":["go","test","./..."]}`, 'T'},
 		{"Read", `{"file_path":"a.go"}`, 'S'},

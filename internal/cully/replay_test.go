@@ -111,7 +111,7 @@ func TestReconcileBothDirections(t *testing.T) {
 	if !r.Available || !r.Comparable {
 		t.Fatalf("result = %+v", r)
 	}
-	if !reflect.DeepEqual(r.Unseen, []string{"newdir/", "readonly.go", "sneaky.go"}) {
+	if !reflect.DeepEqual(r.Unseen, []string{"newdir/", "pkg/", "readonly.go", "renamed.go", "sneaky.go"}) {
 		t.Errorf("unseen = %v", r.Unseen)
 	}
 	if !reflect.DeepEqual(r.DeletedStillExist, []string{"gone.go"}) {
@@ -148,6 +148,20 @@ func TestReadGitStatusInRealRepo(t *testing.T) {
 	entries, ok := readGitStatus(filepath.Join(dir, "sub"))
 	if !ok || len(entries) != 1 || entries[0].Path != "x.go" {
 		t.Fatalf("entries from subdirectory = %+v %v", entries, ok)
+	}
+	for _, name := range []string{"agent.go", "outside.go"} {
+		if err := os.WriteFile(filepath.Join(dir, "sub", name), []byte("x"), 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	entries, ok = readGitStatus(filepath.Join(dir, "sub"))
+	if !ok {
+		t.Fatal("git status unavailable")
+	}
+	sum := summarizeFiles([]journalEvent{{Class: journalEdit, Op: opCreate, Path: "agent.go"}})
+	reconciled := reconcileWithGit(sum, func(string) ([]gitEntry, bool) { return entries, true }, filepath.Join(dir, "sub"), nil)
+	if !reflect.DeepEqual(reconciled.Unseen, []string{"outside.go", "x.go"}) {
+		t.Fatalf("unrecorded files hidden by directory status: %+v", reconciled)
 	}
 	if _, ok := readGitStatus(t.TempDir()); ok {
 		t.Error("non-repo must be unavailable")

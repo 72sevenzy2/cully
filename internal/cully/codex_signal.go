@@ -206,7 +206,7 @@ func codexToolClass(event codexToolEvent) byte {
 	// Tool names can include transport namespaces. Recognize the actual tool
 	// rather than guessing commands embedded in orchestration source text.
 	name := toolBaseName(event.ToolName)
-	if name == "apply_patch" || name == "edit" || name == "write" || name == "delete" || name == "str_replace" || name == "strreplace" || name == "multiedit" {
+	if name == "apply_patch" || name == "edit" || name == "write" || name == "create_file" || name == "notebookedit" || name == "delete" || name == "str_replace" || name == "strreplace" || name == "multiedit" {
 		return 'E'
 	}
 	if name == "bash" || name == "exec_command" || name == "shell" {
