@@ -28,6 +28,10 @@ Usage:
   cully suggestions                       Review suggested improvements
   cully run AGENT [ARGS...]               Run any coding agent in the Cully terminal
   cully claude|codex|cursor [ARGS...]     Shortcuts for cully run claude, codex and cursor-agent
+  cully timeline [--all] [--session ID] [--cwd DIR]
+                                         Show what happened in a coding session
+  cully handoff [AGENT] [--print] [--cwd DIR]
+                                         Hand the session to another coding agent
   cully apply <n> [--dry-run] [--yes] [--cwd DIR]
   cully mcp add --url URL [--agent claude|codex|cursor] [--oauth]
   cully version
@@ -79,6 +83,10 @@ func run(args []string) error {
 		return cully.RunPane(args[1], args[2:], os.Stdin, os.Stdout)
 	case "claude", "codex", "cursor":
 		return cully.RunPane(args[0], args[1:], os.Stdin, os.Stdout)
+	case "timeline":
+		return cully.RunTimeline(os.Stdout, args[1:])
+	case "handoff":
+		return cully.RunHandoff(args[1:], os.Stdin, os.Stdout)
 	case "apply":
 		n, yes, dryRun, cwd, err := parseApply(args[1:])
 		if err != nil {
