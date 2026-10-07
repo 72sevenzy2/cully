@@ -32,13 +32,11 @@ The installer adds the selected directory to your zsh or Bash startup file when 
 
 Your team can host Cully MCP, the private Cully data API, Mem0 and their databases on remote infrastructure. These services can run on separate hosts. Your machine needs only the Cully CLI, your coding agent, and the local advisor, skill and hooks installed by setup. Give the installer the public Cully MCP URL:
 
-```sh
-curl -fsSL https://cully.net/install.sh | sh -s -- --mcp-url https://mcp.example.com/mcp
-```
+<InstallCommand template="curl -fsSL https://cully.net/install.sh | sh -s -- --agent {agent} --mcp-url https://mcp.example.com/mcp --oauth" />
 
 The installer downloads the latest released CLI and runs setup with that URL. Setup registers the remote MCP connection, installs the selected agent's Cully skill and hooks, and starts the local advisor daemon. It does not start a local Docker stack or install Mem0 on your machine. Your agent sends memory tool calls to the remote MCP server; the advisor reads local session signals.
 
-`--mcp-url` is the only required flag for this path. Setup detects installed coding agents; add `--agent codex`, `--agent claude` or `--agent cursor` to select one explicitly. Add `--oauth` only when the endpoint requires OAuth sign-in. If the CLI is already installed, run `cully setup --mcp-url URL` with the same optional flags. See [connect an agent](/agents) for sign-in and [team deployment](/team-deployment) for the remote services.
+`--mcp-url` selects the remote server. Keep `--oauth` for an OAuth-protected team endpoint, as shown above; omit it for a trusted private single-user endpoint. `--agent` selects the integration; if omitted, setup detects installed coding agents. If the CLI is already installed, run `cully setup --agent AGENT --mcp-url URL --oauth` for a team endpoint. See [connect an agent](/agents) for sign-in and the [connection map](/team-deployment#connect-the-components) for remote services.
 
 ## Build the CLI from source
 

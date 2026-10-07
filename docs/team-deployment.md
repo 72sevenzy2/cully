@@ -37,15 +37,19 @@ flowchart LR
 
 The [Docker Compose setup](/oauth#self-hosted-docker-with-mcp-auth) starts Cully, PostgreSQL, Mem0, MCP Auth and Caddy on one machine. It is the shortest deployment path.
 
-Cully release tags publish matching `ghcr.io/mcp-runtime/cully-mcp`, `ghcr.io/mcp-runtime/cully-data` and `ghcr.io/mcp-runtime/cully-mem0` images. Run them with Compose, Kubernetes or another suitable platform, together or on separate hosts. Configure private URLs between Cully MCP, the data API and Mem0, and provide persistent databases and service credentials. Use the [Compose file](https://github.com/mcp-runtime/cully/blob/main/deploy/self-hosted/compose.yaml) as a reference. Run the data image's `migrate` command before serving traffic. Give Mem0 its pgvector-enabled PostgreSQL database and persistent history volume. Keep both databases, Mem0 REST and the data API on private networks; expose only MCP through HTTPS.
+Cully releases provide the CLI and installer for users, plus matching `ghcr.io/mcp-runtime/cully-mcp`, `ghcr.io/mcp-runtime/cully-data` and `ghcr.io/mcp-runtime/cully-mem0` images for operators. Run the images with Compose, Kubernetes or another suitable platform, together or on separate hosts. The [Compose file](https://github.com/mcp-runtime/cully/blob/main/deploy/self-hosted/compose.yaml) is a reference, not a required layout. Run the data image's `migrate` command before serving traffic. Give Mem0 its pgvector-enabled PostgreSQL database and persistent history volume. Keep both databases, Mem0 REST and the data API on private networks; expose only MCP through HTTPS.
 
-| Service | Essential settings |
+### Connect the components
+
+| Connection | Configure |
 | --- | --- |
-| Cully MCP | `CULLY_DATA_API_URL`, private `CULLY_DATA_API_TOKEN`, `CULLY_MCP_AUTH_MODE=oauth`, exact `CULLY_AUTH_ISSUER`, `CULLY_AUTH_RESOURCE` and `CULLY_JWKS_URL`. |
-| Data API | `CULLY_DATABASE_URL`, the same `CULLY_DATA_API_TOKEN`, `CULLY_MEM0_URL` and `CULLY_MEM0_API_KEY`. |
-| Mem0 | Its pgvector/PostgreSQL settings, `ADMIN_API_KEY` matching the data API's Mem0 key, `JWT_SECRET` and persistent history volume. |
+| Agent → Cully MCP | Give each user the public HTTPS MCP URL with `--mcp-url`. For a team endpoint, set `CULLY_MCP_AUTH_MODE=oauth` and configure the exact public URL as `CULLY_AUTH_RESOURCE`, plus `CULLY_AUTH_ISSUER` and `CULLY_JWKS_URL`. |
+| Cully MCP → data API | Set `CULLY_DATA_API_URL` to the private data API base URL. Put the same `CULLY_DATA_API_TOKEN` on both services. |
+| Data API → source PostgreSQL | Set `CULLY_DATABASE_URL` to the private database connection URL and run the data image's `migrate` command. |
+| Data API → Mem0 | Set `CULLY_MEM0_URL` to the private Mem0 REST base URL. Set `CULLY_MEM0_API_KEY` to the same value as Mem0's `ADMIN_API_KEY`. |
+| Mem0 → pgvector PostgreSQL | Set Mem0's `POSTGRES_HOST`, `POSTGRES_PORT`, `POSTGRES_DB`, `POSTGRES_USER` and `POSTGRES_PASSWORD`. Give Mem0 a `JWT_SECRET`; persist its database and history volume. |
 
-The [configuration reference](/configuration) has the full variable list and credential boundaries. Agents receive only the public MCP URL and their own OAuth sign-in; service secrets stay with the deployment.
+These connections are the deployment requirement; choose the hosts, platform and private network that fit your environment. The [configuration reference](/configuration) has the full variable list and credential boundaries. Agents receive only the public MCP URL and their own OAuth sign-in; service secrets stay with the deployment.
 
 ### Quick path with Docker Compose
 
