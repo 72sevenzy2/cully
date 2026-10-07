@@ -116,6 +116,12 @@ func recordCodexSessionTool(session string, class, failure byte) {
 		switch class {
 		case 'S':
 			state.Stats.Searches++
+		case 'A':
+			state.Stats.Agents++
+		case 'W':
+			state.Stats.Web++
+		case 'G':
+			state.Stats.Commits++
 		case 'E':
 			state.Stats.Edits++
 			state.Stats.EditsSinceCheck++

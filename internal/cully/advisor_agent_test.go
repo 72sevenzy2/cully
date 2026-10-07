@@ -45,6 +45,41 @@ printf 'SOURCE|MEMORY|checked\nCAUT|🔍 Narrow repeated searches.\nTOOLGAP: bro
 	}
 }
 
+func TestWorkerDoesNotSuggestToolWithoutConfirmedResearch(t *testing.T) {
+	root := t.TempDir()
+	t.Setenv("CODEX_HOME", root)
+	t.Setenv("CLAUDE_CONFIG_DIR", root)
+	t.Setenv("PATH", root)
+	script := `#!/bin/sh
+for arg in "$@"; do
+  if [ "$arg" = 'web_search="live"' ]; then
+    printf 'SOURCE|RESEARCH|unavailable\n🔌 Audit an unverified tool — https://example.org/tool\n'
+    exit 0
+  fi
+done
+printf 'SOURCE|MEMORY|checked\nCAUT|🔍 Narrow repeated searches.\nTOOLGAP: browser checks || repeated manual checks || browser integration\n'
+`
+	if err := os.WriteFile(filepath.Join(root, "codex"), []byte(script), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	const session = "unavailable-research"
+	if err := registerCodexPane(session, root); err != nil {
+		t.Fatal(err)
+	}
+	path := sessionSignalsFile(session)
+	if err := os.WriteFile(path, []byte("agent=codex\nsearches=20\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	RunWorker(path, session, root)
+	if got := readSnapshot(session).AdvisorResearch; got != "unavailable" {
+		t.Fatalf("research state = %q", got)
+	}
+	lines := strings.Join(readSuggestions(session), "\n")
+	if !strings.Contains(lines, "Narrow repeated searches") || strings.Contains(lines, "unverified tool") {
+		t.Fatalf("unconfirmed tool suggestion shown: %s", lines)
+	}
+}
+
 func TestWorkerStartupFailureDoesNotBlameMemory(t *testing.T) {
 	root := t.TempDir()
 	t.Setenv("CLAUDE_CONFIG_DIR", root)

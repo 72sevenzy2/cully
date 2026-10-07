@@ -203,7 +203,12 @@ func patchSnapshotFromStatusline(in slInput, session string) {
 		snap.CtxSize = in.ContextWindow.ContextWindowSize
 		snap.CtxTokens = in.ContextWindow.TotalInputTokens
 		snap.CostUSD = in.Cost.TotalCostUSD
+		snap.TokensOut = in.ContextWindow.TotalOutputTokens
 	}
+	if in.Model.DisplayName != "" {
+		snap.Model = in.Model.DisplayName
+	}
+	snap.LinesAdded, snap.LinesRemoved = in.Cost.TotalLinesAdded, in.Cost.TotalLinesRemoved
 	fiveH := int(in.RateLimits.FiveHour.UsedPercentage)
 	if fiveH == 0 {
 		fiveH = st.FiveH
@@ -594,11 +599,20 @@ func gitBranch(dir string) string {
 // has reported a context window.
 func readClaudeContext(session string, view *codexStatusView) {
 	snap := readSnapshot(session)
+	if snap.Model != "" {
+		view.Model = snap.Model
+	}
 	if snap.CtxSize <= 0 {
 		return
 	}
 	view.ContextKnown = true
 	view.ContextLeft = min(100, max(0, 100-snap.ContextUsedPct))
+	view.Input, view.Output = fmtTokens(snap.CtxTokens), fmtTokens(snap.TokensOut)
+	view.FiveHour = fmt.Sprintf("%d%% used", snap.Rate5hPct)
+	view.Weekly = fmt.Sprintf("%d%% used", snap.Rate7dPct)
+	if snap.LinesAdded > 0 || snap.LinesRemoved > 0 {
+		view.LinesAdded, view.LinesRemoved = snap.LinesAdded, snap.LinesRemoved
+	}
 }
 
 // sessionContextUsed returns the percent of the context window a terminal

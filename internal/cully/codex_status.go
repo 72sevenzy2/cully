@@ -138,7 +138,7 @@ func codexStatusContent(cols int, advice []string, stats codexToolStats, view co
 	}
 	grid([]string{cyan + bold + "✦ Cully" + rst + "    " + formatPhaseBadge(phase)}, []string{dim + "⏱️ elapsed " + rst + elapsed})
 	rows = append(rows, "")
-	context := dim + "waiting for Codex footer" + rst
+	context := dim + waitingForAgent(view, true) + rst
 	if view.ContextKnown {
 		used := 100 - view.ContextLeft
 		context = pctColor(used) + gauge(used) + bold + fmt.Sprintf("  %d%% used  ·  %d%% left", used, view.ContextLeft) + rst
@@ -155,7 +155,7 @@ func codexStatusContent(cols int, advice []string, stats codexToolStats, view co
 	}
 	model := blue + bold + view.Model + rst
 	if view.Model == "" {
-		model = dim + "waiting for Codex footer" + rst
+		model = dim + waitingForAgent(view, true) + rst
 	}
 	grid(codexMetricRows("📁 Project", location, cellWidth), codexMetricRows("🤖 Model", model, cellWidth))
 	if view.Terminal.Program != "" || view.Terminal.Type != "" {
@@ -175,7 +175,9 @@ func codexStatusContent(cols int, advice []string, stats codexToolStats, view co
 		weekly = strings.TrimPrefix(weekly, prefix)
 	}
 	metric(&left, "Weekly", codexInstrument(weekly))
-	metric(&left, "Fast", codexInstrument(strings.TrimPrefix(view.Fast, "Fast ")))
+	if view.Agent == "" || view.Agent == "codex" {
+		metric(&left, "Fast", codexInstrument(strings.TrimPrefix(view.Fast, "Fast ")))
+	}
 	changes := codexInstrument("")
 	if view.ChangesKnown {
 		changes = green + fmt.Sprintf("+%d", view.LinesAdded) + rst + " / " + red + fmt.Sprintf("-%d", view.LinesRemoved) + rst + fmt.Sprintf("  ·  %d tracked files", view.ChangedFiles)
@@ -184,7 +186,7 @@ func codexStatusContent(cols int, advice []string, stats codexToolStats, view co
 	for _, counter := range []struct {
 		label string
 		value int
-	}{{"Tools", stats.Tools}, {"Searches", stats.Searches}, {"Edits", stats.Edits}, {"Checks", stats.Checks}, {"Errors", stats.Errors}} {
+	}{{"Tools", stats.Tools}, {"Searches", stats.Searches}, {"Edits", stats.Edits}, {"Checks", stats.Checks}, {"Commits", stats.Commits}, {"Subagents", stats.Agents}, {"Web", stats.Web}, {"Errors", stats.Errors}} {
 		value := fmt.Sprint(counter.value)
 		if counter.label == "Errors" && counter.value > 0 {
 			value = yellow + bold + value + rst
@@ -564,7 +566,7 @@ func codexCompactInstrumentRows(cols int, stats codexToolStats, view codexStatus
 	rows = append(rows, "")
 	model := blue + bold + view.Model + rst
 	if view.Model == "" {
-		model = dim + "waiting for Codex" + rst
+		model = dim + waitingForAgent(view, false) + rst
 	}
 	errors := fmt.Sprint(stats.Errors)
 	if stats.Errors > 0 {
@@ -574,7 +576,7 @@ func codexCompactInstrumentRows(cols int, stats codexToolStats, view codexStatus
 	if stats.EditsSinceCheck > 0 {
 		verification = yellow + fmt.Sprintf("%d edits need check", stats.EditsSinceCheck) + rst
 	}
-	activity := []string{bold + "Model & activity" + rst, "", "Model " + model, fmt.Sprintf("Tools %d · Searches %d", stats.Tools, stats.Searches), fmt.Sprintf("Edits %d · Checks %d · Errors %s", stats.Edits, stats.Checks, errors), "Verification " + verification}
+	activity := []string{bold + "Model & activity" + rst, "", "Model " + model, fmt.Sprintf("Tools %d · Searches %d · Subagents %d · Web %d", stats.Tools, stats.Searches, stats.Agents, stats.Web), fmt.Sprintf("Edits %d · Checks %d · Commits %d · Errors %s", stats.Edits, stats.Checks, stats.Commits, errors), "Verification " + verification}
 	loopRow := ""
 	if view.Loops.Active() {
 		loopRow = "Loops " + yellow + view.Loops.Summary() + rst
@@ -587,7 +589,7 @@ func codexCompactInstrumentRows(cols int, stats codexToolStats, view codexStatus
 	if view.Branch != "" {
 		location += " / " + magenta + view.Branch + rst
 	}
-	context := dim + "waiting for Codex footer" + rst
+	context := dim + waitingForAgent(view, true) + rst
 	if view.ContextKnown {
 		used := 100 - view.ContextLeft
 		context = pctColor(used) + gauge(used) + fmt.Sprintf(" %d%% used · %d%% left", used, view.ContextLeft) + rst
@@ -611,9 +613,16 @@ func codexCompactInstrumentRows(cols int, stats codexToolStats, view codexStatus
 	if view.ChangesKnown {
 		changes = green + fmt.Sprintf("+%d", view.LinesAdded) + rst + "/" + red + fmt.Sprintf("-%d", view.LinesRemoved) + rst + fmt.Sprintf(" (%d tracked)", view.ChangedFiles)
 	}
-	work := "Fast " + codexInstrument(strings.TrimPrefix(view.Fast, "Fast ")) + " · Git " + changes
-	if view.Fast == "" && !view.ChangesKnown {
-		work = dim + "Fast / Git unavailable" + rst
+	showFast := view.Agent == "" || view.Agent == "codex"
+	work := "Git " + changes
+	if showFast {
+		work = "Fast " + codexInstrument(strings.TrimPrefix(view.Fast, "Fast ")) + " · " + work
+	}
+	if !view.ChangesKnown && (!showFast || view.Fast == "") {
+		work = dim + "Git unavailable" + rst
+		if showFast {
+			work = dim + "Fast / Git unavailable" + rst
+		}
 	}
 	usage := []string{bold + "Project & usage" + rst, "", location, "Context " + context, tokens, quota, work}
 	cully := codexCullyInstrumentRows(stats, width)
@@ -646,7 +655,7 @@ func codexCompactInstrumentRows(cols int, stats codexToolStats, view codexStatus
 		// normal narrow terminal still leaves most rows to the conversation.
 		rows = rows[:len(rows)-1] // title and first group belong to one section
 		groups = [][]string{
-			{activity[0], "Model " + model, fmt.Sprintf("Tools %d · Searches %d · Edits %d · Checks %d · Errors %s", stats.Tools, stats.Searches, stats.Edits, stats.Checks, errors), "Verification " + verification, loopRow},
+			{activity[0], "Model " + model, fmt.Sprintf("Tools %d · Searches %d · Subagents %d · Web %d", stats.Tools, stats.Searches, stats.Agents, stats.Web), fmt.Sprintf("Edits %d · Checks %d · Commits %d · Errors %s", stats.Edits, stats.Checks, stats.Commits, errors), "Verification " + verification, loopRow},
 			{usage[0], location, "Context " + context, tokens + " · " + quota, work},
 			{cully[0], fmt.Sprintf("Calls %d observed", stats.Cully.Calls) + " · Auth " + codexObservedState(stats.Cully.Auth, true), fmt.Sprintf("Log %d · Context %d · Recall %d · Search %d · Get %d · Other %d", stats.Cully.Log, stats.Cully.Context, stats.Cully.Recall, stats.Cully.Search, stats.Cully.Get, stats.Cully.Other)},
 		}
@@ -698,7 +707,7 @@ func codexCullyToolRows(stats codexCullyStats, width int) []string {
 		counts = map[string]int{"cully_log": stats.Log, "cully_context": stats.Context, "cully_recall": stats.Recall, "cully_search": stats.Search, "cully_get": stats.Get, "earlier_other": stats.Other}
 	}
 	names := map[string]bool{}
-	for _, name := range []string{"cully_log", "cully_context", "cully_search", "cully_recall", "cully_get", "cully_update", "cully_delete", "cully_recent", "cully_projects"} {
+	for _, name := range []string{"cully_log", "cully_context", "cully_search", "cully_recall", "cully_get", "cully_update", "cully_delete", "cully_recent", "cully_projects", "cully_session", "cully_session_get"} {
 		names[name] = true
 	}
 	for name := range counts {
@@ -843,4 +852,18 @@ func codexPanelLines(cols, height int, content []string, hud string) []string {
 		lines[i] = ansi.Truncate(content[i-1], width, "…")
 	}
 	return lines
+}
+
+// waitingForAgent names the agent the panel is waiting on. Codex supplies a
+// terminal footer; other agents feed the panel through their statusline hook.
+func waitingForAgent(view codexStatusView, footer bool) string {
+	name := agentDisplayName(view.Agent)
+	if view.Agent == "" || view.Agent == "codex" {
+		name = "Codex"
+		if footer {
+			return "waiting for Codex footer"
+		}
+		return "waiting for Codex"
+	}
+	return "waiting for " + name
 }

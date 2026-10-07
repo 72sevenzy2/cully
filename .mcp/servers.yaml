@@ -76,4 +76,4 @@ servers:
         idleTimeout: 1h
         upstreamTokenHeader: Authorization
       gateway:
-        enabled: false
+        enabled: true

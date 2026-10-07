@@ -29,7 +29,7 @@ This page separates what ships today from what is planned. Cully's other pages d
 | [Loop detection](/session-intelligence#loop-detection) | Shipped | Rule based. Reports what repeated, never a cause. |
 | Verification state | Shipped | Whether a check passed since the last edit. |
 | [Session health](/session-intelligence#cully-status) and a rule-based risk label | Shipped | The label names its reason. It is not a score. |
-| Task and progress percentage | Planned | Cully does not record prompts, so it does not know the task. It shows the Git branch instead. |
+| Session task and progress | Partial | The task comes from `cully task` and the linked session record; a progress percentage is still planned because the journal has no measured source for it. |
 
 ## Remember
 

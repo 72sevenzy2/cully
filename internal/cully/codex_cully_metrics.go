@@ -44,6 +44,19 @@ func codexCullyTool(name string) string {
 // Health is the last observed response, not a background network probe. A
 // successful owner-scoped Cully tool establishes authentication at that time.
 func codexCullyResponseState(raw json.RawMessage) (health, auth string) {
+	// Claude Code reports an MCP result as a bare array of content blocks;
+	// Codex reports an object. Read both through the object shape.
+	if trimmed := strings.TrimSpace(string(raw)); strings.HasPrefix(trimmed, "[") {
+		raw = json.RawMessage(`{"content":` + trimmed + `}`)
+	} else if strings.HasPrefix(trimmed, `"`) {
+		// Some agents report the result as a string of tool text. Plain text
+		// can be an error message, so only a JSON payload counts as evidence.
+		var text string
+		if json.Unmarshal(raw, &text) == nil && json.Valid([]byte(text)) && strings.ContainsAny(strings.TrimSpace(text)[:1], "{[") {
+			block, _ := json.Marshal([]map[string]string{{"type": "text", "text": text}})
+			raw = json.RawMessage(`{"content":` + string(block) + `}`)
+		}
+	}
 	var response struct {
 		IsError      bool            `json:"isError"`
 		IsErrorSnake bool            `json:"is_error"`
