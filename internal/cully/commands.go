@@ -162,7 +162,13 @@ func RunStatus(w io.Writer, cwd string) {
 		events = evs
 	}
 	_, gitFiles := gitChangedFiles(cwd, 0)
-	fmt.Fprintln(w, renderSessionHealth(events, gitFiles, time.Now()))
+	healthSession, _, _ := latestJournal(cwd)
+	fmt.Fprintln(w, renderSessionHealth(events, healthInputs{
+		Branch:      gitBranch(cwd),
+		GitFiles:    gitFiles,
+		ContextUsed: sessionContextUsed(healthSession.Session),
+		Now:         time.Now(),
+	}))
 	writeIntegrations(w, cwd)
 	RunDaemonStatus(w)
 	fmt.Fprintln(w)

@@ -75,7 +75,7 @@ func RunPane(agentName string, args []string, input, output *os.File) error {
 	defer pruneJournals()
 	cmd := exec.Command(agent.Binary, agent.args(args)...)
 	cmd.Env = append(os.Environ(), "CULLY_PANE_SESSION="+session, "CULLY_SESSION="+session, "CULLY_AGENT="+agent.Name)
-	view := codexStatusView{Project: currentDir(), Branch: gitBranch(currentDir()), Started: time.Now(), Daemon: isDaemonRunning()}
+	view := codexStatusView{Agent: agent.Name, Project: currentDir(), Branch: gitBranch(currentDir()), Started: time.Now(), Daemon: isDaemonRunning()}
 	view.Terminal = detectTerminalProfile()
 	restoredSession := false
 	lastSessionSave := time.Time{}
@@ -213,7 +213,7 @@ func RunPane(agentName string, args []string, input, output *os.File) error {
 		if drawer.Open {
 			return drawer.render(cols, rows, stats, view)
 		}
-		return renderCodexPane(emulator, cols, rows, content, agent.NativeFooter)
+		return renderCodexPane(emulator, cols, rows, content, agent.NativeFooter, paneHUD(cols, stats, view, time.Now()))
 	}
 	preview := func() {
 		if drawer.Busy || drawer.Details || len(drawer.Items) == 0 {
@@ -496,7 +496,7 @@ func currentDir() string {
 	return cwd
 }
 
-func renderCodexPane(emulator *vt.Emulator, cols, rows int, content []string, nativeFooter bool) string {
+func renderCodexPane(emulator *vt.Emulator, cols, rows int, content []string, nativeFooter bool, hud string) string {
 	var out strings.Builder
 	limit := max(0, cols-1) // avoid triggering automatic terminal wrap
 	top := min(emulator.Height(), rows)
@@ -520,7 +520,7 @@ func renderCodexPane(emulator *vt.Emulator, cols, rows int, content []string, na
 		out.WriteString(line.Render())
 	}
 	if top < rows {
-		panel := codexPanelLines(cols, rows-top, content)
+		panel := codexPanelLines(cols, rows-top, content, hud)
 		for i, line := range panel {
 			fmt.Fprintf(&out, "\x1b[%d;1H\x1b[0m\x1b[2K%s\x1b[0m", top+i+1, line)
 		}

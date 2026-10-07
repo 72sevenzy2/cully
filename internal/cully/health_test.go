@@ -6,9 +6,13 @@ import (
 	"time"
 )
 
+func healthIn(files, ctx int) healthInputs {
+	return healthInputs{Branch: "main", GitFiles: files, ContextUsed: ctx, Now: rescueNow}
+}
+
 func TestRenderSessionHealthNoJournal(t *testing.T) {
-	got := renderSessionHealth(nil, 0, rescueNow)
-	if strings.Count(strings.TrimSpace(got), "\n") != 0 || !strings.Contains(got, "cully run AGENT") {
+	got := renderSessionHealth(nil, healthIn(0, -1))
+	if !strings.Contains(got, "cully run AGENT") || strings.Contains(got, "Risk") {
 		t.Fatalf("got %q", got)
 	}
 }
@@ -19,13 +23,24 @@ func TestRenderSessionHealthRunning(t *testing.T) {
 		{Time: rescueNow.Add(-80 * time.Minute), Class: journalEdit},
 		{Time: rescueNow.Add(-70 * time.Minute), Class: journalCheck, Failed: true, Sig: "a"},
 		{Time: rescueNow.Add(-60 * time.Minute), Class: journalSearch},
-		{Time: rescueNow.Add(-50 * time.Minute), Class: journalMemory},
+		{Time: rescueNow.Add(-50 * time.Minute), Class: journalMemory, Tool: "cully_context"},
+		{Time: rescueNow.Add(-45 * time.Minute), Class: journalMemory, Tool: "cully_log"},
 		{Time: rescueNow.Add(-40 * time.Minute), Class: journalNote, Note: noteLoop},
 	}
-	got := renderSessionHealth(events, 4, rescueNow)
-	for _, want := range []string{"codex", "1h30m (running)", "Tool calls     3", "Edits          1", "0 passed, 1 failed", "Verification   failed", "Loops detected 1", "4 files", "Memory saves   1"} {
+	got := renderSessionHealth(events, healthIn(4, 71))
+	for _, want := range []string{
+		"CULLY", "Agent          Codex", "Branch         main", "Session        1h30m (running)",
+		"Context        ███████░░░ 71%", "Tests          0 ✓  1 ✕", "Verification   failed",
+		"Loops          1 ⚠", "Uncommitted    4 files", "Memory         1 recall · 1 save",
+		"Risk           HIGH · the agent may be looping",
+	} {
 		if !strings.Contains(got, want) {
 			t.Fatalf("missing %q in\n%s", want, got)
+		}
+	}
+	for _, banned := range []string{"Progress", "Task"} {
+		if strings.Contains(got, banned) {
+			t.Fatalf("status must not show unmeasured %q:\n%s", banned, got)
 		}
 	}
 }
@@ -47,13 +62,48 @@ func TestSessionHealthVerification(t *testing.T) {
 	}
 }
 
-func TestRenderSessionHealthEndedHidesUnknownGit(t *testing.T) {
+func TestRenderSessionHealthEndedHidesUnknowns(t *testing.T) {
 	events := []journalEvent{
 		{Time: rescueNow.Add(-time.Hour), Class: journalStart},
 		{Time: rescueNow.Add(-30 * time.Minute), Class: journalEnd},
 	}
-	got := renderSessionHealth(events, -1, rescueNow)
-	if !strings.Contains(got, "30m (ended)") || strings.Contains(got, "Uncommitted") {
+	got := renderSessionHealth(events, healthInputs{GitFiles: -1, ContextUsed: -1, Now: rescueNow})
+	if !strings.Contains(got, "30m (ended)") || strings.Contains(got, "Uncommitted") ||
+		strings.Contains(got, "Context") || strings.Contains(got, "Branch") {
+		t.Fatalf("unknown values must be left out:\n%s", got)
+	}
+	if !strings.Contains(got, "Memory         none this session") {
 		t.Fatalf("got\n%s", got)
+	}
+}
+
+func TestHealthRiskRules(t *testing.T) {
+	cases := []struct {
+		name  string
+		h     sessionHealth
+		in    healthInputs
+		level string
+	}{
+		{"loop", sessionHealth{Loops: 1, Verification: "passed since last edit"}, healthIn(0, -1), "HIGH"},
+		{"failed check", sessionHealth{Verification: "failed"}, healthIn(0, -1), "HIGH"},
+		{"context full", sessionHealth{Verification: "no edits"}, healthIn(0, 92), "HIGH"},
+		{"unchecked edits", sessionHealth{Verification: "none since last edit"}, healthIn(0, -1), "MEDIUM"},
+		{"context filling", sessionHealth{Verification: "no edits"}, healthIn(0, 80), "MEDIUM"},
+		{"many files", sessionHealth{Verification: "no edits"}, healthIn(20, -1), "MEDIUM"},
+		{"clean", sessionHealth{Verification: "passed since last edit"}, healthIn(2, 30), "LOW"},
+	}
+	for _, c := range cases {
+		if level, reason := healthRisk(c.h, c.in); level != c.level || reason == "" {
+			t.Fatalf("%s: got %s %q, want %s", c.name, level, reason, c.level)
+		}
+	}
+}
+
+func TestHealthGauge(t *testing.T) {
+	if got := healthGauge(71); got != "███████░░░ 71%" {
+		t.Fatalf("gauge = %q", got)
+	}
+	if healthGauge(-5) != "░░░░░░░░░░ 0%" || healthGauge(140) != "██████████ 100%" {
+		t.Fatal("gauge must clamp")
 	}
 }

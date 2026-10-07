@@ -600,3 +600,20 @@ func readClaudeContext(session string, view *codexStatusView) {
 	view.ContextKnown = true
 	view.ContextLeft = min(100, max(0, 100-snap.ContextUsedPct))
 }
+
+// sessionContextUsed returns the percent of the context window a terminal
+// session has used, or -1 when the agent has not reported a window size.
+func sessionContextUsed(session string) int {
+	if session == "" {
+		return -1
+	}
+	if snap := readSnapshot(session); snap.CtxSize > 0 {
+		return min(100, max(0, snap.ContextUsedPct))
+	}
+	if path := codexSessionStateFile(session); path != "" {
+		if state := readCodexSessionState(path); state.ContextKnown {
+			return min(100, max(0, 100-state.ContextLeft))
+		}
+	}
+	return -1
+}

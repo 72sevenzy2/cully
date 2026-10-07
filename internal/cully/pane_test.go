@@ -21,7 +21,7 @@ func TestCodexPaneConfinesChildScreen(t *testing.T) {
 	defer emulator.Close()
 	_, _ = emulator.WriteString("\x1b[2J\x1b[1;1HCODEX\x1b[12;1Hlower edge")
 	content := codexStatusRows(60, []string{"ADV|Run a focused check."}, codexToolStats{Tools: 3}, codexStatusView{Project: "/work/cully"})
-	frame := renderCodexPane(emulator, 60, 24, content, true)
+	frame := renderCodexPane(emulator, 60, 24, content, true, "")
 	for _, want := range []string{"CODEX", "lower edge", "Cully", "Run a focused check.", "\x1b[13;1H"} {
 		if !strings.Contains(frame, want) {
 			t.Fatalf("pane frame missing %q", want)

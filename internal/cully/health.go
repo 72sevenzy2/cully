@@ -16,7 +16,8 @@ type sessionHealth struct {
 	ChecksPassed int
 	ChecksFailed int
 	Loops        int
-	MemorySaves  int
+	Recalls      int // Cully memory lookups
+	Saves        int // Cully memory writes
 	Verification string
 }
 
@@ -47,7 +48,11 @@ func measureHealth(events []journalEvent) sessionHealth {
 		case journalSearch, journalOther:
 			h.Tools++
 		case journalMemory:
-			h.MemorySaves++
+			if memoryWrite(e.Tool) {
+				h.Saves++
+			} else {
+				h.Recalls++
+			}
 		case journalEnd:
 			h.End = e.Time
 		}
@@ -79,33 +84,84 @@ func healthDuration(d time.Duration) string {
 	return fmt.Sprintf("%dh%02dm", int(d.Hours()), int(d.Minutes())%60)
 }
 
-// renderSessionHealth formats the newest session's measured health. gitFiles is
-// the live uncommitted file count, or negative when Git could not be read.
-func renderSessionHealth(events []journalEvent, gitFiles int, now time.Time) string {
+// memoryWrite reports whether a Cully memory tool changes records.
+func memoryWrite(tool string) bool {
+	return tool == "cully_log" || tool == "cully_update" || tool == "cully_delete"
+}
+
+// healthInputs are the live values that the journal cannot supply.
+type healthInputs struct {
+	Branch      string
+	GitFiles    int // negative when Git could not be read
+	ContextUsed int // percent of the context window used; negative when unknown
+	Now         time.Time
+}
+
+// healthGauge draws a ten-cell gauge for a percentage.
+func healthGauge(pct int) string {
+	pct = min(100, max(0, pct))
+	filled := (pct + 5) / 10
+	return strings.Repeat("█", filled) + strings.Repeat("░", 10-filled) + fmt.Sprintf(" %d%%", pct)
+}
+
+// healthRisk is a plain rule over measured values, never a score. It names the
+// reason so a developer can check it.
+func healthRisk(h sessionHealth, in healthInputs) (level, reason string) {
+	switch {
+	case h.Loops > 0:
+		return "HIGH", "the agent may be looping"
+	case h.Verification == "failed":
+		return "HIGH", "the last check failed"
+	case in.ContextUsed >= 90:
+		return "HIGH", "context almost full"
+	case h.Verification == "none since last edit":
+		return "MEDIUM", "edits not checked"
+	case in.ContextUsed >= 75:
+		return "MEDIUM", "context filling up"
+	case in.GitFiles >= 15:
+		return "MEDIUM", "many uncommitted files"
+	}
+	return "LOW", "nothing flagged"
+}
+
+// renderSessionHealth formats the newest session's measured health. It shows
+// only values Cully can measure; a row with no data is left out.
+func renderSessionHealth(events []journalEvent, in healthInputs) string {
 	if len(events) == 0 {
-		return "Session health: nothing recorded yet — start one with cully run AGENT\n"
+		return "CULLY\n\n  Nothing recorded yet. Start a session with cully run AGENT.\n"
 	}
 	h := measureHealth(events)
 	var b strings.Builder
-	agent := h.Agent
-	if agent == "" {
-		agent = "unknown"
+	row := func(label, value string) { fmt.Fprintf(&b, "  %-14s %s\n", label, value) }
+	b.WriteString("CULLY\n\n")
+	row("Agent", journalAgentName(h.Agent))
+	if in.Branch != "" {
+		row("Branch", in.Branch)
 	}
-	b.WriteString("Session health\n")
-	fmt.Fprintf(&b, "  Agent          %s\n", agent)
 	if h.End.IsZero() {
-		fmt.Fprintf(&b, "  Duration       %s (running)\n", healthDuration(now.Sub(h.Start)))
+		row("Session", healthDuration(in.Now.Sub(h.Start))+" (running)")
 	} else {
-		fmt.Fprintf(&b, "  Duration       %s (ended)\n", healthDuration(h.End.Sub(h.Start)))
+		row("Session", healthDuration(h.End.Sub(h.Start))+" (ended)")
 	}
-	fmt.Fprintf(&b, "  Tool calls     %d\n", h.Tools)
-	fmt.Fprintf(&b, "  Edits          %d\n", h.Edits)
-	fmt.Fprintf(&b, "  Checks         %d passed, %d failed\n", h.ChecksPassed, h.ChecksFailed)
-	fmt.Fprintf(&b, "  Verification   %s\n", h.Verification)
-	fmt.Fprintf(&b, "  Loops detected %d\n", h.Loops)
-	if gitFiles >= 0 {
-		fmt.Fprintf(&b, "  Uncommitted    %d files\n", gitFiles)
+	if in.ContextUsed >= 0 {
+		row("Context", healthGauge(in.ContextUsed))
 	}
-	fmt.Fprintf(&b, "  Memory saves   %d\n", h.MemorySaves)
+	row("Tests", fmt.Sprintf("%d ✓  %d ✕", h.ChecksPassed, h.ChecksFailed))
+	row("Verification", h.Verification)
+	loops := fmt.Sprintf("%d", h.Loops)
+	if h.Loops > 0 {
+		loops += " ⚠"
+	}
+	row("Loops", loops)
+	if in.GitFiles >= 0 {
+		row("Uncommitted", fmt.Sprintf("%d %s", in.GitFiles, pluralWord("file", in.GitFiles)))
+	}
+	memory := "none this session"
+	if h.Recalls+h.Saves > 0 {
+		memory = fmt.Sprintf("%d %s · %d %s", h.Recalls, pluralWord("recall", h.Recalls), h.Saves, pluralWord("save", h.Saves))
+	}
+	row("Memory", memory)
+	level, reason := healthRisk(h, in)
+	row("Risk", level+" · "+reason)
 	return b.String()
 }

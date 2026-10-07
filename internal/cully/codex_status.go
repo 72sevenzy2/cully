@@ -32,6 +32,7 @@ type codexStatusView struct {
 	AdvisorFocused                                                bool
 	Terminal                                                      terminalProfile
 	Loops                                                         loopReport
+	Agent                                                         string
 }
 
 var codexContextLeft = regexp.MustCompile(`^Context ([0-9]{1,3})% left$`)
@@ -783,13 +784,13 @@ func codexPaneTop(rows, statusRows int) int {
 	return rows - min(max(0, statusRows)+1, budget)
 }
 
-func codexPanelLines(cols, height int, content []string) []string {
+func codexPanelLines(cols, height int, content []string, hud string) []string {
 	lines := make([]string, max(0, height))
 	if height <= 0 {
 		return lines
 	}
 	width := max(0, cols-1)
-	lines[0] = dim + strings.Repeat("─", width) + rst
+	lines[0] = hudRule(width, hud)
 	capacity := height - 1
 	if len(content) > capacity {
 		// Keep advice visible on shorter terminals. Drop secondary instruments
