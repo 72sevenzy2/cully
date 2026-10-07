@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Define explicit session task-link semantics: omitting the task keeps the current link, a new name links it, and `clear_task` in `cully_session` unlinks it while keeping the task record. `cully_update` can no longer move a linked task entry to another section, and deleting a task entry clears only the link. The deployment manifests now gate all eleven registered tools, and a contract test keeps registration, manifests and the skill in agreement.
 - Refactor the terminal core without changing behavior: one agent catalog replaces the scattered per-agent switches, shared Codex-named panel types use neutral names, and footer/snapshot feeds parse through explicit updates with a documented merge contract. On-disk paths, hook commands, panel output and goldens are unchanged.
 
 - Show researched tool suggestions only when the advisor's web scout reports a successful search.

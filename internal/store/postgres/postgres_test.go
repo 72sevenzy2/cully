@@ -358,3 +358,49 @@ func TestDatabaseSessionsAndTasks(t *testing.T) {
 		t.Fatalf("deleting the task entry must unlink it: %+v", got)
 	}
 }
+
+func TestDatabaseSessionTaskClearAndScope(t *testing.T) {
+	s := testStore(t)
+	project := "https://github.com/mcp-runtime/cully"
+	task := "Oauth validation"
+	ref := "claude-fedcba9876543210"
+	clear := true
+	personal := "personal"
+	session := func(owner string, task *string, clear *bool) memory.Result {
+		in := memory.SessionInput{SessionRef: ref, Assistant: "claude", Section: "company", ProjectURL: &project, Task: task, ClearTask: clear}
+		return execute(t, s, owner, memory.Request{Operation: "session", Session: &in})
+	}
+	linked := session("owner-a", &task, nil)
+	if linked.Session.TaskID == nil {
+		t.Fatal("task not linked")
+	}
+	taskID := *linked.Session.TaskID
+	// A linked task keeps its session's section.
+	update := memory.UpdateInput{EntryID: taskID, Section: &personal}
+	if _, err := (memory.Service{Store: s}).Execute(context.Background(), "owner-a", memory.Request{Operation: "update", Update: &update}); !errors.Is(err, memory.ErrInvalid) {
+		t.Fatalf("linked task section change must be rejected as invalid: %v", err)
+	}
+	// Explicit clear unlinks the session but keeps the task record.
+	cleared := session("owner-a", nil, &clear)
+	if cleared.Session.TaskID != nil || cleared.Session.Task != nil {
+		t.Fatalf("clear_task must unlink the task: %+v", cleared.Session)
+	}
+	kind := "task"
+	kept := execute(t, s, "owner-a", memory.Request{Operation: "recent", Recent: &memory.RecentInput{EntryType: &kind, Limit: 10}})
+	if len(kept.Entries) != 1 || kept.Entries[0].ID != taskID {
+		t.Fatalf("clear_task must keep the task record: %+v", kept.Entries)
+	}
+	// Omitted task after a clear stays cleared; setting links again.
+	if got := session("owner-a", nil, nil); got.Session.TaskID != nil {
+		t.Fatal("omitted task must not restore the cleared link")
+	}
+	again := "Token audience checks"
+	if relinked := session("owner-a", &again, nil); relinked.Session.TaskID == nil || *relinked.Session.Task != again {
+		t.Fatal("a new task name must link after a clear")
+	}
+	// Another owner cannot touch the task through update scoping.
+	other := memory.UpdateInput{EntryID: taskID, Summary: &again}
+	if got := execute(t, s, "owner-b", memory.Request{Operation: "update", Update: &other}); got.Entry != nil {
+		t.Fatal("cross-owner task update")
+	}
+}

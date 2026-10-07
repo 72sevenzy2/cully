@@ -104,6 +104,19 @@ func (s *Store) execute(ctx context.Context, tx pgx.Tx, owner string, r memory.R
 		return out, err
 	case "update":
 		v := r.Update
+		// A task entry linked to a session keeps its session's scope.
+		// Sessions reject section changes, so a linked task cannot move
+		// to another section through an update either.
+		if v.Section != nil {
+			var linked string
+			err := tx.QueryRow(ctx, `SELECT s.section FROM cully_sessions s WHERE s.owner_subject=$1 AND s.task_id=$2::uuid`, owner, v.EntryID).Scan(&linked)
+			if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+				return out, err
+			}
+			if err == nil && linked != *v.Section {
+				return out, fmt.Errorf("%w: linked task section cannot change", memory.ErrInvalid)
+			}
+		}
 		args := []any{owner, v.EntryID}
 		assignments := []string{}
 		add := func(field string, value any, cast string) {
@@ -253,9 +266,13 @@ func (s *Store) session(ctx context.Context, tx pgx.Tx, owner string, v *memory.
 			out.Entry, taskID = e, &e.ID
 		}
 	}
+	// ClearTask unlinks the session's task while keeping the task record.
+	// An omitted task preserves the current link; only an explicit clear
+	// nulls it.
+	clearTask := v.ClearTask != nil && *v.ClearTask
 	_, err = tx.Exec(ctx, `INSERT INTO cully_sessions AS s (owner_subject,session_ref,section,project_url,assistant,branch,task_id) VALUES ($1,$2,$3,$4,$5,$6,$7::uuid)
-ON CONFLICT (owner_subject,session_ref) DO UPDATE SET project_url=COALESCE(EXCLUDED.project_url,s.project_url), branch=COALESCE(EXCLUDED.branch,s.branch), task_id=COALESCE(EXCLUDED.task_id,s.task_id), assistant=EXCLUDED.assistant, last_seen_at=now()`,
-		owner, v.SessionRef, v.Section, v.ProjectURL, v.Assistant, v.Branch, taskID)
+ON CONFLICT (owner_subject,session_ref) DO UPDATE SET project_url=COALESCE(EXCLUDED.project_url,s.project_url), branch=COALESCE(EXCLUDED.branch,s.branch), task_id=CASE WHEN $8::boolean THEN NULL ELSE COALESCE(EXCLUDED.task_id,s.task_id) END, assistant=EXCLUDED.assistant, last_seen_at=now()`,
+		owner, v.SessionRef, v.Section, v.ProjectURL, v.Assistant, v.Branch, taskID, clearTask)
 	if err != nil {
 		return out, err
 	}
