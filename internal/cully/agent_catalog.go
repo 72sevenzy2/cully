@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 )
 
 // agentConfigPaths groups the configuration locations of one agent. It is
@@ -25,10 +26,13 @@ type agentSpec struct {
 	ID          string // canonical id: claude, codex, cursor
 	DisplayName string // Claude Code, Codex, Cursor
 	ShortName   string // Claude, Codex, Cursor (compact panel text)
-	Aliases     []string
-	Binary      string
-	Launch      func(args []string) []string
-	ResumeID    func(args []string) string
+	JournalName string // Claude Code, Codex, Cursor (timeline, replay and health rows)
+	// ConfigDir returns the agent's home configuration directory.
+	ConfigDir func() string
+	Aliases   []string
+	Binary    string
+	Launch    func(args []string) []string
+	ResumeID  func(args []string) string
 	// NativeFooter reports a terminal footer the wrapper can read.
 	NativeFooter bool
 	// AdvisorMCPScope runs the headless advisor under this agent's MCP scope.
@@ -48,12 +52,20 @@ type agentSpec struct {
 // agentCatalog lists every known agent in a stable order. Generic executables
 // stay outside the catalog; lookupPaneAgent still runs them with common
 // instruments.
-func agentCatalog() []agentSpec {
+func agentCatalog() []agentSpec { return agentCatalogOnce() }
+
+// agentCatalogOnce builds the catalog once; panel paints and lookups reuse
+// it. Callers must not mutate the returned slice.
+var agentCatalogOnce = sync.OnceValue(buildAgentCatalog)
+
+func buildAgentCatalog() []agentSpec {
 	return []agentSpec{
 		{
 			ID:               "claude",
 			DisplayName:      "Claude Code",
 			ShortName:        "Claude",
+			JournalName:      "Claude Code",
+			ConfigDir:        ConfigDir,
 			Aliases:          []string{"claude-code", "claude code"},
 			Binary:           "claude",
 			AdvisorMCPScope:  false,
@@ -82,6 +94,8 @@ func agentCatalog() []agentSpec {
 			ID:               "codex",
 			DisplayName:      "Codex",
 			ShortName:        "Codex",
+			JournalName:      "Codex",
+			ConfigDir:        CodexConfigDir,
 			Binary:           "codex",
 			Launch:           func(args []string) []string { return append([]string{"-c", codexStatusConfig}, args...) },
 			ResumeID:         codexExplicitResumeID,
@@ -112,6 +126,8 @@ func agentCatalog() []agentSpec {
 			ID:               "cursor",
 			DisplayName:      "Cursor",
 			ShortName:        "Cursor",
+			JournalName:      "Cursor",
+			ConfigDir:        CursorConfigDir,
 			Aliases:          []string{"cursor-agent"},
 			Binary:           "cursor-agent",
 			AdvisorMCPScope:  false,
@@ -170,31 +186,22 @@ func normalizeAgentID(input string) string {
 // agentDisplayName maps an agent id to its compact panel name. Unknown names
 // pass through; empty means the agent is not known yet.
 func agentDisplayName(agent string) string {
-	switch normalizeAgentID(agent) {
-	case "claude":
-		return "Claude"
-	case "codex":
-		return "Codex"
-	case "cursor":
-		return "Cursor"
-	case "":
-		return "Agent"
-	default:
-		return strings.TrimSpace(agent)
+	if spec, ok := lookupAgentSpec(normalizeAgentID(agent)); ok {
+		return spec.ShortName
 	}
+	if strings.TrimSpace(agent) == "" {
+		return "Agent"
+	}
+	return strings.TrimSpace(agent)
 }
 
 // journalAgentName maps a journal agent id to the name timeline, replay and
 // health rows show. Surface labels stay exactly as before.
 func journalAgentName(agent string) string {
-	switch normalizeAgentID(agent) {
-	case "claude":
-		return "Claude Code"
-	case "codex":
-		return "Codex"
-	case "cursor":
-		return "Cursor"
-	case "":
+	if spec, ok := lookupAgentSpec(normalizeAgentID(agent)); ok {
+		return spec.JournalName
+	}
+	if normalizeAgentID(agent) == "" {
 		return "The agent"
 	}
 	return agent

@@ -23,25 +23,13 @@ func codingAgents(cwd string) []codingAgent {
 		out = append(out, codingAgent{
 			ID:          spec.ID,
 			Name:        spec.DisplayName,
-			ConfigDir:   configDirFor(spec.ID),
+			ConfigDir:   spec.ConfigDir(),
 			ProjectDirs: paths.ProjectDirs,
 			UserDirs:    paths.UserDirs,
 			MCPFiles:    paths.MCPFiles,
 		})
 	}
 	return out
-}
-
-// configDirFor returns the home config directory of a catalog agent.
-func configDirFor(id string) string {
-	switch id {
-	case "codex":
-		return CodexConfigDir()
-	case "cursor":
-		return CursorConfigDir()
-	default:
-		return ConfigDir()
-	}
 }
 
 func sharedSkillRoot(cwd string) string {

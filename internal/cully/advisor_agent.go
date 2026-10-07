@@ -149,7 +149,8 @@ func runAdvisorAgentProbeContext(parent context.Context, agent, cwd string, rese
 		defer cleanup()
 		args = append(args, "--strict-mcp-config", "--mcp-config", config)
 	}
-	if agent == "codex" {
+	spec, _ := lookupAgentSpec(agent)
+	if spec.AdvisorMCPScope {
 		args = append(args[:len(args)-1], append(advisorMCPArgs(cwd), "-")...)
 	}
 	ctx, cancel := context.WithTimeout(parent, 2*time.Minute)
@@ -177,7 +178,7 @@ func runAdvisorAgentProbeContext(parent context.Context, agent, cwd string, rese
 	if probeSession != "" {
 		cmd.Env = append(cmd.Env, "CULLY_MCP_PROBE_SESSION="+probeSession)
 	}
-	if scope, ok := parent.Value(codexMCPScopeKey{}).(codexMCPScope); ok && scope.Session != "" && agent == "codex" {
+	if scope, ok := parent.Value(codexMCPScopeKey{}).(codexMCPScope); ok && scope.Session != "" && spec.AdvisorMCPScope {
 		cmd.Env = append(cmd.Env, "CULLY_MCP_METRICS_SESSION="+scope.Session, "CULLY_MCP_ORIGIN="+scope.Origin)
 	}
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}

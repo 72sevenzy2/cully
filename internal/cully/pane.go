@@ -54,7 +54,7 @@ func RunPane(agentName string, args []string, input, output *os.File) error {
 
 	session := uuid.NewString()
 	if err := registerPane(session, currentDir()); err != nil {
-		return fmt.Errorf("register Codex advisor pane: %w", err)
+		return fmt.Errorf("register %s advisor pane: %w", agent.Name, err)
 	}
 	defer os.Remove(paneRegistrationFile(session)) //nolint:errcheck
 	defer os.Remove(paneBindingFile(session))      //nolint:errcheck
