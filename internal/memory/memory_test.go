@@ -120,3 +120,38 @@ func TestSessionValidation(t *testing.T) {
 		t.Fatalf("task via cully_log must point at cully_session: %v", err)
 	}
 }
+
+func TestSessionTaskClearValidation(t *testing.T) {
+	ref := "claude-dd4aac2e2202d45c"
+	task := "Oauth validation"
+	empty := ""
+	clear := true
+	good := func() Request {
+		return Request{Operation: "session", Session: &SessionInput{SessionRef: ref, Assistant: "claude", Section: "company"}}
+	}
+	// Omitted task preserves the link.
+	omitted := good()
+	if err := omitted.Validate(); err != nil {
+		t.Fatal(err)
+	}
+	// Explicit clear without a task is valid.
+	c := good()
+	c.Session.ClearTask = &clear
+	if err := c.Validate(); err != nil {
+		t.Fatalf("clear_task rejected: %v", err)
+	}
+	// Set and clear together are rejected.
+	both := good()
+	both.Session.Task = &task
+	both.Session.ClearTask = &clear
+	if !errors.Is(both.Validate(), ErrInvalid) {
+		t.Fatal("task with clear_task accepted")
+	}
+	// Blank task with clear unlinks rather than conflicting.
+	blank := good()
+	blank.Session.Task = &empty
+	blank.Session.ClearTask = &clear
+	if err := blank.Validate(); err != nil {
+		t.Fatalf("blank task with clear_task rejected: %v", err)
+	}
+}

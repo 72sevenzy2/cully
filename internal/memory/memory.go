@@ -110,7 +110,9 @@ type Project struct {
 }
 
 // SessionInput starts or updates one agent session. A non-empty Task creates
-// the session's task entry once and links it; repeating the same task is a no-op.
+// the session's task entry once and links it; repeating the same task keeps or relinks that record.
+// An omitted Task preserves the current link; ClearTask unlinks it while
+// keeping the task record. Task and ClearTask are mutually exclusive.
 type SessionInput struct {
 	SessionRef string  `json:"session_ref"`
 	Assistant  string  `json:"assistant"`
@@ -118,6 +120,7 @@ type SessionInput struct {
 	ProjectURL *string `json:"project_url,omitempty"`
 	Branch     *string `json:"branch,omitempty"`
 	Task       *string `json:"task,omitempty"`
+	ClearTask  *bool   `json:"clear_task,omitempty"`
 }
 type SessionRefInput struct {
 	SessionRef string `json:"session_ref"`
@@ -392,6 +395,9 @@ func (r *Request) Validate() error {
 		checks = append(checks, sessionRef(&v.SessionRef), section(&v.Section), project(v.ProjectURL), text(v.Branch, false), text(v.Task, false))
 		if v.Task != nil && utf8.RuneCountInString(*v.Task) > taskNameLimit {
 			return fmt.Errorf("%w: task exceeds 60 characters", ErrInvalid)
+		}
+		if v.ClearTask != nil && *v.ClearTask && v.Task != nil && *v.Task != "" {
+			return fmt.Errorf("%w: task and clear_task are mutually exclusive", ErrInvalid)
 		}
 		if v.Branch != nil && utf8.RuneCountInString(*v.Branch) > 200 {
 			return fmt.Errorf("%w: branch exceeds 200 characters", ErrInvalid)

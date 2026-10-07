@@ -104,6 +104,30 @@ func (s *Store) execute(ctx context.Context, tx pgx.Tx, owner string, r memory.R
 		return out, err
 	case "update":
 		v := r.Update
+		// A task entry linked to a session keeps its session's scope.
+		// Sessions reject section changes, so a linked task cannot move
+		// to another section through an update either.
+		if v.Section != nil {
+			// Serialize with session link/unlink, which holds the same lock.
+			var taskSession *string
+			err := tx.QueryRow(ctx, `SELECT session_ref FROM cully_entries WHERE owner_subject=$1 AND id=$2::uuid AND entry_type='task'`, owner, v.EntryID).Scan(&taskSession)
+			if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+				return out, err
+			}
+			if taskSession != nil {
+				if err := lockSession(ctx, tx, owner, *taskSession); err != nil {
+					return out, err
+				}
+			}
+			var linked string
+			err = tx.QueryRow(ctx, `SELECT s.section FROM cully_sessions s WHERE s.owner_subject=$1 AND s.task_id=$2::uuid`, owner, v.EntryID).Scan(&linked)
+			if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+				return out, err
+			}
+			if err == nil && linked != *v.Section {
+				return out, fmt.Errorf("%w: linked task section cannot change", memory.ErrInvalid)
+			}
+		}
 		args := []any{owner, v.EntryID}
 		assignments := []string{}
 		add := func(field string, value any, cast string) {
@@ -221,13 +245,19 @@ func loadSession(ctx context.Context, tx pgx.Tx, owner, ref string) (*memory.Ses
 	return &sess, nil
 }
 
+// lockSession serializes writers of one session and the task entry it links.
+func lockSession(ctx context.Context, tx pgx.Tx, owner, sessionRef string) error {
+	_, err := tx.Exec(ctx, `SELECT pg_advisory_xact_lock(hashtextextended($1, hashtextextended($2, 0)))`, owner, sessionRef)
+	return err
+}
+
 // session upserts one session. A new task name creates a task entry and links
 // it; the same task name again leaves the existing entry in place. The
 // advisory lock serializes concurrent callers for one session so two new task
 // names cannot both insert and leave an orphan behind.
 func (s *Store) session(ctx context.Context, tx pgx.Tx, owner string, v *memory.SessionInput) (memory.Result, error) {
 	out := memory.Result{}
-	if _, err := tx.Exec(ctx, `SELECT pg_advisory_xact_lock(hashtextextended($1, hashtextextended($2, 0)))`, owner, v.SessionRef); err != nil {
+	if err := lockSession(ctx, tx, owner, v.SessionRef); err != nil {
 		return out, err
 	}
 	var existingSection string
@@ -240,12 +270,17 @@ func (s *Store) session(ctx context.Context, tx pgx.Tx, owner string, v *memory.
 	}
 	var taskID *string
 	if v.Task != nil && *v.Task != "" {
-		var current *string
-		err = tx.QueryRow(ctx, "SELECT t.summary FROM cully_sessions s JOIN cully_entries t ON t.id=s.task_id AND t.owner_subject=s.owner_subject WHERE s.owner_subject=$1 AND s.session_ref=$2", owner, v.SessionRef).Scan(&current)
+		// Compare with the session's latest task record, not the current link,
+		// so repeating a name after clear_task relinks it instead of
+		// inserting a duplicate.
+		var latestID, latest *string
+		err = tx.QueryRow(ctx, "SELECT id::text, summary FROM cully_entries WHERE owner_subject=$1 AND session_ref=$2 AND entry_type='task' ORDER BY created_at DESC, id DESC LIMIT 1", owner, v.SessionRef).Scan(&latestID, &latest)
 		if err != nil && !errors.Is(err, pgx.ErrNoRows) {
 			return out, err
 		}
-		if current == nil || *current != *v.Task {
+		if latest != nil && *latest == *v.Task {
+			taskID = latestID
+		} else {
 			e, err := one(ctx, tx, `INSERT INTO cully_entries AS e (id,owner_subject,section,project_url,session_ref,entry_type,summary,assistant,tags,occurred_at) VALUES ($1::uuid,$2,$3,$4,$5,'task',$6,$7,'{}',now()) RETURNING `+record, uuid.NewString(), owner, v.Section, v.ProjectURL, v.SessionRef, *v.Task, v.Assistant)
 			if err != nil {
 				return out, err
@@ -253,9 +288,13 @@ func (s *Store) session(ctx context.Context, tx pgx.Tx, owner string, v *memory.
 			out.Entry, taskID = e, &e.ID
 		}
 	}
+	// ClearTask unlinks the session's task while keeping the task record.
+	// An omitted task preserves the current link; only an explicit clear
+	// nulls it.
+	clearTask := v.ClearTask != nil && *v.ClearTask
 	_, err = tx.Exec(ctx, `INSERT INTO cully_sessions AS s (owner_subject,session_ref,section,project_url,assistant,branch,task_id) VALUES ($1,$2,$3,$4,$5,$6,$7::uuid)
-ON CONFLICT (owner_subject,session_ref) DO UPDATE SET project_url=COALESCE(EXCLUDED.project_url,s.project_url), branch=COALESCE(EXCLUDED.branch,s.branch), task_id=COALESCE(EXCLUDED.task_id,s.task_id), assistant=EXCLUDED.assistant, last_seen_at=now()`,
-		owner, v.SessionRef, v.Section, v.ProjectURL, v.Assistant, v.Branch, taskID)
+ON CONFLICT (owner_subject,session_ref) DO UPDATE SET project_url=COALESCE(EXCLUDED.project_url,s.project_url), branch=COALESCE(EXCLUDED.branch,s.branch), task_id=CASE WHEN $8::boolean THEN NULL ELSE COALESCE(EXCLUDED.task_id,s.task_id) END, assistant=EXCLUDED.assistant, last_seen_at=now()`,
+		owner, v.SessionRef, v.Section, v.ProjectURL, v.Assistant, v.Branch, taskID, clearTask)
 	if err != nil {
 		return out, err
 	}

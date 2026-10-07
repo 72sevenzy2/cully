@@ -127,7 +127,12 @@ func RunTask(w io.Writer, args []string) error {
 		return nil
 	}
 	if len(args) == 1 && args[0] == "--clear" {
-		return writeTask(session, "")
+		if err := writeTask(session, ""); err != nil {
+			return err
+		}
+		fmt.Fprintln(w, "Task cleared locally.")
+		fmt.Fprintln(w, "Agent: unlink the session task with cully_session (clear_task, current session_ref).")
+		return nil
 	}
 	if err := writeTask(session, strings.Join(args, " ")); err != nil {
 		return err
