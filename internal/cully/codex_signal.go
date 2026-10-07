@@ -2,17 +2,22 @@ package cully
 
 import (
 	"bufio"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"io"
 	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
+	"time"
 )
 
 // Codex hook events are reduced to single-letter counters. Commands, prompts,
 // tool output, and transcript paths are never written to disk.
 type codexToolEvent struct {
+	Cwd          string          `json:"cwd"`
+	SessionID    string          `json:"session_id"`
 	ToolName     string          `json:"tool_name"`
 	ToolInput    json.RawMessage `json:"tool_input"`
 	ToolResponse json.RawMessage `json:"tool_response"`
@@ -31,16 +36,115 @@ func codexSignalFile(session string) string {
 	return filepath.Join(cullyDir(), safeSession(session)+".codex-events")
 }
 
+type codexPaneRegistration struct {
+	Session string `json:"session"`
+	Cwd     string `json:"cwd"`
+	PID     int    `json:"pid"`
+}
+
+func codexPaneRegistrationFile(session string) string {
+	return filepath.Join(cullyDir(), safeSession(session)+".codex-pane")
+}
+
+func codexPaneBindingFile(session string) string {
+	return filepath.Join(cullyDir(), safeSession(session)+".codex-pane-session")
+}
+
+func registerCodexPane(session, cwd string) error {
+	b, err := json.Marshal(codexPaneRegistration{Session: session, Cwd: filepath.Clean(cwd), PID: os.Getpid()})
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(codexPaneRegistrationFile(session), b, 0o600)
+}
+
+// Codex may execute hooks in a long-running app server that predates the pane.
+// Its SessionStart hook binds the Codex session to the sole live pane for this
+// working directory; later tool hooks use that binding, not inherited env.
+func soleActiveCodexPane(cwd string) (codexPaneRegistration, bool) {
+	if cwd == "" {
+		return codexPaneRegistration{}, false
+	}
+	entries, err := os.ReadDir(cullyDir())
+	if err != nil {
+		return codexPaneRegistration{}, false
+	}
+	var match codexPaneRegistration
+	for _, entry := range entries {
+		if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".codex-pane") {
+			continue
+		}
+		path := filepath.Join(cullyDir(), entry.Name())
+		info, err := entry.Info()
+		if err != nil || time.Since(info.ModTime()) > 10*time.Second {
+			continue
+		}
+		b, err := os.ReadFile(path)
+		if err != nil {
+			continue
+		}
+		var pane codexPaneRegistration
+		if json.Unmarshal(b, &pane) != nil || pane.Session == "" || pane.PID <= 0 ||
+			filepath.Clean(pane.Cwd) != filepath.Clean(cwd) || !processAlive(pane.PID) {
+			continue
+		}
+		if match.Session != "" {
+			return codexPaneRegistration{}, false
+		}
+		match = pane
+	}
+	return match, match.Session != ""
+}
+
+func codexSessionKey(id string) string {
+	sum := sha256.Sum256([]byte("codex\x00" + id))
+	return hex.EncodeToString(sum[:16])
+}
+
+func bindCodexPane(cwd, codexSessionID string) {
+	if codexSessionID == "" {
+		return
+	}
+	pane, ok := soleActiveCodexPane(cwd)
+	if !ok {
+		return
+	}
+	f, err := os.OpenFile(codexPaneBindingFile(pane.Session), os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0o600)
+	if err != nil {
+		return // first SessionStart for this pane keeps its binding
+	}
+	_, _ = f.WriteString(codexSessionKey(codexSessionID))
+	_ = f.Close()
+}
+
+func activeCodexPaneSession(cwd, codexSessionID string) string {
+	if codexSessionID == "" {
+		return ""
+	}
+	pane, ok := soleActiveCodexPane(cwd)
+	if !ok {
+		return ""
+	}
+	b, err := os.ReadFile(codexPaneBindingFile(pane.Session))
+	if err != nil || string(b) != codexSessionKey(codexSessionID) {
+		return ""
+	}
+	return pane.Session
+}
+
 // RunCodexSignalHook is installed as an asynchronous PostToolUse hook. It is
 // inactive outside the opt-in pane, so ordinary Codex sessions have no local
 // advisor artifacts.
 func RunCodexSignalHook(r io.Reader) {
-	session := os.Getenv("CULLY_PANE_SESSION")
-	if session == "" {
-		return
-	}
 	var event codexToolEvent
 	if json.NewDecoder(io.LimitReader(r, 1<<20)).Decode(&event) != nil || event.ToolName == "" {
+		return
+	}
+	session := os.Getenv("CULLY_PANE_SESSION")
+	if session == "" {
+		session = activeCodexPaneSession(event.Cwd, event.SessionID)
+	}
+	if session == "" {
 		return
 	}
 	class := codexToolClass(event)

@@ -22,6 +22,7 @@ const continuityFinish = "Cully check: If this turn produced substantive work, a
 var substantiveResponse = regexp.MustCompile(`(?i)\b(implement(?:ed)?|fix(?:ed)?|chang(?:e|ed)|add(?:ed)?|remov(?:e|ed)|refactor(?:ed)?|test(?:ed|s)?|deploy(?:ed)?|publish(?:ed)?|document(?:ed)?|decid(?:e|ed)|block(?:ed|er)?|discover(?:ed)?|learn(?:ed|t)|investigat(?:e|ed)|resolv(?:e|ed)|updat(?:e|ed))\b`)
 
 type continuityHookInput struct {
+	Cwd                  string `json:"cwd"`
 	StopHookActive       bool   `json:"stop_hook_active"`
 	LastAssistantMessage string `json:"last_assistant_message"`
 	Text                 string `json:"text"`
@@ -82,7 +83,10 @@ func RunContinuityHook(agent, event string, r io.Reader, w io.Writer) {
 	switch event {
 	case "start":
 		switch agent {
-		case "claude", "codex":
+		case "claude":
+			out = map[string]any{"hookSpecificOutput": map[string]any{"hookEventName": "SessionStart", "additionalContext": continuityPrompt(continuityStart, agent, in)}}
+		case "codex":
+			bindCodexPane(in.Cwd, in.SessionID)
 			out = map[string]any{"hookSpecificOutput": map[string]any{"hookEventName": "SessionStart", "additionalContext": continuityPrompt(continuityStart, agent, in)}}
 		case "cursor":
 			out = map[string]any{"additional_context": continuityPrompt(continuityStart, agent, in)}

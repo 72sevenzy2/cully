@@ -46,8 +46,13 @@ func RunCodexPane(args []string, input, output *os.File) error {
 	defer io.WriteString(output, "\x1b[0m\x1b[?25h\x1b[?1049l") //nolint:errcheck
 
 	session := uuid.NewString()
-	defer os.Remove(codexSignalFile(session))   //nolint:errcheck
-	defer os.Remove(sessionReportFile(session)) //nolint:errcheck
+	if err := registerCodexPane(session, currentDir()); err != nil {
+		return fmt.Errorf("register Codex advisor pane: %w", err)
+	}
+	defer os.Remove(codexPaneRegistrationFile(session)) //nolint:errcheck
+	defer os.Remove(codexPaneBindingFile(session))      //nolint:errcheck
+	defer os.Remove(codexSignalFile(session))           //nolint:errcheck
+	defer os.Remove(sessionReportFile(session))         //nolint:errcheck
 	cmd := exec.Command("codex", args...)
 	cmd.Env = append(os.Environ(), "CULLY_PANE_SESSION="+session, "CULLY_SESSION="+session, "CULLY_AGENT=codex")
 	top := codexPaneTop(rows)
@@ -94,6 +99,7 @@ func RunCodexPane(args []string, input, output *os.File) error {
 	ticker := time.NewTicker(80 * time.Millisecond)
 	defer ticker.Stop()
 	dirty, lastAdvice := true, ""
+	lastBeat := time.Now()
 	var advice []string
 	for {
 		select {
@@ -117,6 +123,10 @@ func RunCodexPane(args []string, input, output *os.File) error {
 		case sig := <-stop:
 			_ = cmd.Process.Signal(sig)
 		case <-ticker.C:
+			if time.Since(lastBeat) >= 2*time.Second {
+				_ = os.Chtimes(codexPaneRegistrationFile(session), time.Now(), time.Now())
+				lastBeat = time.Now()
+			}
 			stats := readCodexToolStats(session)
 			advice = codexAdvice(stats)
 			joined := strings.Join(advice, "\n")
