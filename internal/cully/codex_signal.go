@@ -149,7 +149,16 @@ func RunCodexSignalHook(r io.Reader) { RunPaneSignalHook("codex", r) }
 // local advisor artifacts.
 func RunPaneSignalHook(agent string, r io.Reader) {
 	var event codexToolEvent
-	if json.NewDecoder(io.LimitReader(r, 1<<20)).Decode(&event) != nil || event.ToolName == "" {
+	data, _ := io.ReadAll(io.LimitReader(r, 1<<20))
+	if agent == "cursor" {
+		var ok bool
+		if event, ok = cursorToolEvent(data); !ok {
+			return
+		}
+	} else if json.Unmarshal(data, &event) != nil {
+		return
+	}
+	if event.ToolName == "" {
 		return
 	}
 	if os.Getenv("MODEL_HINT_GUARD") != "" {

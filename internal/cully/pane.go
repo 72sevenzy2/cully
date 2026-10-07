@@ -439,6 +439,9 @@ func RunPane(agentName string, args []string, input, output *os.File) error {
 			}
 			stats = readCodexToolStats(session)
 			readFooter()
+			if agent.Name == "claude" {
+				readClaudeContext(session, &view)
+			}
 			if time.Since(lastSessionSave) >= time.Second {
 				persistSession()
 			}
