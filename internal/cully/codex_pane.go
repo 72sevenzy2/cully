@@ -58,10 +58,22 @@ func RunCodexPane(args []string, input, output *os.File) error {
 	defer os.Remove(sessionSnapshotFile(session))       //nolint:errcheck
 	defer os.Remove(sessionSignalsFile(session))        //nolint:errcheck
 	defer os.Remove(sessionSeenFile(session))           //nolint:errcheck
+	defer clearCodexCullyStats(session)
 	cmd := exec.Command("codex", append([]string{"-c", codexStatusConfig}, args...)...)
 	cmd.Env = append(os.Environ(), "CULLY_PANE_SESSION="+session, "CULLY_SESSION="+session, "CULLY_AGENT=codex")
 	view := codexStatusView{Project: currentDir(), Branch: gitBranch(currentDir()), Started: time.Now(), Daemon: isDaemonRunning()}
 	view.Terminal = detectTerminalProfile()
+	restoredSession := false
+	lastSessionSave := time.Time{}
+	refreshSession := func() {
+		if !restoredSession {
+			restoredSession = restoreCodexSessionView(session, &view)
+		}
+	}
+	persistSession := func() {
+		saveCodexSessionView(session, view)
+		lastSessionSave = time.Now()
+	}
 	readCodexGitChanges(&view)
 	stats := readCodexToolStats(session)
 	advice := codexCombinedAdvice(session, stats, view)
@@ -311,7 +323,9 @@ func RunCodexPane(args []string, input, output *os.File) error {
 	}
 	var shutdown <-chan time.Time
 	paintFinal := func() {
+		refreshSession()
 		readCodexFooter(emulator, &view)
+		persistSession()
 		stats = readCodexToolStats(session)
 		advice = codexCombinedAdvice(session, stats, view)
 		content = statusRows()
@@ -388,6 +402,7 @@ func RunCodexPane(args []string, input, output *os.File) error {
 			_ = syscall.Kill(-cmd.Process.Pid, syscall.SIGKILL)
 			shutdown = nil
 		case <-ticker.C:
+			refreshSession()
 			if time.Since(lastInput) >= 80*time.Millisecond {
 				handleKeys(panelInput.feed(nil, true))
 			}
@@ -400,6 +415,9 @@ func RunCodexPane(args []string, input, output *os.File) error {
 			}
 			stats = readCodexToolStats(session)
 			readCodexFooter(emulator, &view)
+			if time.Since(lastSessionSave) >= time.Second {
+				persistSession()
+			}
 			if stats.Tools > lastAnalysisTools && time.Since(lastAnalysis) >= 2*time.Minute {
 				snap := readSnapshot(session)
 				snap.Cwd = view.Project

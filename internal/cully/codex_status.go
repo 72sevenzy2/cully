@@ -54,7 +54,8 @@ func readCodexFooter(emulator *vt.Emulator, view *codexStatusView) int {
 			continue
 		}
 		view.Model, view.ContextLeft, view.ContextKnown = parts[0], left, true
-		view.Input, view.Output, view.FiveHour, view.Weekly, view.Fast = "", "", "", "", ""
+		// Narrow native footers omit instruments. Keep their last observed
+		// values until Codex supplies an update instead of erasing them.
 		for _, part := range parts[2:] {
 			switch {
 			case strings.HasSuffix(part, " in"):
@@ -177,7 +178,6 @@ func codexStatusContent(cols int, advice []string, stats codexToolStats, view co
 		changes = green + fmt.Sprintf("+%d", view.LinesAdded) + rst + " / " + red + fmt.Sprintf("-%d", view.LinesRemoved) + rst + fmt.Sprintf("  ·  %d tracked files", view.ChangedFiles)
 	}
 	metric(&left, "Working tree", changes)
-	metric(&left, "Cost / cache", dim+"unavailable from Codex"+rst)
 	for _, counter := range []struct {
 		label string
 		value int
@@ -194,6 +194,10 @@ func codexStatusContent(cols int, advice []string, stats codexToolStats, view co
 	}
 	metric(&right, "Verification", verification)
 	grid(left, right)
+	rows = append(rows, "")
+	for _, line := range codexCullyInstrumentRows(stats, max(1, cols-5)) {
+		add(line)
+	}
 	rows = append(rows, "")
 	daemon := yellow + "● daemon offline" + rst
 	if view.Daemon {
@@ -433,102 +437,13 @@ func codexAdviceBadge(suggestion string) (color, badge string) {
 // and previews two actionable comments. The expanded renderer retains every
 // instrument and the complete advice text.
 func codexCompactStatusRows(cols, availableRows int, advice []string, stats codexToolStats, view codexStatusView) []string {
+	availableRows = min(availableRows, 22)
 	capacity := max(0, availableRows-1)
 	if capacity == 0 {
 		return nil
 	}
 	width := max(1, cols-5)
-	var status []string
-	line := func(text string) { status = append(status, "  "+ansi.Truncate(text, width, "…")+rst) }
-	pair := func(left, right string) {
-		if cols < 70 {
-			for _, value := range []string{left, right} {
-				for _, row := range strings.Split(ansi.Wrap(value, width, ""), "\n") {
-					line(row)
-				}
-			}
-			return
-		}
-		const gap = 6
-		cellWidth := max(1, (width-gap)/2)
-		leftRows := strings.Split(ansi.Wrap(left, cellWidth, ""), "\n")
-		rightRows := strings.Split(ansi.Wrap(right, cellWidth, ""), "\n")
-		for i := 0; i < max(len(leftRows), len(rightRows)); i++ {
-			l, r := "", ""
-			if i < len(leftRows) {
-				l = leftRows[i]
-			}
-			if i < len(rightRows) {
-				r = rightRows[i]
-			}
-			line(l + strings.Repeat(" ", max(0, cellWidth-ansi.StringWidth(l))+gap) + r)
-		}
-	}
-	phase := codexSessionPhase(stats, view)
-	elapsed := "unavailable"
-	if !view.Started.IsZero() {
-		elapsed = time.Since(view.Started).Truncate(time.Second).String()
-	}
-	daemon := yellow + "● daemon offline" + rst
-	if view.Daemon {
-		daemon = green + "● daemon online" + rst
-	}
-	pair(cyan+bold+"✦ Cully"+rst+"  "+formatPhaseBadge(phase), daemon+dim+"  ·  elapsed "+elapsed+rst)
-	location := dim + "Project unavailable" + rst
-	if view.Project != "" {
-		location = cyan + "📁 " + filepath.Base(view.Project) + rst
-	}
-	if view.Branch != "" {
-		location += "  " + magenta + view.Branch + rst
-	}
-	model := blue + bold + view.Model + rst
-	if view.Model == "" {
-		model = dim + "waiting for Codex" + rst
-	}
-	pair(location, dim+"Model "+rst+model)
-	metricBreak := len(status)
-	context := dim + "waiting for Codex footer" + rst
-	if view.ContextKnown {
-		used := 100 - view.ContextLeft
-		context = pctColor(used) + gauge(used) + fmt.Sprintf("  %d%% used · %d%% left", used, view.ContextLeft) + rst
-		if view.ContextLeft <= 10 {
-			context += red + "  /compact" + rst
-		}
-	}
-	line("🧠 Context  " + context)
-	tokens := "Tokens " + dim + "unavailable" + rst
-	if view.Input != "" || view.Output != "" {
-		tokens = "Tokens in " + codexInstrument(view.Input) + " / out " + codexInstrument(view.Output)
-	}
-	pair(tokens, fmt.Sprintf("Tools %d  ·  Searches %d", stats.Tools, stats.Searches))
-	quota := dim + "5h / Weekly unavailable" + rst
-	if view.FiveHour != "" || view.Weekly != "" {
-		weekly := view.Weekly
-		for _, prefix := range []string{"Weekly ", "Week ", "7d "} {
-			weekly = strings.TrimPrefix(weekly, prefix)
-		}
-		quota = "5h " + codexInstrument(strings.TrimPrefix(view.FiveHour, "5h ")) + " · Week " + codexInstrument(weekly)
-	}
-	errorCount := fmt.Sprint(stats.Errors)
-	if stats.Errors > 0 {
-		errorCount = yellow + bold + errorCount + rst
-	}
-	pair(quota, fmt.Sprintf("Edits %d · Checks %d · Errors %s", stats.Edits, stats.Checks, errorCount))
-	changes := dim + "unavailable" + rst
-	if view.ChangesKnown {
-		changes = green + fmt.Sprintf("+%d", view.LinesAdded) + rst + "/" + red + fmt.Sprintf("-%d", view.LinesRemoved) + rst + fmt.Sprintf(" (%d tracked)", view.ChangedFiles)
-	}
-	fast := codexInstrument(strings.TrimPrefix(view.Fast, "Fast "))
-	work := "Fast " + fast + " · Git " + changes + dim + " · Cost/cache unavailable" + rst
-	if view.Fast == "" && !view.ChangesKnown {
-		work = dim + "Fast / Git / Cost/cache unavailable" + rst
-	}
-	verification := green + "no pending edits" + rst
-	if stats.EditsSinceCheck > 0 {
-		verification = yellow + fmt.Sprintf("%d edits need check", stats.EditsSinceCheck) + rst
-	}
-	pair(work, "Verification "+verification)
-
+	status, context := codexCompactInstrumentRows(cols, stats, view)
 	selected := codexCompactAdvice(advice)
 	var preview []string
 	for _, suggestion := range selected {
@@ -573,8 +488,9 @@ func codexCompactStatusRows(cols, availableRows int, advice []string, stats code
 		heading += fmt.Sprintf(" · %d tip%s", tips, pluralSuffix(tips))
 	}
 	control := cyan + bold + "Ctrl+] / F6 Open advisor" + rst
-	if suggestions > 0 {
-		control += dim + " · review & apply" + rst
+	control += dim + fmt.Sprintf(" · %d suggestion%s", suggestions, pluralSuffix(suggestions)) + rst
+	if tips > 0 {
+		control += dim + fmt.Sprintf(" · %d tip%s", tips, pluralSuffix(tips)) + rst
 	}
 	if more > 0 {
 		control = dim + fmt.Sprintf("+%d more  ·  ", more) + rst + control
@@ -586,12 +502,20 @@ func codexCompactStatusRows(cols, availableRows int, advice []string, stats code
 	if capacity == 2 {
 		return []string{"  " + ansi.Truncate("🧠 Context  "+context, width, "…") + rst, footer}
 	}
-	// Rows within a section share the same spacing. One blank row separates
-	// identity, instruments, advisor and controls when the terminal can fit it.
-	if len(status)+len(preview)+5 <= capacity {
-		rows := append([]string(nil), status[:metricBreak]...)
-		rows = append(rows, "")
-		rows = append(rows, status[metricBreak:]...)
+	// Spend spare height on consistent breathing room, never on hiding a
+	// metric or shortening a preview. Wrapped continuations stay together.
+	if cols >= 120 {
+		spaced, _ := codexCompactInstrumentRowsSpaced(cols, stats, view, true)
+		if len(spaced)+len(preview)+4 <= capacity {
+			rows := append([]string(nil), spaced...)
+			rows = append(rows, "", "", "  "+cyan+ansi.Truncate(heading, width, "…")+rst)
+			rows = append(rows, preview...)
+			return append(rows, footer)
+		}
+	}
+	// Smaller layouts shed optional whitespace before shedding information.
+	if len(status)+len(preview)+4 <= capacity {
+		rows := append([]string(nil), status...)
 		rows = append(rows, "", "  "+cyan+ansi.Truncate(heading, width, "…")+rst)
 		rows = append(rows, preview...)
 		rows = append(rows, "", footer)
@@ -620,6 +544,170 @@ func codexCompactStatusRows(cols, availableRows int, advice []string, stats code
 	rows := append(status, preview[:previewCount]...)
 	rows = append(rows, footer)
 	return rows[:min(capacity, len(rows))]
+}
+
+func codexCompactInstrumentRows(cols int, stats codexToolStats, view codexStatusView) ([]string, string) {
+	return codexCompactInstrumentRowsSpaced(cols, stats, view, false)
+}
+
+func codexCompactInstrumentRowsSpaced(cols int, stats codexToolStats, view codexStatusView, spaced bool) ([]string, string) {
+	width := max(1, cols-5)
+	var rows []string
+	add := func(text string) { rows = append(rows, "  "+ansi.Truncate(text, width, "…")+rst) }
+	elapsed := "unavailable"
+	if !view.Started.IsZero() {
+		elapsed = time.Since(view.Started).Truncate(time.Second).String()
+	}
+	daemon := yellow + "● daemon offline" + rst
+	if view.Daemon {
+		daemon = green + "● daemon online" + rst
+	}
+	title := cyan + bold + "✦ Cully" + rst + "  " + formatPhaseBadge(codexSessionPhase(stats, view))
+	state := daemon + dim + " · elapsed " + elapsed + rst
+	if cols >= 120 {
+		add(title + strings.Repeat(" ", max(2, width-ansi.StringWidth(title)-ansi.StringWidth(state))) + state)
+	} else {
+		add(title + "  " + state)
+	}
+	rows = append(rows, "")
+	model := blue + bold + view.Model + rst
+	if view.Model == "" {
+		model = dim + "waiting for Codex" + rst
+	}
+	errors := fmt.Sprint(stats.Errors)
+	if stats.Errors > 0 {
+		errors = yellow + bold + errors + rst
+	}
+	verification := green + "no pending edits" + rst
+	if stats.EditsSinceCheck > 0 {
+		verification = yellow + fmt.Sprintf("%d edits need check", stats.EditsSinceCheck) + rst
+	}
+	activity := []string{bold + "Model & activity" + rst, "", "Model " + model, fmt.Sprintf("Tools %d · Searches %d", stats.Tools, stats.Searches), fmt.Sprintf("Edits %d · Checks %d · Errors %s", stats.Edits, stats.Checks, errors), "Verification " + verification}
+	location := dim + "Project unavailable" + rst
+	if view.Project != "" {
+		location = "Project " + cyan + filepath.Base(view.Project) + rst
+	}
+	if view.Branch != "" {
+		location += " / " + magenta + view.Branch + rst
+	}
+	context := dim + "waiting for Codex footer" + rst
+	if view.ContextKnown {
+		used := 100 - view.ContextLeft
+		context = pctColor(used) + gauge(used) + fmt.Sprintf(" %d%% used · %d%% left", used, view.ContextLeft) + rst
+		if view.ContextLeft <= 10 {
+			context += red + " /compact" + rst
+		}
+	}
+	tokens := "Tokens " + dim + "unavailable" + rst
+	if view.Input != "" || view.Output != "" {
+		tokens = "Tokens in " + codexInstrument(view.Input) + " / out " + codexInstrument(view.Output)
+	}
+	quota := dim + "5h / Weekly unavailable" + rst
+	if view.FiveHour != "" || view.Weekly != "" {
+		weekly := view.Weekly
+		for _, prefix := range []string{"Weekly ", "Week ", "7d "} {
+			weekly = strings.TrimPrefix(weekly, prefix)
+		}
+		quota = "5h " + codexInstrument(strings.TrimPrefix(view.FiveHour, "5h ")) + " · Week " + codexInstrument(weekly)
+	}
+	changes := dim + "unavailable" + rst
+	if view.ChangesKnown {
+		changes = green + fmt.Sprintf("+%d", view.LinesAdded) + rst + "/" + red + fmt.Sprintf("-%d", view.LinesRemoved) + rst + fmt.Sprintf(" (%d tracked)", view.ChangedFiles)
+	}
+	work := "Fast " + codexInstrument(strings.TrimPrefix(view.Fast, "Fast ")) + " · Git " + changes
+	if view.Fast == "" && !view.ChangesKnown {
+		work = dim + "Fast / Git unavailable" + rst
+	}
+	usage := []string{bold + "Project & usage" + rst, "", location, "Context " + context, tokens, quota, work}
+	cully := codexCullyInstrumentRows(stats, width)
+	groups := [][]string{activity, usage, cully}
+	if cols >= 120 {
+		const gap = 6
+		cellWidth := max(1, (width-gap*2)/3)
+		var wrapped [3][]string
+		for column, group := range groups {
+			for index, value := range group {
+				wrapped[column] = append(wrapped[column], strings.Split(ansi.Wrap(value, cellWidth, ""), "\n")...)
+				if spaced && index >= 2 && index < len(group)-1 {
+					wrapped[column] = append(wrapped[column], "")
+				}
+			}
+		}
+		for y := 0; y < max(len(wrapped[0]), len(wrapped[1]), len(wrapped[2])); y++ {
+			var line strings.Builder
+			for column := 0; column < 3; column++ {
+				value := ""
+				if y < len(wrapped[column]) {
+					value = wrapped[column][y]
+				}
+				line.WriteString(value)
+				if column < 2 {
+					line.WriteString(strings.Repeat(" ", max(0, cellWidth-ansi.StringWidth(value))+gap))
+				}
+			}
+			add(line.String())
+		}
+	} else {
+		// Stack the same groups, combining adjacent counters and usages so a
+		// normal narrow terminal still leaves most rows to the conversation.
+		rows = rows[:len(rows)-1] // title and first group belong to one section
+		groups = [][]string{
+			{activity[0], "Model " + model, fmt.Sprintf("Tools %d · Searches %d · Edits %d · Checks %d · Errors %s", stats.Tools, stats.Searches, stats.Edits, stats.Checks, errors), "Verification " + verification},
+			{usage[0], location, "Context " + context, tokens + " · " + quota, work},
+			{cully[0], fmt.Sprintf("Calls %d observed", stats.Cully.Calls) + " · Auth " + codexObservedState(stats.Cully.Auth, true), fmt.Sprintf("Log %d · Context %d · Recall %d · Search %d · Get %d · Other %d", stats.Cully.Log, stats.Cully.Context, stats.Cully.Recall, stats.Cully.Search, stats.Cully.Get, stats.Cully.Other)},
+		}
+		for i, group := range groups {
+			if i > 0 {
+				rows = append(rows, "")
+			}
+			for _, value := range group {
+				if value == "" {
+					continue
+				}
+				for _, line := range strings.Split(ansi.Wrap(value, width, ""), "\n") {
+					add(line)
+				}
+			}
+		}
+	}
+	return rows, context
+}
+
+func codexCullyInstrumentRows(stats codexToolStats, width int) []string {
+	c := stats.Cully
+	health := dim + "Awaiting first MCP response" + rst
+	if c.Health == "healthy" {
+		health = green + "● Healthy" + rst
+	} else if c.Health == "unhealthy" {
+		health = red + "● Unhealthy" + rst
+	} else if c.Calls > 0 {
+		health = dim + "Awaiting response evidence" + rst
+	}
+	auth := codexObservedState(c.Auth, true)
+	rows := []string{bold + "Cully MCP" + rst + " · " + health, "", fmt.Sprintf("Calls %d observed", c.Calls), fmt.Sprintf("Log %d · Context %d · Recall %d", c.Log, c.Context, c.Recall), fmt.Sprintf("Search %d · Get %d · Other %d", c.Search, c.Get, c.Other), "Auth " + auth}
+	if c.CheckedAt != "" {
+		rows = append(rows, "Last observed "+c.CheckedAt)
+	}
+	return rows
+}
+
+func codexObservedState(state string, auth bool) string {
+	if auth {
+		switch state {
+		case "authenticated":
+			return green + state + rst
+		case "unauthenticated":
+			return red + state + rst
+		}
+	} else {
+		switch state {
+		case "healthy":
+			return green + state + rst
+		case "unhealthy":
+			return red + state + rst
+		}
+	}
+	return dim + "unknown" + rst
 }
 
 func codexCompactAdvice(advice []string) []string {

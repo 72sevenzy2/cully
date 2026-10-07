@@ -25,6 +25,7 @@ type codexToolEvent struct {
 
 type codexToolStats struct {
 	Tools, Errors, Searches, Edits, Checks, EditsSinceCheck int
+	Cully                                                   codexCullyStats
 }
 
 var (
@@ -109,12 +110,20 @@ func bindCodexPane(cwd, codexSessionID string) {
 	if !ok {
 		return
 	}
+	previous := readCodexToolStats(pane.Session)
 	f, err := os.OpenFile(codexPaneBindingFile(pane.Session), os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0o600)
 	if err != nil {
 		return // first SessionStart for this pane keeps its binding
 	}
 	_, _ = f.WriteString(codexSessionKey(codexSessionID))
 	_ = f.Close()
+	updateCodexSessionState(pane.Session, func(state *codexSessionState) {
+		// Seed early unbound observations only on a new thread; never replace
+		// saved totals when opening a resumed session.
+		if _, err := os.Stat(codexSessionStateFile(pane.Session)); os.IsNotExist(err) {
+			state.Stats = previous
+		}
+	})
 }
 
 func activeCodexPaneSession(cwd, codexSessionID string) string {
@@ -155,6 +164,14 @@ func RunCodexSignalHook(r io.Reader) {
 	if codexToolFailed(event.ToolResponse) {
 		failure = '!'
 	}
+	if tool := codexCullyTool(event.ToolName); tool != "" {
+		health, auth := codexCullyResponseState(event.ToolResponse)
+		if health == "unhealthy" {
+			failure = '!'
+		}
+		recordCodexCullyCall(session, tool, health, auth)
+	}
+	recordCodexSessionTool(session, class, failure)
 	f, err := os.OpenFile(codexSignalFile(session), os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o600)
 	if err != nil {
 		return
@@ -215,7 +232,12 @@ func codexToolFailed(raw json.RawMessage) bool {
 }
 
 func readCodexToolStats(session string) codexToolStats {
-	var stats codexToolStats
+	if path := codexSessionStateFile(session); path != "" {
+		if _, err := os.Stat(path); err == nil {
+			return readCodexSessionState(path).Stats
+		}
+	}
+	stats := codexToolStats{Cully: readCodexCullyStats(session)}
 	f, err := os.Open(codexSignalFile(session))
 	if err != nil {
 		return stats

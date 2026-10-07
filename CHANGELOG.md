@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+## 0.8.0
+
+- Organize the Codex pane into Model & activity, Project & usage, and Cully MCP groups, with aligned columns on wide screens and consistent spacing when stacked.
+- Add a small uniform gap between wide-panel metric rows and a larger break before the advisor, shedding optional spacing first on short screens.
+- Count directly observed Cully MCP calls per session, including log/context/recall/search/get, and show last-observed health/authentication with explicit unknown and failure states.
+- Show verified MCP health as a green Healthy or red Unhealthy heading badge, with a clear awaiting-response startup state and no duplicate Health row.
+- Save private thread-scoped MCP and tool totals, verification state and native model/context/token/quota instruments locally; restore them when resuming the same Codex thread and keep different threads isolated.
+- Keep the last observed native token totals when a narrow footer omits them, and replace cumulative totals without double counting.
+- Omit Codex cost/cache placeholders when reliable billable cost is unavailable; retain model, context and token usage.
+
 ## 0.7.0
 
 - Make the Codex pane's row spacing consistent within each section, with a single separator row between identity, instruments, advice and controls.

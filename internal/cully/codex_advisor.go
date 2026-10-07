@@ -12,6 +12,11 @@ import (
 // limited to what these two sources actually observe, never a transcript.
 func codexAdviceWithStatus(stats codexToolStats, view codexStatusView) []string {
 	var advice []string
+	if stats.Cully.Auth == "unauthenticated" {
+		advice = append(advice, "WARN|Cully MCP needs authentication. Reconnect Cully in this coding agent before using memory tools.")
+	} else if stats.Cully.Health == "unhealthy" {
+		advice = append(advice, "CAUT|The last Cully MCP call failed. Inspect the connection or memory service before retrying.")
+	}
 	if view.ContextKnown && view.ContextLeft <= 10 {
 		advice = append(advice, fmt.Sprintf("WARN|Context is nearly full (%d%% left). Use /compact before continuing a long task.", view.ContextLeft))
 	} else if view.ContextKnown && view.ContextLeft <= 25 {
@@ -32,7 +37,7 @@ func codexAdvisorSignals(stats codexToolStats, view codexStatusView) string {
 	if view.ContextKnown {
 		ctx = fmt.Sprintf("context_used_pct=%d", 100-view.ContextLeft)
 	}
-	return fmt.Sprintf("agent=codex\n%s\ntools=%d searches=%d edits=%d checks=%d tool_errors=%d edits_since_check=%d\nsignal_scope=aggregate_counters_and_footer; task_intent=unknown\n", ctx, stats.Tools, stats.Searches, stats.Edits, stats.Checks, stats.Errors, stats.EditsSinceCheck) + view.Terminal.signals()
+	return fmt.Sprintf("agent=codex\n%s\ntools=%d searches=%d edits=%d checks=%d tool_errors=%d edits_since_check=%d\ncully_mcp_calls=%d cully_log_calls=%d cully_context_calls=%d cully_recall_calls=%d cully_search_calls=%d cully_get_calls=%d cully_mcp_health=%s cully_mcp_auth=%s\nsignal_scope=aggregate_counters_and_footer; task_intent=unknown\n", ctx, stats.Tools, stats.Searches, stats.Edits, stats.Checks, stats.Errors, stats.EditsSinceCheck, stats.Cully.Calls, stats.Cully.Log, stats.Cully.Context, stats.Cully.Recall, stats.Cully.Search, stats.Cully.Get, fallback(stats.Cully.Health, "unknown"), fallback(stats.Cully.Auth, "unknown")) + view.Terminal.signals()
 }
 
 func codexCombinedAdvice(session string, stats codexToolStats, view codexStatusView) []string {

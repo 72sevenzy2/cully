@@ -53,7 +53,7 @@ func TestCodexStatusReadableAndExpandable(t *testing.T) {
 		t.Fatal("wrapped content should expand the panel upward")
 	}
 	plain := normalizedCodexPanel(strings.Join(wide, "\n"))
-	for _, want := range []string{"Cully", "Tools 14", "Searches 3", "Edits 2", "Checks 1", "Errors 1", "92% used", "8% left", "/compact", "GPT-6.1-Sol high", "main", "daemon online", "Advisor", "Run a focused verification", "2 edits awaiting a successful check", gauge(92), "Tokens", "5h limit unavailable", "Weekly unavailable", "Fast unavailable", "Cost / cache unavailable from Codex", "/prompts:cully", "cully suggestions", "elapsed unavailable", "🧠", "📁", "🔧"} {
+	for _, want := range []string{"Cully", "Tools 14", "Searches 3", "Edits 2", "Checks 1", "Errors 1", "92% used", "8% left", "/compact", "GPT-6.1-Sol high", "main", "daemon online", "Advisor", "Run a focused verification", "2 edits awaiting a successful check", gauge(92), "Tokens", "5h limit unavailable", "Weekly unavailable", "Fast unavailable", "/prompts:cully", "cully suggestions", "elapsed unavailable", "🧠", "📁", "🔧"} {
 		if !strings.Contains(plain, normalizedCodexPanel(want)) {
 			t.Fatalf("missing status field %q", want)
 		}
@@ -69,6 +69,61 @@ func TestCodexStatusReadableAndExpandable(t *testing.T) {
 	}
 	if !strings.Contains(ansi.Strip(clipped[1]), "Context") {
 		t.Fatal("short panels must prioritize context over decorative headings")
+	}
+}
+
+func TestCodexNativeFooterRetainsClippedInstruments(t *testing.T) {
+	emulator := vt.NewEmulator(180, 20)
+	defer emulator.Close()
+	view := codexStatusView{Input: "1.2K", Output: "240", FiveHour: "5h 82% left", Weekly: "Weekly 91% left", Fast: "Fast off"}
+	_, _ = emulator.WriteString("\x1b[19;1HGPT-6.1-Sol medium · Context 70% left · 1.4K in")
+	if readCodexFooter(emulator, &view) != 18 || view.Input != "1.4K" || view.Output != "240" || view.FiveHour != "5h 82% left" || view.Weekly != "Weekly 91% left" || view.Fast != "Fast off" {
+		t.Fatalf("clipped footer erased known instruments or failed to update: %+v", view)
+	}
+	_, _ = emulator.WriteString("\x1b[19;1H\x1b[2KGPT-6.1-Sol medium · Context 68% left · 300 out · 5h 80% left · Weekly 90% left · Fast on")
+	if readCodexFooter(emulator, &view) != 18 || view.Input != "1.4K" || view.Output != "300" || view.FiveHour != "5h 80% left" || view.Weekly != "Weekly 90% left" || view.Fast != "Fast on" {
+		t.Fatalf("new footer instruments were not applied: %+v", view)
+	}
+}
+
+func TestCodexCompactGroupSpacingAdaptsWithoutLosingMetrics(t *testing.T) {
+	stats := codexToolStats{Tools: 60, Searches: 3, Edits: 2, Checks: 1}
+	stats.Cully.Health, stats.Cully.Auth = "healthy", "authenticated"
+	stats.Cully.CheckedAt = "2026-10-07T12:34:56Z"
+	view := codexStatusView{Project: "/work/cully", Branch: "main", Model: "GPT-6.1-Sol high", ContextKnown: true, ContextLeft: 73, Input: "1.2K", Output: "240", FiveHour: "5h 82% left", Weekly: "Weekly 91% left", Fast: "Fast off"}
+	advice := []string{"CAUT|Inspect repeated failures.", "ADV|Run focused verification."}
+	wide := codexCompactStatusRows(149, 43, advice, stats, view)
+	find := func(rows []string, text string) int {
+		for i, row := range rows {
+			if strings.Contains(ansi.Strip(row), text) {
+				return i
+			}
+		}
+		t.Fatalf("panel lost %q", text)
+		return -1
+	}
+	for _, pair := range [][2]string{{"Model GPT", "Tools 60"}, {"Tools 60", "Edits 2"}, {"Edits 2", "Verification"}, {"Project cully", "Context "}, {"Tokens in", "5h 82%"}, {"Calls 0 observed", "Log 0"}, {"Search 0", "Auth authenticated"}} {
+		if gap := find(wide, pair[1]) - find(wide, pair[0]); gap != 2 {
+			t.Fatalf("metric spacing %q → %q = %d, want2", pair[0], pair[1], gap)
+		}
+	}
+	heading := find(wide, "Advisor has")
+	if heading < 2 || strings.TrimSpace(ansi.Strip(wide[heading-1])) != "" || strings.TrimSpace(ansi.Strip(wide[heading-2])) != "" {
+		t.Fatal("Advisor must have a larger two-row section break")
+	}
+	longAdvice := []string{"CAUT|" + strings.Repeat("Inspect the first failure before retrying. ", 4), "ADV|" + strings.Repeat("Run focused verification before finishing. ", 4)}
+	longRows := codexCompactStatusRows(149, 43, longAdvice, stats, view)
+	if gap := find(longRows, "Tools 60") - find(longRows, "Model GPT"); gap != 2 {
+		t.Fatal("wrapped previews removed metric spacing on a normal wide terminal", gap)
+	}
+	for _, size := range [][2]int{{149, 16}, {80, 43}} {
+		rows := codexCompactStatusRows(size[0], size[1], advice, stats, view)
+		for _, metric := range []string{"Tools 60", "Verification", "Tokens in", "Auth authenticated", "Inspect repeated failures", "Run focused verification", "Open advisor"} {
+			find(rows, metric)
+		}
+		if len(rows)+1 > min(size[1], 22) {
+			t.Fatal("optional spacing exceeded compact panel budget")
+		}
 	}
 }
 
@@ -125,7 +180,7 @@ func TestCodexPanelShowsRichInstrumentsAndOverflow(t *testing.T) {
 	content := codexStatusRows(149, []string{"ADV|Run a focused check before finishing."}, stats, view)
 	height := 55 - codexPaneTop(55, len(content))
 	plain := normalizedCodexPanel(strings.Join(codexPanelLines(149, height, content), "\n"))
-	for _, want := range []string{"GPT-6.1-Sol high", "27% used", "73% left", "Input 1.2K", "Output 240", "5h limit 82% left", "Weekly 91% left", "Fast off", "+42 / -7", "3 tracked files", "Errors 0", "Verification no pending edits", "Cost / cache unavailable", "daemon online", "Run a focused check", "/prompts:cully"} {
+	for _, want := range []string{"GPT-6.1-Sol high", "27% used", "73% left", "Input 1.2K", "Output 240", "5h limit 82% left", "Weekly 91% left", "Fast off", "+42 / -7", "3 tracked files", "Errors 0", "Verification no pending edits", "daemon online", "Run a focused check", "/prompts:cully"} {
 		if !strings.Contains(plain, normalizedCodexPanel(want)) {
 			t.Fatalf("normal terminal lost instrument %q", want)
 		}
@@ -271,15 +326,15 @@ func TestCodexCompactPanelKeepsMetricsAndTwoPriorityComments(t *testing.T) {
 	advice := []string{"MEMO|Nominal marker should not crowd out a warning.", "ADV|A useful next step.", "CAUT|A caution needs attention.", "WARN|An urgent warning needs attention."}
 	for _, cols := range []int{80, 149} {
 		rows := codexCompactStatusRows(cols, 43, advice, stats, view)
-		limit := 17
+		limit := 22
 		if cols == 80 {
-			limit = 18
+			limit = 22
 		}
 		if len(rows)+1 > limit {
 			t.Fatalf("compact panel too tall at %d columns: %d rows", cols, len(rows)+1)
 		}
 		text := normalizedCodexPanel(strings.Join(rows, "\n"))
-		for _, want := range []string{"Cully", "main", "GPT-6.1-Sol high", "27% used", "73% left", "in 1.2K / out 240", "Tools 14", "Searches 3", "Edits 2", "Checks 1", "Errors 0", "5h 82% left", "Week 91% left", "Fast off", "+42/-7", "3 tracked", "Cost/cache unavailable", "Verification 2 edits need check", "daemon online", "elapsed", "An urgent warning", "A caution needs attention", "+2 more", "Ctrl+] / F6 Open advisor"} {
+		for _, want := range []string{"Cully", "main", "GPT-6.1-Sol high", "27% used", "73% left", "in 1.2K / out 240", "Tools 14", "Searches 3", "Edits 2", "Checks 1", "Errors 0", "5h 82% left", "Week 91% left", "Fast off", "+42/-7", "3 tracked", "Verification 2 edits need check", "daemon online", "elapsed", "An urgent warning", "A caution needs attention", "+2 more", "Ctrl+] / F6 Open advisor"} {
 			if !strings.Contains(text, want) {
 				t.Fatalf("compact panel at %d lost %q", cols, want)
 			}
@@ -294,8 +349,12 @@ func TestCodexCompactPanelBoundsCommentWrapping(t *testing.T) {
 	advice := []string{"WARN|First " + strings.Repeat("inspect this failure ", 40), "ADV|Second " + strings.Repeat("run a focused check ", 40), "MEMO|Third should remain in the expanded view."}
 	rows := codexCompactStatusRows(149, 43, advice, codexToolStats{}, codexStatusView{Project: "/work/cully", Started: time.Now()})
 	count := 0
+	advisor := false
 	for _, row := range rows {
-		if strings.HasPrefix(row, "    ") {
+		if strings.Contains(ansi.Strip(row), "Advisor has") {
+			advisor = true
+		}
+		if advisor && strings.HasPrefix(row, "    ") {
 			count++
 		}
 	}
@@ -385,5 +444,96 @@ func TestCodexAdviceCategoriesIncludeApply(t *testing.T) {
 		if !strings.Contains(text, "Apply") || !strings.Contains(text, "Next") {
 			t.Fatal("full and compact views should expose the same action categories")
 		}
+	}
+}
+
+func TestCodexCompactThreeGroupsAndObservedCullyStates(t *testing.T) {
+	stats := codexToolStats{Tools: 60, Searches: 3, Edits: 2, Checks: 1}
+	stats.Cully.Calls = 27
+	stats.Cully.Log = 2
+	stats.Cully.Context = 3
+	stats.Cully.Recall = 4
+	stats.Cully.Search = 5
+	stats.Cully.Get = 6
+	stats.Cully.Other = 7
+	stats.Cully.Health = "healthy"
+	stats.Cully.Auth = "authenticated"
+	stats.Cully.CheckedAt = "2026-10-07T12:34:56Z"
+	view := codexStatusView{Project: "/work/cully", Branch: "main", Model: "GPT-6.1-Sol high", ContextKnown: true, ContextLeft: 73, Input: "1.2K", Output: "240", FiveHour: "5h 82% left", Weekly: "Weekly 91% left", Fast: "Fast off", Daemon: true, Started: time.Now()}
+	advice := []string{"CAUT|Inspect repeated failures before retrying.", "ADV|Run a focused verification before finishing."}
+	wide := codexCompactStatusRows(149, 43, advice, stats, view)
+	text := normalizedCodexPanel(strings.Join(wide, "\n"))
+	for _, want := range []string{"Model & activity", "Project & usage", "Cully MCP", "Calls 27 observed", "Log 2", "Context 3", "Recall 4", "Search 5", "Get 6", "Other 7", "● Healthy", "Auth authenticated", "2026-10-07T12:34:56Z", "daemon online", "2 suggestions", "Open advisor"} {
+		if !strings.Contains(text, want) {
+			t.Fatalf("three-group panel lost %q", want)
+		}
+	}
+	if len(wide)+1 > 22 {
+		t.Fatalf("wide panel should preserve at least35of55coding rows: %d", len(wide)+1)
+	}
+	headerFound := false
+	for _, row := range wide {
+		plain := ansi.Strip(row)
+		model, usage, cully := strings.Index(plain, "Model & activity"), strings.Index(plain, "Project & usage"), strings.Index(plain, "Cully MCP")
+		if model < 0 || usage < 0 || cully < 0 {
+			continue
+		}
+		left := ansi.StringWidth(plain[:model])
+		middle := ansi.StringWidth(plain[:usage])
+		right := ansi.StringWidth(plain[:cully])
+		if left != 2 || middle < 50 || right < 100 || middle-left != right-middle {
+			t.Fatalf("groups must form three aligned columns: %d/%d/%d", left, middle, right)
+		}
+		headerFound = true
+	}
+	if !headerFound {
+		t.Fatal("wide panel did not align all three group headings on one row")
+	}
+	narrow := codexCompactStatusRows(80, 43, advice, stats, view)
+	narrowText := normalizedCodexPanel(strings.Join(narrow, "\n"))
+	for _, want := range []string{"Model & activity", "Project & usage", "Cully MCP", "● Healthy", "Auth authenticated", "Calls 27 observed", "Log 2", "Context 3", "Recall 4", "Search 5", "Get 6", "Other 7"} {
+		if !strings.Contains(narrowText, want) {
+			t.Fatalf("stacked panel lost %q", want)
+		}
+	}
+	if len(narrow)+1 > 22 {
+		t.Fatalf("stacked default panel should remain bounded: %d", len(narrow)+1)
+	}
+}
+
+func TestCodexCullyHealthAndAuthAreIndependentAndUnknownByDefault(t *testing.T) {
+	view := codexStatusView{Daemon: true}
+	stats := codexToolStats{}
+	for _, tc := range []struct{ health, auth string }{
+		{"", ""}, {"unknown", "unknown"}, {"unhealthy", "unauthenticated"}, {"healthy", "unknown"},
+	} {
+		stats.Cully.Health, stats.Cully.Auth = tc.health, tc.auth
+		rows := codexCompactStatusRows(149, 43, nil, stats, view)
+		text := normalizedCodexPanel(strings.Join(rows, "\n"))
+		health, auth := tc.health, tc.auth
+		switch health {
+		case "healthy":
+			health = "● Healthy"
+		case "unhealthy":
+			health = "● Unhealthy"
+		default:
+			health = "Awaiting first MCP response"
+		}
+		if auth == "" {
+			auth = "unknown"
+		}
+		if !strings.Contains(text, health) || !strings.Contains(text, "Auth "+auth) || !strings.Contains(text, "Calls 0 observed") {
+			t.Fatalf("observed MCP state lost or invented: %s", text)
+		}
+		if strings.Contains(text, "Health ") || strings.Contains(text, "last response") {
+			t.Fatal("redundant health row/label remains")
+		}
+		if strings.Contains(text, "Cost") || strings.Contains(text, "cache") {
+			t.Fatal("unsupported Codex cost/cache rows must be omitted")
+		}
+	}
+	full := normalizedCodexPanel(strings.Join(codexStatusRows(149, nil, stats, view), "\n"))
+	if !strings.Contains(full, "Cully MCP") || strings.Contains(full, "Cost / cache") {
+		t.Fatal("expanded instruments should retain MCP metrics and omit unsupported cost")
 	}
 }

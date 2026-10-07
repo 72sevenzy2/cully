@@ -113,7 +113,7 @@ sleep 0.3
 printf 'O!\nO!\nO!\nE.\n' >> "$CLAUDE_CONFIG_DIR/cully-logs/$CULLY_PANE_SESSION.codex-events"
 sleep 0.3
 set -- $(stty size)
-if [ "$1" -lt 37 ]; then exit 2; fi
+if [ "$1" -lt 33 ]; then exit 2; fi
 `
 	if err := os.WriteFile(command, []byte(script), 0o755); err != nil {
 		t.Fatal(err)
