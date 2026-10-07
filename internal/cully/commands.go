@@ -155,6 +155,12 @@ func RunStatus(w io.Writer, cwd string) {
 	}
 	snap := readSnapshot(resolveSession(cwd))
 	st, hasState := readState()
+	var events []journalEvent
+	if _, evs, ok := latestJournal(cwd); ok {
+		events = evs
+	}
+	_, gitFiles := gitChangedFiles(cwd, 0)
+	fmt.Fprintln(w, renderSessionHealth(events, gitFiles, time.Now()))
 	writeIntegrations(w, cwd)
 	RunDaemonStatus(w)
 	fmt.Fprintln(w)

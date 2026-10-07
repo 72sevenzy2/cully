@@ -23,6 +23,8 @@ Usage:
   cully uninstall [--purge-data]           Stop local stack and remove managed agent setup
   cully uninstall [claude|codex|cursor|all] Remove one or all agent integrations
   cully status [directory]                Show session and agent status
+  cully rescue [--cwd DIR] [--agent claude|codex|cursor] [--no-ai]
+                                          Diagnose a stuck session from recorded evidence
   cully suggestions                       Review suggested improvements
   cully run AGENT [ARGS...]               Run any coding agent in the Cully terminal
   cully claude|codex|cursor [ARGS...]     Shortcuts for cully run claude, codex and cursor-agent
@@ -66,6 +68,8 @@ func run(args []string) error {
 			cwd = args[1]
 		}
 		cully.RunStatus(os.Stdout, cwd)
+	case "rescue":
+		return cully.RunRescue(os.Stdout, args[1:])
 	case "suggestions":
 		cully.RunList(os.Stdout)
 	case "run":
