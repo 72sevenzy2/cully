@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Fix two macOS test harness issues: resolve temporary-directory symlinks when checking child working directories, and drain terminal output during the hangup test.
+
+- Install one Cully binary at `~/.local/bin/cully` and link agent command paths to it, migrating older Cully copies. Installer logs show versions, paths, migrations and terminal refresh instructions; full uninstall removes managed agent links.
+- Require `cully setup --all` for a full local setup or `--mcp-url URL` for a deployed server, reject positional agent names, and verify MCP initialization and Cully tool discovery. Local setup streams build progress and identifies failed stages; OAuth verification remains pending until agent sign-in.
+
 ## 0.10.2
 
 - In Warp, the Cully terminal no longer enables mouse tracking at startup. That mode was consuming Warp scroll mode and the host mouse wheel. Mouse tracking turns on only while the advisor drawer is open (Ctrl+] / F6) and turns off again when it closes. Other terminals keep click-to-open on the compact panel.
