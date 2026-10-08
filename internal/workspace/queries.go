@@ -84,7 +84,8 @@ func getTask(t *Team, actor string, p *Project, v Input, now time.Time) (Result,
 	out := Result{TeamID: t.ID, Task: task}
 	if len(task.Attempts) > 0 {
 		// Match inbox and reclaim: expired at lease instant (!Before), not only after.
-		out.Stale = !now.Before(task.Attempts[len(task.Attempts)-1].LeaseUntil) && slices.Contains([]string{"active", "blocked"}, task.State)
+		// Review is included so abandoned submissions surface as stale for reclaim/force-release.
+		out.Stale = leaseExpired(task, now) && slices.Contains([]string{"active", "blocked", "review"}, task.State)
 	}
 	return out, task.ID, nil
 }

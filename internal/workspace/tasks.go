@@ -58,8 +58,12 @@ func mutateTask(t *Team, actor string, p *Project, v Input, now time.Time) (Resu
 		err = claimTask(t, actor, task, v, now)
 	case "task_approve":
 		err = approveTask(actor, p, task, v, now)
+	case "task_release":
+		err = releaseTask(actor, p, task, now)
 	case "task_state":
-		if v.State == "cancelled" && task.State == "ready" {
+		if v.State == "cancelled" && (task.State == "ready" || task.Owner == actor) {
+			// Ready cancel is any writer; owned cancel works even after lease expiry
+			// so agents do not need a reclaim hop just to drop stuck work.
 			err = cancelTask(t, task)
 		} else {
 			err = updateOwnedTask(t, actor, p, task, v, now)
@@ -115,11 +119,47 @@ func cancelTask(t *Team, task *Task) error {
 	return nil
 }
 
+func leaseExpired(task *Task, now time.Time) bool {
+	return len(task.Attempts) > 0 && !now.Before(task.Attempts[len(task.Attempts)-1].LeaseUntil)
+}
+
+// releaseTask returns work to ready. The owner needs a live lease and a
+// checkpoint. Maintainers may force-release someone else's review, or their
+// active/blocked claim after lease expiry, so the board is not stranded.
+func releaseTask(actor string, p *Project, task *Task, now time.Time) error {
+	if task.Owner == actor {
+		if len(task.Attempts) == 0 || leaseExpired(task, now) {
+			return ErrConflict
+		}
+		if required(task.Checkpoint, task.NextStep) != nil {
+			return ErrInvalid
+		}
+	} else {
+		if p.Members[actor] != "maintainer" {
+			return ErrForbidden
+		}
+		switch task.State {
+		case "review":
+			// incomplete or abandoned review can be returned without waiting
+		case "active", "blocked":
+			if !leaseExpired(task, now) {
+				return ErrConflict
+			}
+		default:
+			return ErrConflict
+		}
+	}
+	task.Owner = ""
+	task.State = "ready"
+	task.Evidence = nil
+	return nil
+}
+
 func updateOwnedTask(t *Team, actor string, p *Project, task *Task, v Input, now time.Time) error {
 	if task.Owner != actor {
 		return ErrForbidden
 	}
-	if len(task.Attempts) == 0 || !now.Before(task.Attempts[len(task.Attempts)-1].LeaseUntil) {
+	if len(task.Attempts) == 0 || leaseExpired(task, now) {
 		return ErrConflict
 	}
 	switch v.Action {
@@ -136,13 +176,6 @@ func updateOwnedTask(t *Team, actor string, p *Project, task *Task, v Input, now
 			task.State = "active"
 			task.Evidence = nil
 		}
-	case "task_release":
-		if required(task.Checkpoint, task.NextStep) != nil {
-			return ErrInvalid
-		}
-		task.Owner = ""
-		task.State = "ready"
-		task.Evidence = nil
 	case "task_state":
 		if !slices.Contains([]string{"active", "blocked", "cancelled"}, v.State) || (v.State == "blocked" && required(v.NextStep) != nil) {
 			return ErrInvalid

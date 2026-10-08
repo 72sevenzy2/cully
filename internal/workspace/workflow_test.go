@@ -198,6 +198,67 @@ func TestDispatchPreservesAccessAndAuditBoundaries(t *testing.T) {
 	}
 }
 
+func TestOwnerCancelAfterLeaseExpiry(t *testing.T) {
+	team, p, task, now := fixture(t)
+	apply(t, team, p, "dev", Input{Action: "task_claim", TaskID: task.ID, Version: 1, Agent: "claude"}, now)
+	apply(t, team, p, "dev", Input{Action: "task_state", TaskID: task.ID, Version: 2, State: "blocked", NextStep: "Need docs"}, now)
+	later := task.Attempts[0].LeaseUntil
+	if _, _, err := team.Apply("dev", Input{Action: "task_checkpoint", TeamID: team.ID, ProjectID: p.ID, TaskID: task.ID, Version: 3, Checkpoint: "x", NextStep: "y"}, later); !errors.Is(err, ErrConflict) {
+		t.Fatal("expired lease still mutated")
+	}
+	apply(t, team, p, "dev", Input{Action: "task_state", TaskID: task.ID, Version: 3, State: "cancelled"}, later)
+	if task.State != "cancelled" || task.Owner != "" {
+		t.Fatalf("owner could not cancel after lease expiry: %+v", task)
+	}
+}
+
+func TestMaintainerForceReleaseAndReviewStale(t *testing.T) {
+	team, p, task, now := fixture(t)
+	apply(t, team, p, "dev", Input{Action: "task_claim", TaskID: task.ID, Version: 1, Agent: "claude"}, now)
+	apply(t, team, p, "dev", Input{Action: "task_checkpoint", TaskID: task.ID, Version: 2, Checkpoint: "Partial", NextStep: "Finish", Branch: "fix/x"}, now)
+	apply(t, team, p, "dev", Input{Action: "task_submit", TaskID: task.ID, Version: 3, Revision: "r1", Artifact: "https://github.com/mcp-runtime/cully/pull/19", Evidence: []Evidence{{Criterion: 0, Check: "a", Status: "pass", Revision: "r1", ObservedAt: now}}}, now)
+	later := task.Attempts[0].LeaseUntil
+	if !apply(t, team, p, "next", Input{Action: "task_get", TaskID: task.ID}, later).Stale {
+		t.Fatal("expired review not marked stale")
+	}
+	if _, _, err := team.Apply("next", Input{Action: "task_claim", TeamID: team.ID, ProjectID: p.ID, TaskID: task.ID, Version: task.Version, Agent: "codex"}, later); !errors.Is(err, ErrConflict) {
+		t.Fatal("foreign reclaim of review allowed")
+	}
+	if _, _, err := team.Apply("next", Input{Action: "task_release", TeamID: team.ID, ProjectID: p.ID, TaskID: task.ID, Version: task.Version}, later); !errors.Is(err, ErrForbidden) {
+		t.Fatal("non-maintainer force-release allowed")
+	}
+	apply(t, team, p, "lead", Input{Action: "task_release", TaskID: task.ID, Version: task.Version}, later)
+	if task.State != "ready" || task.Owner != "" || task.Checkpoint != "Partial" || len(task.Evidence) != 0 {
+		t.Fatalf("maintainer force-release failed: %+v", task)
+	}
+}
+
+func TestLearningDeleteRemovesPlaybooks(t *testing.T) {
+	team, p, task, now := fixture(t)
+	apply(t, team, p, "dev", Input{Action: "task_claim", TaskID: task.ID, Version: 1, Agent: "claude"}, now)
+	apply(t, team, p, "dev", Input{Action: "task_checkpoint", TaskID: task.ID, Version: 2, Checkpoint: "Done", NextStep: "Ship", Branch: "fix/x"}, now)
+	evidence := []Evidence{{Criterion: 0, Check: "a", Status: "pass", Revision: "r1", ObservedAt: now}, {Criterion: 1, Check: "b", Status: "pass", Revision: "r1", ObservedAt: now}}
+	apply(t, team, p, "dev", Input{Action: "task_submit", TaskID: task.ID, Version: 3, Revision: "r1", Artifact: "https://github.com/mcp-runtime/cully/pull/19", Evidence: evidence}, now)
+	apply(t, team, p, "lead", Input{Action: "task_approve", TaskID: task.ID, Version: 4, Revision: "r1"}, now)
+	l := apply(t, team, p, "dev", Input{Action: "learning_draft", TaskID: task.ID, Lesson: "Tip", AppliesWhen: "when", Limitations: "none"}, now).Learning
+	apply(t, team, p, "dev", Input{Action: "learning_publish", LearningID: l.ID, Version: 1}, now)
+	adopted := apply(t, team, p, "lead", Input{Action: "playbook_adopt", LearningID: l.ID, Version: 2, Steps: []string{"One", "Two"}}, now).Playbooks
+	if len(adopted) != 1 || team.Playbooks[adopted[0].ID] == nil {
+		t.Fatal("playbook missing after adopt")
+	}
+	bookID := adopted[0].ID
+	apply(t, team, p, "dev", Input{Action: "learning_delete", LearningID: l.ID, Version: 2}, now)
+	if team.Learnings[l.ID] != nil || team.Playbooks[bookID] != nil {
+		t.Fatal("learning delete left orphan learning or playbook")
+	}
+}
+
+func TestUnknownActionIsNotWrite(t *testing.T) {
+	if (Input{Action: "task_typo"}).Write() {
+		t.Fatal("unknown action treated as write")
+	}
+}
+
 func TestRemoveMemberReleasesOwnedOpenTasks(t *testing.T) {
 	team, p, task, now := fixture(t)
 	apply(t, team, p, "dev", Input{Action: "task_claim", TaskID: task.ID, Version: 1, Agent: "claude"}, now)

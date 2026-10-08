@@ -59,6 +59,19 @@ func changeLearning(t *Team, actor string, p *Project, v Input, now time.Time) (
 		l.Artifact = task.Artifact
 		l.Revision = task.Revision
 	}
+	if v.Action == "learning_delete" {
+		for id, b := range t.Playbooks {
+			if b != nil && b.LearningID == l.ID {
+				if b.Status == "active" {
+					p.GuidanceVersion++
+				}
+				delete(t.Playbooks, id)
+			}
+		}
+		delete(t.Learnings, l.ID)
+		out.Learning = nil
+		return out, l.ID, nil
+	}
 	if v.Action == "learning_publish" && (t.Tasks[l.TaskID] == nil || t.Tasks[l.TaskID].Version != l.TaskVersion) {
 		return out, "", ErrConflict
 	}
@@ -71,10 +84,6 @@ func changeLearning(t *Team, actor string, p *Project, v Input, now time.Time) (
 			b.Version++
 			p.GuidanceVersion++
 		}
-	}
-	if v.Action == "learning_delete" {
-		delete(t.Learnings, l.ID)
-		out.Learning = nil
 	}
 	return out, l.ID, nil
 }

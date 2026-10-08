@@ -39,7 +39,7 @@ type Input struct {
 
 func (v Input) Write() bool {
 	op, ok := operations[v.Action]
-	return !ok || op.write
+	return ok && op.write
 }
 func (v Input) Validate() error {
 	op, ok := operations[v.Action]

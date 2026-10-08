@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+## 0.11.2
+
+- Let a task owner cancel their own active/blocked work after lease expiry without reclaiming first. Mark expired review packets stale. Allow project maintainers to force-release someone else's review (or their expired active/blocked claim) back to ready. Delete dependent playbooks when a lesson is deleted. Treat unknown workspace actions as non-writes for CLI/MCP tool selection.
+
 ## 0.11.1
 
 - When a Team member is removed from the team or project, or demoted to viewer, their owned open tasks return to ready so incomplete reviews and live claims are not stranded. Keep checkpoint/next step for handoff and clear evidence. Align `task_get` stale with inbox/reclaim at the exact lease expiry instant.
