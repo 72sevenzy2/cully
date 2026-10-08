@@ -93,8 +93,8 @@ func Data(command string) error {
 	checkCtx, stop := context.WithTimeout(ctx, 10*time.Second)
 	defer stop()
 	var schemaReady bool
-	if err = pool.QueryRow(checkCtx, "SELECT EXISTS(SELECT 1 FROM cully_schema_versions WHERE version=3)").Scan(&schemaReady); err != nil || !schemaReady {
-		return fmt.Errorf("Cully schema is missing; run cully-data migrate")
+	if err = pool.QueryRow(checkCtx, "SELECT EXISTS(SELECT 1 FROM cully_schema_versions WHERE version=$1)", migrations.RequiredVersion).Scan(&schemaReady); err != nil || !schemaReady {
+		return fmt.Errorf("Cully schema is missing or behind (need version %d); run cully-data migrate", migrations.RequiredVersion)
 	}
 	store := &postgres.Store{Pool: pool}
 	if s.Mem0URL != "" || s.Mem0APIKey != "" {

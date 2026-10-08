@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+## 0.11.3
+
+- Refuse to start `cully-data serve` until schema version 6 is applied (sessions/tasks and Team workspaces), instead of accepting a database that only reached version 3. Migration tests assert the required version stays current.
+
 ## 0.11.2
 
 - Let a task owner cancel their own active/blocked work after lease expiry without reclaiming first. Mark expired review packets stale. Allow project maintainers to force-release someone else's review (or their expired active/blocked claim) back to ready. Delete dependent playbooks when a lesson is deleted. Treat unknown workspace actions as non-writes for CLI/MCP tool selection.
