@@ -1,11 +1,25 @@
 ---
-title: Product direction
-description: Where Cully is going. Shipped capabilities are separated from proposals so nothing planned reads as available.
+title: Product vision
+description: Solo mode is a copilot for your coding agent and work environment. Team mode connects people and agents through tasks, handoffs, review and learning.
 ---
 
-# Product direction
+# Product vision
 
-Cully is the intelligent workspace around your coding agents. The long-term idea is that Cully understands **how coding agents are working**, not only what they remember.
+**Your agent's copilot. Your team's workspace.**
+
+Cully has two product modes around the coding agents people already use. They share the same CLI, terminal and services; these are workflows, not new `--solo` or `--team` setup flags.
+
+## Solo mode
+
+A copilot for your coding agent and work environment. Understand session health, notice loops and unchecked edits, recover private context, replay what happened and continue in another agent. The journal stays local; saved memory stays owner-scoped. Immediate advisor warnings work offline. Start with [Solo mode](/solo).
+
+## Team mode
+
+Keep your team's agent work moving, whoever picks it up next. A task outlives any session, person or agent: its outcome, accountable person, attempts, decisions, checkpoint, review evidence and useful lessons remain connected. Members claim work and hand it off; a noncontributing maintainer accepts delivery and adopts explicitly published guidance. Private solo notes and journals remain separate.
+
+The first [team workflow](/team-workflows) uses CLI/MCP and manual agent launch. It implements issuer-scoped OAuth identity, explicit project roles, atomic versioned claims, dependencies, board/inbox, checkpoints, reported review evidence and project lessons/playbooks. Managed execution and automatic learning remain planned.
+
+The adoption hypothesis is that connected tasks reduce repeated investigation and explicit evidence improves review confidence. Validate those outcomes with real teams before claiming savings or fixing pricing. Measure handoff time, review waiting time, reopened tasks and lesson usefulness, with counts and limitations.
 
 This page separates **shipped** work from **proposals**. Proposals are not promises and carry no dates. For the exact list of what exists today, see [current capabilities](/capabilities).
 
@@ -30,6 +44,9 @@ Terminal and hooks ──► Session journal ──► Session intelligence ─�
 | `cully status` | Measured session health and a rule-based risk label |
 | [Session forensics](/use-cases) | Flight-recorder postmortems, audit-grade review and replayable playbooks from the same record |
 | Project workflow hint | "You usually run checks after editing here" |
+| Team workspace through CLI/MCP | Authorized project roles, stable tasks, board/inbox, claims and selected checkpoints |
+| Task acceptance | Reported evidence for each criterion and revision/version-pinned maintainer approval |
+| Explicit project learning | Private drafts, publication/withdrawal and maintained source-linked playbooks |
 
 ## Next
 
@@ -79,6 +96,25 @@ Work that builds on the journal and needs moderate additions.
 | Complexity | Low to medium. |
 | Differentiation | Medium. |
 
+## Team workspace target
+
+The [manual-launch workflow](/team-workflows) is the shipped Team slice. Existing private sessions and task links remain owner-scoped. Team work uses separate records and explicit authorization; Cully does not intercept model traffic.
+
+### Demo and commercial validation
+
+Demonstrate one task: one developer starts it, another continues in a different agent, the reviewer sees missing evidence, the checks are supplied, and an accepted lesson improves a later task. Include a private note that never appears to the teammate and a membership removal that stops new reads.
+
+Measure time to first useful action after handoff, repeated investigation, time waiting for review, reopened tasks and playbook usefulness. Compare like-for-like work with and without Cully. Show counts and denominators; no arbitrary productivity score. Validate willingness to adopt before fixing packaging or pricing.
+
+### Planned team stages
+
+| Stage | Deliverable | Gate |
+| --- | --- | --- |
+| Managed execution | Capability-aware adapters, isolated worktrees, bounded runs, cancellation and recovery | Duplicate events do not duplicate runs; unsupported controls are explicit |
+| Shared learning extensions | Team-wide visibility, semantic shared retrieval, ranking and optional background draft suggestions | Private notes never enter shared retrieval; edits/withdrawals invalidate derived tips |
+| Browser and trackers | Web board/inbox and GitHub/Linear-style artifact sync | Signed events, delivery deduplication and external permission checks before bidirectional writes |
+| Measured improvement | Team workflow suggestions and agent comparisons from verified outcomes | Show cohort size and confounders before any automatic routing |
+
 ## Later
 
 Ideas that need new data, new instrumentation or a lot of history first.
@@ -90,9 +126,20 @@ Ideas that need new data, new instrumentation or a lot of history first.
 | User problem | "We always run a security review after authorization changes" lives only in people's heads. |
 | Experience | When a session type usually ends with certain steps and some are missing, Cully says so. |
 | Reuses | The journal, project memory, the existing workflow hint. |
-| Missing | Classifying what kind of work a session was, without reading prompts. Team-level storage. |
+| Missing | Classifying work without reading prompts and collecting enough verified outcomes to support useful patterns. |
 | Complexity | High. |
 | Differentiation | High, if it is accurate. |
+
+### Shared learning workers
+
+| | |
+| --- | --- |
+| User problem | Useful lessons stay private drafts or drown in a long project history. |
+| Experience | Opt-in preparation suggests draft lessons and ranks currently authorized tips; publishing and playbook adoption stay explicit. |
+| Reuses | Project lessons, playbooks and live authorization checks from Team mode. |
+| Missing | Bounded job IDs, cancellation, membership-aware caches and Mem0 hydration that never exposes private notes. |
+| Complexity | High. |
+| Differentiation | High if withdrawal and access removal stay correct. |
 
 ### Agent performance intelligence
 
