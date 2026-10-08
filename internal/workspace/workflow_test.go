@@ -198,6 +198,56 @@ func TestDispatchPreservesAccessAndAuditBoundaries(t *testing.T) {
 	}
 }
 
+func TestRemoveMemberReleasesOwnedOpenTasks(t *testing.T) {
+	team, p, task, now := fixture(t)
+	apply(t, team, p, "dev", Input{Action: "task_claim", TaskID: task.ID, Version: 1, Agent: "claude"}, now)
+	apply(t, team, p, "dev", Input{Action: "task_checkpoint", TaskID: task.ID, Version: 2, Checkpoint: "Partial fix", NextStep: "Finish tests", Branch: "fix/auth"}, now)
+	apply(t, team, p, "dev", Input{Action: "task_submit", TaskID: task.ID, Version: 3, Revision: "r-partial", Artifact: "https://github.com/mcp-runtime/cully/pull/19", Evidence: []Evidence{{Criterion: 0, Check: "Sign-in E2E", Status: "pass", Revision: "r-partial", ObservedAt: now}}}, now)
+	if task.State != "review" || task.Owner != "dev" {
+		t.Fatal("expected incomplete review owned by removed member")
+	}
+	versionBefore := task.Version
+	apply(t, team, p, "lead", Input{Action: "team_member", Principal: "dev", Role: "remove"}, now)
+	if task.Owner != "" || task.State != "ready" || task.Version != versionBefore+1 || task.Checkpoint == "" || len(task.Evidence) != 0 {
+		t.Fatalf("owned review not released for reclaim: %+v", task)
+	}
+	apply(t, team, p, "next", Input{Action: "task_claim", TaskID: task.ID, Version: task.Version, Agent: "codex"}, now)
+	if task.Owner != "next" || task.State != "active" {
+		t.Fatal("reclaim after membership removal failed")
+	}
+
+	// Demoting to viewer also drops write access and must release the claim.
+	other := apply(t, team, p, "next", Input{Action: "task_create", Name: "Docs", Criteria: []string{"Updated"}}, now).Task
+	apply(t, team, p, "next", Input{Action: "task_claim", TaskID: other.ID, Version: 1, Agent: "codex"}, now)
+	apply(t, team, p, "lead", Input{Action: "project_member", Principal: "next", Role: "viewer"}, now)
+	if other.Owner != "" || other.State != "ready" {
+		t.Fatalf("viewer demotion left owned work stranded: %+v", other)
+	}
+}
+
+func TestLeaseExpiryBoundaryMatchesInboxAndReclaim(t *testing.T) {
+	team, p, task, now := fixture(t)
+	apply(t, team, p, "dev", Input{Action: "task_claim", TaskID: task.ID, Version: 1, Agent: "claude"}, now)
+	atExpiry := task.Attempts[0].LeaseUntil
+	if !apply(t, team, p, "next", Input{Action: "task_get", TaskID: task.ID}, atExpiry).Stale {
+		t.Fatal("task_get Stale false at lease instant")
+	}
+	inbox := apply(t, team, p, "next", Input{Action: "inbox"}, atExpiry)
+	found := false
+	for _, item := range inbox.Tasks {
+		if item.ID == task.ID {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatal("inbox omitted task at lease instant")
+	}
+	apply(t, team, p, "next", Input{Action: "task_claim", TaskID: task.ID, Version: 2, Agent: "codex"}, atExpiry)
+	if task.Owner != "next" {
+		t.Fatal("reclaim at lease instant failed")
+	}
+}
+
 func TestCancelledDependencyBlocksAndRejectsDeadlock(t *testing.T) {
 	team, p, task, now := fixture(t)
 	apply(t, team, p, "dev", Input{Action: "task_claim", TaskID: task.ID, Version: 1, Agent: "claude"}, now)

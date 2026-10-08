@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+## 0.11.1
+
+- When a Team member is removed from the team or project, or demoted to viewer, their owned open tasks return to ready so incomplete reviews and live claims are not stranded. Keep checkpoint/next step for handoff and clear evidence. Align `task_get` stale with inbox/reclaim at the exact lease expiry instant.
+
 ## 0.11.0
 
 - Harden Team workspace invariants: keep a project maintainer when removing a team member, reject cancelled dependencies and canceling tasks that still have open dependents, allow project writers to cancel ready tasks, require completed tasks before lesson drafts, prefer published lessons over drafts in `lessons`, and keep team-scoped audit events free of client `project_id`. Restore installer setup without a default `--agent codex`. Fold implemented design pages into team workflows and product vision; remove the standalone team-workspace and shared-learning design docs.

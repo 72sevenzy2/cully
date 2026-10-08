@@ -67,6 +67,8 @@ func manageTeamMember(t *Team, actor string, p *Project, v Input, now time.Time)
 		for _, project := range t.Projects {
 			delete(project.Members, v.Principal)
 		}
+		// Return owned open work to the board so handoffs are not stranded.
+		releaseOwnedOpenTasks(t, "", v.Principal, now)
 	} else {
 		t.Members[v.Principal] = v.Role
 	}
@@ -115,9 +117,36 @@ func manageProjectMember(t *Team, actor string, p *Project, v Input, now time.Ti
 	}
 	if v.Role == "remove" {
 		delete(p.Members, v.Principal)
+		releaseOwnedOpenTasks(t, p.ID, v.Principal, now)
 	} else {
 		p.Members[v.Principal] = v.Role
+		// Viewers cannot mutate; release any claim they still hold.
+		if v.Role == "viewer" {
+			releaseOwnedOpenTasks(t, p.ID, v.Principal, now)
+		}
 	}
 
 	return out, v.Principal, nil
+}
+
+// releaseOwnedOpenTasks returns a principal's non-terminal owned tasks to
+// ready so another member can claim them after membership or write access is
+// lost. Checkpoint and next step stay for handoff; evidence does not.
+func releaseOwnedOpenTasks(t *Team, projectID, principal string, now time.Time) {
+	for _, task := range t.Tasks {
+		if task == nil || task.Owner != principal {
+			continue
+		}
+		if projectID != "" && task.ProjectID != projectID {
+			continue
+		}
+		if task.State == "done" || task.State == "cancelled" || task.State == "ready" {
+			continue
+		}
+		task.Owner = ""
+		task.State = "ready"
+		task.Evidence = nil
+		task.Version++
+		task.UpdatedAt = now
+	}
 }

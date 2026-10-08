@@ -83,7 +83,8 @@ func getTask(t *Team, actor string, p *Project, v Input, now time.Time) (Result,
 	}
 	out := Result{TeamID: t.ID, Task: task}
 	if len(task.Attempts) > 0 {
-		out.Stale = now.After(task.Attempts[len(task.Attempts)-1].LeaseUntil) && slices.Contains([]string{"active", "blocked"}, task.State)
+		// Match inbox and reclaim: expired at lease instant (!Before), not only after.
+		out.Stale = !now.Before(task.Attempts[len(task.Attempts)-1].LeaseUntil) && slices.Contains([]string{"active", "blocked"}, task.State)
 	}
 	return out, task.ID, nil
 }
