@@ -239,12 +239,12 @@ func validate(t Testimonial) error {
 func validatePhoto(photo []byte) error {
 	content := http.DetectContentType(photo)
 	if content != "image/jpeg" && content != "image/png" && content != "image/webp" {
-		return errors.New("Choose a JPG, PNG, or WebP photo.")
+		return NonexistentImageErr
 	}
 	if content != "image/webp" {
 		cfg, _, err := image.DecodeConfig(bytes.NewReader(photo))
 		if err != nil || cfg.Width > 4096 || cfg.Height > 4096 {
-			return errors.New("Choose a valid photo no larger than 4096 × 4096 pixels.")
+			return InvalidImageSizeErr
 		}
 	}
 	return nil
@@ -285,7 +285,7 @@ func (s *Server) photo(w http.ResponseWriter, r *http.Request) {
 
 func List(data, state string) ([]Testimonial, error) {
 	if state != "pending" && state != "approved" {
-		return nil, errors.New("invalid review state")
+		return nil, InvalidReviewStateErr
 	}
 	dirs, err := os.ReadDir(filepath.Join(data, state))
 	if err != nil {
@@ -312,7 +312,7 @@ func List(data, state string) ([]Testimonial, error) {
 // Review is available only through the operator's CLI, never a public route.
 func Review(data, action, id string) error {
 	if !validID.MatchString(id) {
-		return errors.New("invalid submission ID")
+		return InvalidSubmissionIDErr
 	}
 	source := filepath.Join(data, "pending", id)
 	b, err := os.ReadFile(filepath.Join(source, "testimonial.json"))
