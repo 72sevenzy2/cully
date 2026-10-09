@@ -35,7 +35,7 @@ func (s *Server) importProfile(w http.ResponseWriter, r *http.Request) {
 	if !s.allow(w, r) {
 		return
 	}
-	r.Body = http.MaxBytesReader(w, r.Body, 1024)
+	r.Body = http.MaxBytesReader(w, r.Body, MaxHTMLBodyReader)
 	var input struct {
 		URL string `json:"url"`
 	}
@@ -131,8 +131,8 @@ func (s *Server) fetchPhoto(ctx context.Context, raw string) ([]byte, error) {
 	if resp.StatusCode != 200 {
 		return nil, PhotoUnavailableErr
 	}
-	data, err := io.ReadAll(io.LimitReader(resp.Body, MaxPhoto+1))
-	if err != nil || len(data) > MaxPhoto {
+	data, err := io.ReadAll(io.LimitReader(resp.Body, MaxPhotoSize+1))
+	if err != nil || len(data) > MaxPhotoSize {
 		return nil, PhotoTooLargeErr
 	}
 	return data, validatePhoto(data)

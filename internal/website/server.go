@@ -24,8 +24,6 @@ import (
 	"unicode/utf8"
 )
 
-const MaxPhoto = 5 << 20
-
 var validID = regexp.MustCompile(`^[a-f0-9]{32}$`)
 
 type Testimonial struct {
@@ -134,8 +132,8 @@ func (s *Server) submit(w http.ResponseWriter, r *http.Request) {
 		problem(w, 503, "The review inbox is full. Please try again later.")
 		return
 	}
-	r.Body = http.MaxBytesReader(w, r.Body, MaxPhoto+(64<<10))
-	if err := r.ParseMultipartForm(MaxPhoto + (64 << 10)); err != nil {
+	r.Body = http.MaxBytesReader(w, r.Body, MaxPhotoSize+(64<<10))
+	if err := r.ParseMultipartForm(MaxPhotoSize + (64 << 10)); err != nil {
 		problem(w, 400, "Choose a photo up to 5 MB and retry your submission.")
 		return
 	}
@@ -152,12 +150,12 @@ func (s *Server) submit(w http.ResponseWriter, r *http.Request) {
 		problem(w, 400, err.Error())
 		return
 	}
-	var photo []byte
+	photo := make([]byte, MaxPhotoSize)
 	f, _, err := r.FormFile("photo")
 	if err == nil {
 		defer f.Close()
-		photo, err = io.ReadAll(io.LimitReader(f, MaxPhoto+1))
-		if err != nil || len(photo) > MaxPhoto {
+		photo, err = io.ReadAll(io.LimitReader(f, MaxPhotoSize+1))
+		if err != nil || len(photo) > MaxPhotoSize {
 			problem(w, 400, "Choose a photo up to 5 MB.")
 			return
 		}

@@ -152,7 +152,7 @@ func TestInvalidSubmissionsDoNotWriteRecords(t *testing.T) {
 			case "photo":
 				photo = []byte("<svg onload='alert(1)'></svg>")
 			case "large-photo":
-				photo = make([]byte, MaxPhoto+1)
+				photo = make([]byte, MaxPhotoSize+1)
 			case "honeypot":
 				f["website"] = "bot"
 			}

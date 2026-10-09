@@ -8,6 +8,8 @@ import (
 
 const (
 	MaxRequestsPerIPLimit = 20
+	MaxHTMLBodyReader     = 1024
+	MaxPhotoSize          = 5 << 20
 )
 
 // centralised errors, one-time initialisation avoids errors.New(..) overhead on every error case.
