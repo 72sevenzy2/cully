@@ -3,7 +3,6 @@ package website
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"html"
 	"io"
 	"net/http"
@@ -25,7 +24,7 @@ func linkedInURL(u *url.URL) bool {
 func linkedInPhotoURL(raw string) (*url.URL, error) {
 	u, err := url.Parse(raw)
 	if err != nil || u.Scheme != "https" || u.User != nil || u.Port() != "" || u.Hostname() != "media.licdn.com" {
-		return nil, errors.New("invalid LinkedIn photo URL")
+		return nil, InvalidLinkedinURLError
 	}
 	return u, nil
 }
@@ -130,11 +129,11 @@ func (s *Server) fetchPhoto(ctx context.Context, raw string) ([]byte, error) {
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != 200 {
-		return nil, errors.New("photo unavailable")
+		return nil, PhotoUnavailableErr
 	}
 	data, err := io.ReadAll(io.LimitReader(resp.Body, MaxPhoto+1))
 	if err != nil || len(data) > MaxPhoto {
-		return nil, errors.New("photo too large")
+		return nil, PhotoTooLargeErr
 	}
 	return data, validatePhoto(data)
 }
