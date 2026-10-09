@@ -24,7 +24,7 @@ func linkedInURL(u *url.URL) bool {
 func linkedInPhotoURL(raw string) (*url.URL, error) {
 	u, err := url.Parse(raw)
 	if err != nil || u.Scheme != "https" || u.User != nil || u.Port() != "" || u.Hostname() != "media.licdn.com" {
-		return nil, InvalidLinkedinURLError
+		return nil, InvalidLinkedinPhotoErr
 	}
 	return u, nil
 }

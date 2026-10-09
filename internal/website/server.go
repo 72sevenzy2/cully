@@ -105,7 +105,7 @@ func (s *Server) allow(w http.ResponseWriter, r *http.Request) bool {
 	if time.Since(s.window) >= time.Minute {
 		s.window, s.count = time.Now(), 0
 	}
-	if s.count >= 20 {
+	if s.count >= MaxRequestsPerIPLimit {
 		w.Header().Set("Retry-After", "60")
 		problem(w, 429, "Too many requests. Please try again in a minute.")
 		return false
@@ -216,21 +216,21 @@ func (s *Server) submit(w http.ResponseWriter, r *http.Request) {
 
 func validate(t Testimonial) error {
 	if !t.Consent {
-		return errors.New("Please agree to publication before submitting.")
+		return InvalidTestimonialConsentErr
 	}
 	if n := utf8.RuneCountInString(t.Name); n < 1 || n > 80 {
-		return errors.New("Enter a name up to 80 characters.")
+		return InvalidNameLengthErr
 	}
 	if n := utf8.RuneCountInString(t.Quote); n < 20 || n > 1000 {
-		return errors.New("Write a testimonial between 20 and 1,000 characters.")
+		return InvalidTestimonialLengthErr
 	}
 	if utf8.RuneCountInString(t.Context) > 100 || utf8.RuneCountInString(t.Workplace) > 100 {
-		return errors.New("Keep role and workplace within 100 characters each.")
+		return InvalidRolesLengthErr
 	}
 	if t.LinkedIn != "" {
 		u, err := url.Parse(t.LinkedIn)
 		if err != nil || len(t.LinkedIn) > 300 || !linkedInURL(u) {
-			return errors.New("Enter a LinkedIn profile URL starting with https://www.linkedin.com/in/.")
+			return InvalidLinkedinURLErr
 		}
 	}
 	return nil
