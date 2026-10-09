@@ -15,6 +15,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 )
 
 func testServer(t *testing.T) *Server {
@@ -228,9 +229,19 @@ func TestPublicLinkedInImportAndRestrictedFallback(t *testing.T) {
 
 func TestRateLimit(t *testing.T) {
 	s := testServer(t)
+
+	// temporary: ensuring fixed-window rate limiter state before loop
+	s.mu.Lock()
+	s.window = time.Now()
+	s.count = 0
+	s.mu.Unlock()
+
 	for i := 0; i < 21; i++ {
+		req := submission(t, fields(), nil)
+		req.Host = "cully.net"
+
 		w := httptest.NewRecorder()
-		s.Handler().ServeHTTP(w, submission(t, fields(), nil))
+		s.Handler().ServeHTTP(w, req)
 		if i < 20 && w.Code != 201 || i == 20 && w.Code != 429 {
 			t.Fatalf("request %d: %d", i, w.Code)
 		}
