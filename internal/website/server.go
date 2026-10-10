@@ -103,7 +103,7 @@ func (s *Server) allow(w http.ResponseWriter, r *http.Request) bool {
 	if time.Since(s.window) >= time.Minute {
 		s.window, s.count = time.Now(), 0
 	}
-	if s.count >= MaxRequestsPerIPLimit {
+	if s.count >= maxRequestsPerMinute {
 		w.Header().Set("Retry-After", "60")
 		problem(w, 429, "Too many requests. Please try again in a minute.")
 		return false
@@ -132,8 +132,8 @@ func (s *Server) submit(w http.ResponseWriter, r *http.Request) {
 		problem(w, 503, "The review inbox is full. Please try again later.")
 		return
 	}
-	r.Body = http.MaxBytesReader(w, r.Body, MaxPhotoSize+(64<<10))
-	if err := r.ParseMultipartForm(MaxPhotoSize + (64 << 10)); err != nil {
+	r.Body = http.MaxBytesReader(w, r.Body, MaxPhoto+(64<<10))
+	if err := r.ParseMultipartForm(MaxPhoto + (64 << 10)); err != nil {
 		problem(w, 400, "Choose a photo up to 5 MB and retry your submission.")
 		return
 	}
@@ -150,12 +150,12 @@ func (s *Server) submit(w http.ResponseWriter, r *http.Request) {
 		problem(w, 400, err.Error())
 		return
 	}
-	var photo []byte // defaulted nil slice. 
+	var photo []byte
 	f, _, err := r.FormFile("photo")
 	if err == nil {
 		defer f.Close()
-		photo, err = io.ReadAll(io.LimitReader(f, MaxPhotoSize+1))
-		if err != nil || len(photo) > MaxPhotoSize {
+		photo, err = io.ReadAll(io.LimitReader(f, MaxPhoto+1))
+		if err != nil || len(photo) > MaxPhoto {
 			problem(w, 400, "Choose a photo up to 5 MB.")
 			return
 		}
@@ -214,21 +214,21 @@ func (s *Server) submit(w http.ResponseWriter, r *http.Request) {
 
 func validate(t Testimonial) error {
 	if !t.Consent {
-		return InvalidTestimonialConsentErr
+		return errMissingConsent
 	}
 	if n := utf8.RuneCountInString(t.Name); n < 1 || n > 80 {
-		return InvalidNameLengthErr
+		return errInvalidNameLength
 	}
 	if n := utf8.RuneCountInString(t.Quote); n < 20 || n > 1000 {
-		return InvalidTestimonialLengthErr
+		return errInvalidQuoteLength
 	}
 	if utf8.RuneCountInString(t.Context) > 100 || utf8.RuneCountInString(t.Workplace) > 100 {
-		return InvalidRolesLengthErr
+		return errInvalidRoleLength
 	}
 	if t.LinkedIn != "" {
 		u, err := url.Parse(t.LinkedIn)
 		if err != nil || len(t.LinkedIn) > 300 || !linkedInURL(u) {
-			return InvalidLinkedinURLErr
+			return errInvalidLinkedInURL
 		}
 	}
 	return nil
@@ -237,12 +237,12 @@ func validate(t Testimonial) error {
 func validatePhoto(photo []byte) error {
 	content := http.DetectContentType(photo)
 	if content != "image/jpeg" && content != "image/png" && content != "image/webp" {
-		return NonexistentImageErr
+		return errUnsupportedPhotoFormat
 	}
 	if content != "image/webp" {
 		cfg, _, err := image.DecodeConfig(bytes.NewReader(photo))
 		if err != nil || cfg.Width > 4096 || cfg.Height > 4096 {
-			return InvalidImageSizeErr
+			return errInvalidPhotoDimensions
 		}
 	}
 	return nil
@@ -283,7 +283,7 @@ func (s *Server) photo(w http.ResponseWriter, r *http.Request) {
 
 func List(data, state string) ([]Testimonial, error) {
 	if state != "pending" && state != "approved" {
-		return nil, InvalidReviewStateErr
+		return nil, errInvalidReviewState
 	}
 	dirs, err := os.ReadDir(filepath.Join(data, state))
 	if err != nil {
@@ -310,7 +310,7 @@ func List(data, state string) ([]Testimonial, error) {
 // Review is available only through the operator's CLI, never a public route.
 func Review(data, action, id string) error {
 	if !validID.MatchString(id) {
-		return InvalidSubmissionIDErr
+		return errInvalidSubmissionID
 	}
 	source := filepath.Join(data, "pending", id)
 	b, err := os.ReadFile(filepath.Join(source, "testimonial.json"))

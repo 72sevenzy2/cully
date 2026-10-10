@@ -1,29 +1,27 @@
 package website
 
-import (
-	"errors"
-)
+import "errors"
 
-// global types for any arbitrary value type ment for server.go and linkedin.go
+// MaxPhoto is the maximum upload or imported-photo size in bytes.
+const MaxPhoto = 5 << 20
 
 const (
-	MaxRequestsPerIPLimit = 20
-	MaxHTMLBodyReader     = 1024
-	MaxPhotoSize          = 5 << 20
+	maxRequestsPerMinute  = 20
+	maxProfileRequestBody = 1024
 )
 
-// centralised errors, one-time initialisation avoids errors.New(..) overhead on every error case.
+// Validation errors retain the messages shown by the submission form.
 var (
-	InvalidLinkedinPhotoErr      = errors.New("invalid LinkedIn photo URL")
-	PhotoUnavailableErr          = errors.New("photo unavailable")
-	PhotoTooLargeErr             = errors.New("photo too large")
-	InvalidTestimonialConsentErr = errors.New("Please agree to publication before submitting.")
-	InvalidNameLengthErr         = errors.New("Enter a name up to 80 characters.")
-	InvalidTestimonialLengthErr  = errors.New("Write a testimonial between 20 and 1,000 characters.")
-	InvalidRolesLengthErr        = errors.New("Keep role and workplace within 100 characters each.")
-	InvalidLinkedinURLErr        = errors.New("Enter a LinkedIn profile URL starting with https://www.linkedin.com/in/.")
-	NonexistentImageErr          = errors.New("Choose a JPG, PNG, or WebP photo.")
-	InvalidImageSizeErr          = errors.New("Choose a valid photo no larger than 4096 × 4096 pixels.")
-	InvalidReviewStateErr        = errors.New("invalid review state")
-	InvalidSubmissionIDErr       = errors.New("invalid submission ID")
+	errInvalidLinkedInPhoto   = errors.New("invalid LinkedIn photo URL")
+	errPhotoUnavailable       = errors.New("photo unavailable")
+	errPhotoTooLarge          = errors.New("photo too large")
+	errMissingConsent         = errors.New("Please agree to publication before submitting.")
+	errInvalidNameLength      = errors.New("Enter a name up to 80 characters.")
+	errInvalidQuoteLength     = errors.New("Write a testimonial between 20 and 1,000 characters.")
+	errInvalidRoleLength      = errors.New("Keep role and workplace within 100 characters each.")
+	errInvalidLinkedInURL     = errors.New("Enter a LinkedIn profile URL starting with https://www.linkedin.com/in/.")
+	errUnsupportedPhotoFormat = errors.New("Choose a JPG, PNG, or WebP photo.")
+	errInvalidPhotoDimensions = errors.New("Choose a valid photo no larger than 4096 × 4096 pixels.")
+	errInvalidReviewState     = errors.New("invalid review state")
+	errInvalidSubmissionID    = errors.New("invalid submission ID")
 )

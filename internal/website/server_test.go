@@ -15,7 +15,6 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
-	"time"
 )
 
 func testServer(t *testing.T) *Server {
@@ -153,7 +152,7 @@ func TestInvalidSubmissionsDoNotWriteRecords(t *testing.T) {
 			case "photo":
 				photo = []byte("<svg onload='alert(1)'></svg>")
 			case "large-photo":
-				photo = make([]byte, MaxPhotoSize+1)
+				photo = make([]byte, MaxPhoto+1)
 			case "honeypot":
 				f["website"] = "bot"
 			}
@@ -230,20 +229,156 @@ func TestPublicLinkedInImportAndRestrictedFallback(t *testing.T) {
 func TestRateLimit(t *testing.T) {
 	s := testServer(t)
 
-	// temporary: ensuring fixed-window rate limiter state before loop
-	s.mu.Lock()
-	s.window = time.Now()
-	s.count = 0
-	s.mu.Unlock()
-
 	for i := 0; i < 21; i++ {
-		req := submission(t, fields(), nil)
-		req.Host = "cully.net"
-
 		w := httptest.NewRecorder()
-		s.Handler().ServeHTTP(w, req)
+		s.Handler().ServeHTTP(w, submission(t, fields(), nil))
 		if i < 20 && w.Code != 201 || i == 20 && w.Code != 429 {
 			t.Fatalf("request %d: %d", i, w.Code)
 		}
+	}
+}
+
+func TestLinkedInProfileURLValidation(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		url  string
+		want bool
+	}{
+		{"www", "https://www.linkedin.com/in/test-person", true},
+		{"bare-host", "https://linkedin.com/in/test-person", true},
+		{"uppercase-host", "https://WWW.LINKEDIN.COM/in/test-person", true},
+		{"query-and-fragment", "https://linkedin.com/in/test-person?trk=share#details", true},
+		{"trailing-slash", "https://linkedin.com/in/test-person/", true},
+		{"escaped-name", "https://linkedin.com/in/test-%C3%A9", true},
+		{"lookalike-host", "https://linkedin.com.evil.test/in/test-person", false},
+		{"unicode-lookalike", "https://linKedin.com/in/test-person", false},
+		{"http", "http://linkedin.com/in/test-person", false},
+		{"credentials", "https://user:pass@linkedin.com/in/test-person", false},
+		{"port", "https://linkedin.com:443/in/test-person", false},
+		{"empty-port", "https://linkedin.com:/in/test-person", false},
+		{"empty-profile", "https://linkedin.com/in/", false},
+		{"extra-path", "https://linkedin.com/in/test-person/details", false},
+		{"dot-segment", "https://linkedin.com/in/../login", false},
+		{"escaped-dot-segment", "https://linkedin.com/in/%2e%2e", false},
+		{"escaped-slash", "https://linkedin.com/in/test%2fperson", false},
+		{"escaped-backslash", "https://linkedin.com/in/test%5cperson", false},
+		{"double-escape", "https://linkedin.com/in/%252e%252e", false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			u, err := url.Parse(tc.url)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if got := linkedInURL(u); got != tc.want {
+				t.Fatalf("linkedInURL(%q) = %v, want %v", tc.url, got, tc.want)
+			}
+			s := testServer(t)
+			calls := 0
+			s.Client.Transport = transportFunc(func(r *http.Request) (*http.Response, error) {
+				calls++
+				if r.URL.Scheme != "https" || r.URL.Host != "www.linkedin.com" || r.URL.Path != u.Path ||
+					r.URL.User != nil || r.URL.RawQuery != "" || r.URL.Fragment != "" {
+					t.Fatalf("unexpected outbound URL: %s", r.URL)
+				}
+				body := `<meta property="og:title" content="Test Person - Developer | LinkedIn">`
+				return &http.Response{StatusCode: 200, Header: make(http.Header), Body: io.NopCloser(strings.NewReader(body))}, nil
+			})
+			payload, err := json.Marshal(map[string]string{"url": tc.url})
+			if err != nil {
+				t.Fatal(err)
+			}
+			r := httptest.NewRequest("POST", "https://cully.net/api/linkedin-profile", bytes.NewReader(payload))
+			r.Header.Set("X-Cully-Submission", "1")
+			w := httptest.NewRecorder()
+			s.Handler().ServeHTTP(w, r)
+			wantStatus, wantCalls := 400, 0
+			if tc.want {
+				wantStatus, wantCalls = 200, 1
+			}
+			if w.Code != wantStatus || calls != wantCalls {
+				t.Fatalf("import: status %d, calls %d; want %d, %d", w.Code, calls, wantStatus, wantCalls)
+			}
+		})
+	}
+	if linkedInURL(nil) {
+		t.Fatal("nil URL accepted")
+	}
+}
+
+func TestLinkedInImportRedirects(t *testing.T) {
+	for _, tc := range []struct {
+		name     string
+		location string
+		want     int
+	}{
+		{"profile", "https://linkedin.com/in/other-person", 200},
+		{"relative-profile", "/in/other-person", 200},
+		{"loop", "https://www.linkedin.com/in/test-person", 502},
+		{"private-host", "https://127.0.0.1/in/test-person", 502},
+		{"lookalike-host", "https://linkedin.com.evil.test/in/test-person", 502},
+		{"unicode-lookalike", "https://linKedin.com/in/test-person", 502},
+		{"credentials", "https://user:pass@linkedin.com/in/test-person", 502},
+		{"port", "https://linkedin.com:8443/in/test-person", 502},
+		{"http", "http://linkedin.com/in/test-person", 502},
+		{"login", "https://www.linkedin.com/login", 502},
+		{"photo-host", "https://media.licdn.com/photo", 502},
+		{"dot-segment", "https://linkedin.com/in/../login", 502},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			s := testServer(t)
+			calls := 0
+			s.Client.Transport = transportFunc(func(r *http.Request) (*http.Response, error) {
+				calls++
+				if !linkedInURL(r.URL) {
+					t.Fatalf("unsafe redirect fetched: %s", r.URL)
+				}
+				if calls == 1 || tc.name == "loop" {
+					return &http.Response{StatusCode: 302, Header: http.Header{"Location": {tc.location}}, Body: io.NopCloser(strings.NewReader(""))}, nil
+				}
+				body := `<meta property="og:title" content="Test Person - Developer | LinkedIn">`
+				return &http.Response{StatusCode: 200, Header: make(http.Header), Body: io.NopCloser(strings.NewReader(body))}, nil
+			})
+			r := httptest.NewRequest("POST", "https://cully.net/api/linkedin-profile", strings.NewReader(`{"url":"https://www.linkedin.com/in/test-person"}`))
+			r.Header.Set("X-Cully-Submission", "1")
+			w := httptest.NewRecorder()
+			s.Handler().ServeHTTP(w, r)
+			wantCalls := 1
+			if tc.want == 200 {
+				wantCalls = 2
+			} else if tc.name == "loop" {
+				wantCalls = 3
+			}
+			if w.Code != tc.want || calls != wantCalls {
+				t.Fatalf("redirect: status %d, calls %d; want %d, %d", w.Code, calls, tc.want, wantCalls)
+			}
+		})
+	}
+}
+
+func TestSubmissionWithImportedPhoto(t *testing.T) {
+	s := testServer(t)
+	photo := photoFixture(t)
+	calls := 0
+	s.Client.Transport = transportFunc(func(r *http.Request) (*http.Response, error) {
+		calls++
+		if r.URL.String() != "https://media.licdn.com/profile.png" {
+			t.Fatalf("unexpected photo upstream: %s", r.URL)
+		}
+		return &http.Response{StatusCode: 200, Header: make(http.Header), Body: io.NopCloser(bytes.NewReader(photo))}, nil
+	})
+	f := fields()
+	f["importedPhoto"] = "https://media.licdn.com/profile.png"
+	w := httptest.NewRecorder()
+	s.Handler().ServeHTTP(w, submission(t, f, nil))
+	if w.Code != 201 || calls != 1 {
+		t.Fatalf("imported photo: status %d, calls %d: %s", w.Code, calls, w.Body.String())
+	}
+	var result map[string]string
+	if err := json.Unmarshal(w.Body.Bytes(), &result); err != nil {
+		t.Fatal(err)
+	}
+	stored, err := os.ReadFile(filepath.Join(s.DataDir, "pending", result["id"], "photo"))
+	if err != nil || !bytes.Equal(stored, photo) {
+		t.Fatalf("imported photo not preserved: %v", err)
 	}
 }

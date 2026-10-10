@@ -2,7 +2,7 @@
 
 ## Unreleased
 
-- Centralize error/global types with one-time initialisation instead of repeated error.New() calls in website.
+- Centralize website limits and validation errors while preserving optional-photo submissions and rate limiting. Build LinkedIn profile imports from a fixed HTTPS origin and reject unsafe profile paths and lookalike hosts.
 
 ## 0.11.3
 

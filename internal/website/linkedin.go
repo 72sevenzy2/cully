@@ -14,17 +14,28 @@ import (
 var metaTag = regexp.MustCompile(`(?is)<meta\s+[^>]*>`)
 var metaAttr = regexp.MustCompile(`(?i)(property|name|content)\s*=\s*(?:"([^"]*)"|'([^']*)')`)
 var experience = regexp.MustCompile(`(?i)Experience:\s*([^·•\n]+)`)
+var linkedInProfilePath = regexp.MustCompile(`^/in/[\p{L}\p{N}-]+/?$`)
 
 func linkedInURL(u *url.URL) bool {
-	return u != nil && u.Scheme == "https" && u.User == nil && u.Port() == "" &&
-		(strings.EqualFold(u.Hostname(), "www.linkedin.com") || strings.EqualFold(u.Hostname(), "linkedin.com")) &&
-		strings.HasPrefix(u.Path, "/in/") && len(u.Path) > 4
+	if u == nil {
+		return false
+	}
+	// DNS names on the allowlist are ASCII; Unicode case folding also matches
+	// lookalikes such as the Kelvin sign in place of "k".
+	for _, c := range u.Host {
+		if c > 127 {
+			return false
+		}
+	}
+	return u.Scheme == "https" && u.User == nil && u.Port() == "" &&
+		(strings.EqualFold(u.Host, "www.linkedin.com") || strings.EqualFold(u.Host, "linkedin.com")) &&
+		linkedInProfilePath.MatchString(u.Path)
 }
 
 func linkedInPhotoURL(raw string) (*url.URL, error) {
 	u, err := url.Parse(raw)
 	if err != nil || u.Scheme != "https" || u.User != nil || u.Port() != "" || u.Hostname() != "media.licdn.com" {
-		return nil, InvalidLinkedinPhotoErr
+		return nil, errInvalidLinkedInPhoto
 	}
 	return u, nil
 }
@@ -35,7 +46,7 @@ func (s *Server) importProfile(w http.ResponseWriter, r *http.Request) {
 	if !s.allow(w, r) {
 		return
 	}
-	r.Body = http.MaxBytesReader(w, r.Body, MaxHTMLBodyReader)
+	r.Body = http.MaxBytesReader(w, r.Body, maxProfileRequestBody)
 	var input struct {
 		URL string `json:"url"`
 	}
@@ -44,15 +55,14 @@ func (s *Server) importProfile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	
-
 	u, err := url.Parse(input.URL)
 	if err != nil || !linkedInURL(u) || len(input.URL) > 300 {
 		problem(w, 400, "Enter a profile URL starting with https://www.linkedin.com/in/.")
 		return
 	}
-	u.RawQuery, u.Fragment = "", ""
-	req, err := http.NewRequestWithContext(r.Context(), "GET", u.String(), nil)
+	// Only a validated profile path comes from the input. The outbound origin
+	// is fixed, and submitted query parameters and fragments are discarded.
+	req, err := http.NewRequestWithContext(r.Context(), "GET", "https://www.linkedin.com/"+strings.TrimPrefix(u.EscapedPath(), "/"), nil)
 	if err != nil {
 		problem(w, 400, "Enter a valid LinkedIn profile URL.")
 		return
@@ -132,11 +142,11 @@ func (s *Server) fetchPhoto(ctx context.Context, raw string) ([]byte, error) {
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != 200 {
-		return nil, PhotoUnavailableErr
+		return nil, errPhotoUnavailable
 	}
-	data, err := io.ReadAll(io.LimitReader(resp.Body, MaxPhotoSize+1))
-	if err != nil || len(data) > MaxPhotoSize {
-		return nil, PhotoTooLargeErr
+	data, err := io.ReadAll(io.LimitReader(resp.Body, MaxPhoto+1))
+	if err != nil || len(data) > MaxPhoto {
+		return nil, errPhotoTooLarge
 	}
 	return data, validatePhoto(data)
 }
