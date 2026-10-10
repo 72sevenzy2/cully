@@ -17,7 +17,7 @@ var experience = regexp.MustCompile(`(?i)Experience:\s*([^·•\n]+)`)
 
 func linkedInURL(u *url.URL) bool {
 	return u != nil && u.Scheme == "https" && u.User == nil && u.Port() == "" &&
-		(u.Hostname() == "www.linkedin.com" || u.Hostname() == "linkedin.com") &&
+		(strings.EqualFold(u.Hostname(), "www.linkedin.com") || strings.EqualFold(u.Hostname(), "linkedin.com")) &&
 		strings.HasPrefix(u.Path, "/in/") && len(u.Path) > 4
 }
 
@@ -43,6 +43,9 @@ func (s *Server) importProfile(w http.ResponseWriter, r *http.Request) {
 		problem(w, 400, "Enter a LinkedIn profile URL.")
 		return
 	}
+
+	
+
 	u, err := url.Parse(input.URL)
 	if err != nil || !linkedInURL(u) || len(input.URL) > 300 {
 		problem(w, 400, "Enter a profile URL starting with https://www.linkedin.com/in/.")
