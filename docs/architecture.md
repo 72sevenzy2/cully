@@ -81,6 +81,8 @@ It stores direct submissions and photos in a dedicated persistent website volume
 separate from personal/project memory and its authenticated owner scope. Pending
 submissions are private; an operator approves them through the container CLI before
 they appear on the homepage. Public LinkedIn metadata imports are best effort and
-fall back to manual entry when access is restricted.
+fall back to manual entry when access is restricted. Profile imports validate a
+single profile path and build the request from a fixed LinkedIn HTTPS origin;
+redirects remain limited to LinkedIn profile URLs.
 
 For a team deployment, [MCP Auth can connect Cully to an organization's identity provider](team-deployment.md). It authenticates the agent at the MCP boundary; service credentials protect the private data path.
