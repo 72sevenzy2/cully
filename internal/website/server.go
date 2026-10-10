@@ -150,7 +150,7 @@ func (s *Server) submit(w http.ResponseWriter, r *http.Request) {
 		problem(w, 400, err.Error())
 		return
 	}
-	photo := make([]byte, MaxPhotoSize)
+	var photo []byte // defaulted nil slice. 
 	f, _, err := r.FormFile("photo")
 	if err == nil {
 		defer f.Close()
