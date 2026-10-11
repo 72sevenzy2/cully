@@ -1,0 +1,26 @@
+goos: windows
+goarch: amd64
+pkg: github.com/mcp-runtime/cully/internal/website/benchmarks
+cpu: 11th Gen Intel(R) Core(TM) i5-1135G7 @ 2.40GHz
+BenchmarkServerConcurrency-8   	  128628	      8294 ns/op	    6278 B/op	      25 allocs/op
+BenchmarkServerConcurrency-8   	  138230	      8364 ns/op	    6278 B/op	      25 allocs/op
+BenchmarkServerConcurrency-8   	  137715	      8376 ns/op	    6279 B/op	      25 allocs/op
+BenchmarkServerConcurrency-8   	  134072	      8789 ns/op	    6278 B/op	      25 allocs/op
+BenchmarkServerConcurrency-8   	  137527	     17277 ns/op	    6279 B/op	      25 allocs/op
+BenchmarkServerConcurrency-8   	   59488	     22355 ns/op	    6280 B/op	      25 allocs/op
+BenchmarkServerConcurrency-8   	   75627	     14565 ns/op	    6279 B/op	      25 allocs/op
+BenchmarkServerConcurrency-8   	   46341	     23127 ns/op	    6280 B/op	      25 allocs/op
+BenchmarkServerConcurrency-8   	   48804	     22204 ns/op	    6280 B/op	      25 allocs/op
+BenchmarkServerConcurrency-8   	   54643	     21916 ns/op	    6279 B/op	      25 allocs/op
+BenchmarkServerConcurrency-8   	   56244	     23704 ns/op	    6280 B/op	      25 allocs/op
+BenchmarkServerConcurrency-8   	   48522	     23497 ns/op	    6280 B/op	      25 allocs/op
+BenchmarkServerConcurrency-8   	   46153	     23107 ns/op	    6280 B/op	      25 allocs/op
+BenchmarkServerConcurrency-8   	   51798	     23340 ns/op	    6280 B/op	      25 allocs/op
+BenchmarkServerConcurrency-8   	   46191	     23851 ns/op	    6280 B/op	      25 allocs/op
+BenchmarkServerConcurrency-8   	   47378	     23706 ns/op	    6280 B/op	      25 allocs/op
+BenchmarkServerConcurrency-8   	   48540	     22254 ns/op	    6279 B/op	      25 allocs/op
+BenchmarkServerConcurrency-8   	   48012	     23298 ns/op	    6281 B/op	      25 allocs/op
+BenchmarkServerConcurrency-8   	   49432	     23630 ns/op	    6280 B/op	      25 allocs/op
+BenchmarkServerConcurrency-8   	   46370	     22110 ns/op	    6280 B/op	      25 allocs/op
+PASS
+ok  	github.com/mcp-runtime/cully/internal/website/benchmarks	32.829s

@@ -27,6 +27,27 @@ func BenchmarkServer(b *testing.B) {
 	tear_down(b, "test2")
 }
 
+func BenchmarkServerConcurrency(b *testing.B) {
+	b.ReportAllocs()
+
+	s, err := website.New("test", "test2")
+	if err != nil {
+		panic(err)
+	}
+	h := s.Handler()
+	b.ResetTimer()
+
+	b.RunParallel(func(p *testing.PB) {
+		for p.Next() {
+			rec := httptest.NewRequest(http.MethodGet, "/", nil)
+			rr := httptest.NewRecorder()
+
+			h.ServeHTTP(rr, rec)
+		}
+	})
+	tear_down(b, "test2")
+}
+
 func tear_down(r *testing.B, f1 string) {
 	if err := os.RemoveAll(f1); err != nil {
 		// zero copy err logging to affect benchmark allocations as litle as possible.
