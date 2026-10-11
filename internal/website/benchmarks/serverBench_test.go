@@ -10,21 +10,21 @@ import (
 	"github.com/mcp-runtime/cully/internal/website"
 )
 
-func BenchmarkServer(t *testing.B) {
-	//t.ReportAllocs()
+func BenchmarkServer(b *testing.B) {
+	b.ReportAllocs()
 	s, err := website.New("test", "test2")
 	if err != nil {
 		panic(err)
 	}
-	t.ResetTimer()
 	h := s.Handler()
 	rec := httptest.NewRequest(http.MethodGet, "/", nil)
+	rr := httptest.NewRecorder()
+	b.ResetTimer()
 
-	for t.Loop() {
-		rr := httptest.NewRecorder()
+	for b.Loop() {
 		h.ServeHTTP(rr, rec)
 	}
-	tear_down(t, "test2")
+	tear_down(b, "test2")
 }
 
 func tear_down(r *testing.B, f1 string) {
