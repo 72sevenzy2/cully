@@ -1,0 +1,21 @@
+goos: windows
+goarch: amd64
+pkg: github.com/mcp-runtime/cully/internal/website/benchmarks
+cpu: 11th Gen Intel(R) Core(TM) i5-1135G7 @ 2.40GHz
+BenchmarkServer-8   	   87691	     14807 ns/op	    1176 B/op	      16 allocs/op
+BenchmarkServer-8   	   87768	     36747 ns/op	    1176 B/op	      16 allocs/op
+BenchmarkServer-8   	   26320	     45431 ns/op	    1176 B/op	      16 allocs/op
+BenchmarkServer-8   	   26792	     47397 ns/op	    1176 B/op	      16 allocs/op
+BenchmarkServer-8   	   25770	     45635 ns/op	    1176 B/op	      16 allocs/op
+BenchmarkServer-8   	   25821	     46292 ns/op	    1176 B/op	      16 allocs/op
+BenchmarkServer-8   	   28020	     44141 ns/op	    1176 B/op	      16 allocs/op
+BenchmarkServer-8   	   27776	     43849 ns/op	    1176 B/op	      16 allocs/op
+BenchmarkServer-8   	   25906	     46208 ns/op	    1176 B/op	      16 allocs/op
+BenchmarkServer-8   	   25720	     45544 ns/op	    1176 B/op	      16 allocs/op
+BenchmarkServer-8   	   26376	     45063 ns/op	    1176 B/op	      16 allocs/op
+BenchmarkServer-8   	   26568	     45170 ns/op	    1176 B/op	      16 allocs/op
+BenchmarkServer-8   	   26583	     45947 ns/op	    1176 B/op	      16 allocs/op
+BenchmarkServer-8   	   26376	     45421 ns/op	    1176 B/op	      16 allocs/op
+BenchmarkServer-8   	   27145	     44381 ns/op	    1176 B/op	      16 allocs/op
+PASS
+ok  	github.com/mcp-runtime/cully/internal/website/benchmarks	22.968s
