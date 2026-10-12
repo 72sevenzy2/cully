@@ -1,0 +1,26 @@
+goos: windows
+goarch: amd64
+pkg: github.com/mcp-runtime/cully/internal/website/benchmarks
+cpu: 11th Gen Intel(R) Core(TM) i5-1135G7 @ 2.40GHz
+BenchmarkPhotoHandler404-8   	 4469134	       267.4 ns/op	     156 B/op	       6 allocs/op
+BenchmarkPhotoHandler404-8   	 3896872	       570.7 ns/op	     164 B/op	       6 allocs/op
+BenchmarkPhotoHandler404-8   	 3616804	       406.8 ns/op	     170 B/op	       6 allocs/op
+BenchmarkPhotoHandler404-8   	 2247454	       682.4 ns/op	     155 B/op	       6 allocs/op
+BenchmarkPhotoHandler404-8   	 4556019	       420.2 ns/op	     154 B/op	       6 allocs/op
+BenchmarkPhotoHandler404-8   	 2477938	       477.8 ns/op	     150 B/op	       6 allocs/op
+BenchmarkPhotoHandler404-8   	 4610772	       401.4 ns/op	     154 B/op	       6 allocs/op
+BenchmarkPhotoHandler404-8   	 4457686	       449.5 ns/op	     156 B/op	       6 allocs/op
+BenchmarkPhotoHandler404-8   	 3187089	       698.9 ns/op	     138 B/op	       6 allocs/op
+BenchmarkPhotoHandler404-8   	 1639078	       708.9 ns/op	     136 B/op	       6 allocs/op
+BenchmarkPhotoHandler404-8   	 2988991	       447.9 ns/op	     140 B/op	       6 allocs/op
+BenchmarkPhotoHandler404-8   	 3990532	       496.6 ns/op	     163 B/op	       6 allocs/op
+BenchmarkPhotoHandler404-8   	 4545303	       343.3 ns/op	     155 B/op	       6 allocs/op
+BenchmarkPhotoHandler404-8   	 4447030	       367.4 ns/op	     156 B/op	       6 allocs/op
+BenchmarkPhotoHandler404-8   	 2501866	       534.2 ns/op	     149 B/op	       6 allocs/op
+BenchmarkPhotoHandler404-8   	 4224404	       372.9 ns/op	     159 B/op	       6 allocs/op
+BenchmarkPhotoHandler404-8   	 4387546	       390.4 ns/op	     157 B/op	       6 allocs/op
+BenchmarkPhotoHandler404-8   	 2950046	       354.3 ns/op	     141 B/op	       6 allocs/op
+BenchmarkPhotoHandler404-8   	 3440323	       435.4 ns/op	     139 B/op	       6 allocs/op
+BenchmarkPhotoHandler404-8   	 2608830	       518.3 ns/op	     147 B/op	       6 allocs/op
+PASS
+ok  	github.com/mcp-runtime/cully/internal/website/benchmarks	48.591s
