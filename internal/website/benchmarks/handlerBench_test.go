@@ -145,6 +145,11 @@ func BenchmarkSubmitHandler(b *testing.B) {
 			req.Header.Set("x-cully-submission", "1")
 			rr := httptest.NewRecorder()
 			h.ServeHTTP(rr, req)
+
+			if rr.Code != http.StatusOK {
+				b.Fatalf("failed with status %d", rr.Code)
+				return
+			}
 		}
 	})
 }
@@ -175,6 +180,11 @@ func BenchmarkProfileImportHandler(b *testing.B) {
 			req.Header.Set("x-cully-submission", "1")
 			rr := httptest.NewRecorder()
 			h.ServeHTTP(rr, req)
+
+			if rr.Code != http.StatusOK {
+				b.Fatalf("failed with status %d", rr.Code)
+				return
+			}
 		}
 	})
 }
