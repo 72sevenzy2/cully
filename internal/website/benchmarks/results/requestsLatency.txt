@@ -2,25 +2,25 @@ goos: windows
 goarch: amd64
 pkg: github.com/mcp-runtime/cully/internal/website/benchmarks
 cpu: 11th Gen Intel(R) Core(TM) i5-1135G7 @ 2.40GHz
-BenchmarkServerConcurrency-8   	  128628	      8294 ns/op	    6278 B/op	      25 allocs/op
-BenchmarkServerConcurrency-8   	  138230	      8364 ns/op	    6278 B/op	      25 allocs/op
-BenchmarkServerConcurrency-8   	  137715	      8376 ns/op	    6279 B/op	      25 allocs/op
-BenchmarkServerConcurrency-8   	  134072	      8789 ns/op	    6278 B/op	      25 allocs/op
-BenchmarkServerConcurrency-8   	  137527	     17277 ns/op	    6279 B/op	      25 allocs/op
-BenchmarkServerConcurrency-8   	   59488	     22355 ns/op	    6280 B/op	      25 allocs/op
-BenchmarkServerConcurrency-8   	   75627	     14565 ns/op	    6279 B/op	      25 allocs/op
-BenchmarkServerConcurrency-8   	   46341	     23127 ns/op	    6280 B/op	      25 allocs/op
-BenchmarkServerConcurrency-8   	   48804	     22204 ns/op	    6280 B/op	      25 allocs/op
-BenchmarkServerConcurrency-8   	   54643	     21916 ns/op	    6279 B/op	      25 allocs/op
-BenchmarkServerConcurrency-8   	   56244	     23704 ns/op	    6280 B/op	      25 allocs/op
-BenchmarkServerConcurrency-8   	   48522	     23497 ns/op	    6280 B/op	      25 allocs/op
-BenchmarkServerConcurrency-8   	   46153	     23107 ns/op	    6280 B/op	      25 allocs/op
-BenchmarkServerConcurrency-8   	   51798	     23340 ns/op	    6280 B/op	      25 allocs/op
-BenchmarkServerConcurrency-8   	   46191	     23851 ns/op	    6280 B/op	      25 allocs/op
-BenchmarkServerConcurrency-8   	   47378	     23706 ns/op	    6280 B/op	      25 allocs/op
-BenchmarkServerConcurrency-8   	   48540	     22254 ns/op	    6279 B/op	      25 allocs/op
-BenchmarkServerConcurrency-8   	   48012	     23298 ns/op	    6281 B/op	      25 allocs/op
-BenchmarkServerConcurrency-8   	   49432	     23630 ns/op	    6280 B/op	      25 allocs/op
-BenchmarkServerConcurrency-8   	   46370	     22110 ns/op	    6280 B/op	      25 allocs/op
+BenchmarkServerConcurrency-8   	  137725	      8470 ns/op	    6278 B/op	      25 allocs/op
+BenchmarkServerConcurrency-8   	  121114	     17684 ns/op	    6278 B/op	      25 allocs/op
+BenchmarkServerConcurrency-8   	   99901	     14750 ns/op	    6278 B/op	      25 allocs/op
+BenchmarkServerConcurrency-8   	  140744	     14985 ns/op	    6278 B/op	      25 allocs/op
+BenchmarkServerConcurrency-8   	   54532	     23024 ns/op	    6278 B/op	      25 allocs/op
+BenchmarkServerConcurrency-8   	  108645	     17166 ns/op	    6278 B/op	      25 allocs/op
+BenchmarkServerConcurrency-8   	  140194	     14090 ns/op	    6278 B/op	      25 allocs/op
+BenchmarkServerConcurrency-8   	   63850	     19792 ns/op	    6278 B/op	      25 allocs/op
+BenchmarkServerConcurrency-8   	  141956	     17585 ns/op	    6278 B/op	      25 allocs/op
+BenchmarkServerConcurrency-8   	   52372	     23370 ns/op	    6278 B/op	      25 allocs/op
+BenchmarkServerConcurrency-8   	   53708	     22695 ns/op	    6278 B/op	      25 allocs/op
+BenchmarkServerConcurrency-8   	   51280	     23274 ns/op	    6278 B/op	      25 allocs/op
+BenchmarkServerConcurrency-8   	   92872	     18888 ns/op	    6278 B/op	      25 allocs/op
+BenchmarkServerConcurrency-8   	   50983	     23089 ns/op	    6278 B/op	      25 allocs/op
+BenchmarkServerConcurrency-8   	   76172	     18103 ns/op	    6278 B/op	      25 allocs/op
+BenchmarkServerConcurrency-8   	  141558	     13356 ns/op	    6278 B/op	      25 allocs/op
+BenchmarkServerConcurrency-8   	   62074	     18293 ns/op	    6278 B/op	      25 allocs/op
+BenchmarkServerConcurrency-8   	  138062	     14352 ns/op	    6278 B/op	      25 allocs/op
+BenchmarkServerConcurrency-8   	  140318	     14771 ns/op	    6278 B/op	      25 allocs/op
+BenchmarkServerConcurrency-8   	  143712	     13728 ns/op	    6278 B/op	      25 allocs/op
 PASS
-ok  	github.com/mcp-runtime/cully/internal/website/benchmarks	32.829s
+ok  	github.com/mcp-runtime/cully/internal/website/benchmarks	46.596s
