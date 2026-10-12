@@ -1,6 +1,8 @@
 package benchmarks
 
 import (
+	"bytes"
+	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -95,6 +97,52 @@ func BenchmarkInstillationHandler(b *testing.B) {
 		req := httptest.NewRequest(http.MethodGet, "/install.sh", nil)
 		rr := httptest.NewRecorder()
 		for p.Next() {
+			h.ServeHTTP(rr, req)
+		}
+	})
+}
+
+// write-included handlers.
+
+func BenchmarkSubmitHandler(b *testing.B) {
+	s, err := website.New("test", b.TempDir())
+	h := s.Handler()
+	if err != nil {
+		panic(err)
+	}
+
+	var body bytes.Buffer
+	mw := multipart.NewWriter(&body)
+
+	field := map[string]string{
+		"name":    "eg.1",
+		"quote":   "some testimonialss",
+		"consent": "on",
+	}
+
+	for key, value := range field {
+		if err := mw.WriteField(key, value); err != nil {
+			panic(err)
+		}
+	}
+
+	if err := mw.Close(); err != nil {
+		panic(err)
+	}
+
+	payload := append([]byte(nil), body.Bytes()...)
+	contentType := mw.FormDataContentType()
+
+	b.ReportAllocs()
+	b.SetBytes(int64(len(payload)))
+	b.ResetTimer()
+
+	b.RunParallel(func(p *testing.PB) {
+		for p.Next() {
+			req := httptest.NewRequest(http.MethodGet, "/api/testimonials", bytes.NewReader(payload))
+			req.Header.Set("Content-Type", contentType)
+			req.Header.Set("X-Cully-Submission", "1")
+			rr := httptest.NewRecorder()
 			h.ServeHTTP(rr, req)
 		}
 	})
