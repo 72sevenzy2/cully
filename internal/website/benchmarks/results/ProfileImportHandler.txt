@@ -1,0 +1,26 @@
+goos: windows
+goarch: amd64
+pkg: github.com/mcp-runtime/cully/internal/website/benchmarks
+cpu: 11th Gen Intel(R) Core(TM) i5-1135G7 @ 2.40GHz
+BenchmarkProfileImportHandler-8   	       1	1301025700 ns/op	   0.00 MB/s	  343776 B/op	    1854 allocs/op
+BenchmarkProfileImportHandler-8   	      46	  31448307 ns/op	   0.00 MB/s	   11266 B/op	      65 allocs/op
+BenchmarkProfileImportHandler-8   	     490	   2065160 ns/op	   0.02 MB/s	    7592 B/op	      35 allocs/op
+BenchmarkProfileImportHandler-8   	     120	   9324468 ns/op	   0.00 MB/s	    8727 B/op	      44 allocs/op
+BenchmarkProfileImportHandler-8   	   70581	     15206 ns/op	   3.03 MB/s	    7172 B/op	      32 allocs/op
+BenchmarkProfileImportHandler-8   	      36	  43782414 ns/op	   0.00 MB/s	   12684 B/op	      75 allocs/op
+BenchmarkProfileImportHandler-8   	      27	  54371096 ns/op	   0.00 MB/s	   14166 B/op	      89 allocs/op
+BenchmarkProfileImportHandler-8   	     134	   7834321 ns/op	   0.01 MB/s	    8534 B/op	      43 allocs/op
+BenchmarkProfileImportHandler-8   	     276	   4399149 ns/op	   0.01 MB/s	    7833 B/op	      37 allocs/op
+BenchmarkProfileImportHandler-8   	      24	  44160912 ns/op	   0.00 MB/s	   14871 B/op	      95 allocs/op
+BenchmarkProfileImportHandler-8   	      10	 236725850 ns/op	   0.00 MB/s	   28052 B/op	     157 allocs/op
+BenchmarkProfileImportHandler-8   	      25	  43261108 ns/op	   0.00 MB/s	   15210 B/op	      95 allocs/op
+BenchmarkProfileImportHandler-8   	      30	  34916560 ns/op	   0.00 MB/s	   13322 B/op	      82 allocs/op
+BenchmarkProfileImportHandler-8   	    1062	   3518872 ns/op	   0.01 MB/s	    7347 B/op	      33 allocs/op
+BenchmarkProfileImportHandler-8   	     339	   4129223 ns/op	   0.01 MB/s	    7730 B/op	      36 allocs/op
+BenchmarkProfileImportHandler-8   	    1585	    776944 ns/op	   0.06 MB/s	    7294 B/op	      33 allocs/op
+BenchmarkProfileImportHandler-8   	     189	   7141969 ns/op	   0.01 MB/s	    8153 B/op	      40 allocs/op
+BenchmarkProfileImportHandler-8   	      73	  15156438 ns/op	   0.00 MB/s	    9647 B/op	      52 allocs/op
+BenchmarkProfileImportHandler-8   	     528	   2118977 ns/op	   0.02 MB/s	    7557 B/op	      35 allocs/op
+BenchmarkProfileImportHandler-8   	      38	  30371411 ns/op	   0.00 MB/s	   11999 B/op	      71 allocs/op
+PASS
+ok  	github.com/mcp-runtime/cully/internal/website/benchmarks	138.804s

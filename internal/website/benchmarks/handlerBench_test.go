@@ -2,6 +2,7 @@ package benchmarks
 
 import (
 	"bytes"
+	"encoding/json"
 	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
@@ -139,9 +140,39 @@ func BenchmarkSubmitHandler(b *testing.B) {
 
 	b.RunParallel(func(p *testing.PB) {
 		for p.Next() {
-			req := httptest.NewRequest(http.MethodGet, "/api/testimonials", bytes.NewReader(payload))
+			req := httptest.NewRequest(http.MethodPost, "/api/testimonials", bytes.NewReader(payload))
 			req.Header.Set("Content-Type", contentType)
-			req.Header.Set("X-Cully-Submission", "1")
+			req.Header.Set("x-cully-submission", "1")
+			rr := httptest.NewRecorder()
+			h.ServeHTTP(rr, req)
+		}
+	})
+}
+
+func BenchmarkProfileImportHandler(b *testing.B) {
+	s, err := website.New("test", b.TempDir())
+	h := s.Handler()
+	if err != nil {
+		panic(err)
+	}
+	type Test struct {
+		URL string `json:"url"`
+	}
+	n := &Test{
+		URL: "https://www.linkedin.com/in/linkedin",
+	}
+	js, err := json.Marshal(n)
+	if err != nil {
+		panic(err)
+	}
+	b.ReportAllocs()
+	b.SetBytes(int64(len(js)))
+	b.ResetTimer()
+
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			req := httptest.NewRequest(http.MethodPost, "/api/linkedin-profile", bytes.NewReader(js))
+			req.Header.Set("x-cully-submission", "1")
 			rr := httptest.NewRecorder()
 			h.ServeHTTP(rr, req)
 		}
