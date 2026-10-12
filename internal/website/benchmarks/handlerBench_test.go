@@ -46,3 +46,21 @@ func BenchmarkPhotoHandler(b *testing.B) {
 		}
 	})
 }
+
+func BenchmarkInstillationHandler(b *testing.B) {
+	b.ReportAllocs()
+	s, err := website.New("test", b.TempDir())
+	h := s.Handler()
+	if err != nil {
+		panic(err)
+	}
+	b.ResetTimer()
+
+	b.RunParallel(func(p *testing.PB) {
+		req := httptest.NewRequest(http.MethodGet, "/install.sh", nil)
+		rr := httptest.NewRecorder()
+		for p.Next() {
+			h.ServeHTTP(rr, req)
+		}
+	})
+}
