@@ -97,6 +97,9 @@ func BenchmarkInstillationHandler(b *testing.B) {
 
 func BenchmarkSubmitHandler(b *testing.B) {
 	s := SetupBenchmarkHelper(b)
+	// neglecting both the semaphore and prod rate limiter for benchmarking individual requests without contention caused by either.
+	s.MaxRequestsPerMinute = 1_000_000_000
+	s.Uploads = make(chan struct{}, 1_000_000_000)
 	h := s.Handler()
 
 	var body bytes.Buffer
@@ -143,6 +146,8 @@ func BenchmarkSubmitHandler(b *testing.B) {
 
 func BenchmarkProfileImportHandler(b *testing.B) {
 	s := SetupBenchmarkHelper(b)
+	s.MaxRequestsPerMinute = 1_000_000_000
+	s.Uploads = make(chan struct{}, 1_000_000_000)
 	s.Client.Transport = &examReq{}
 	h := s.Handler()
 	type Test struct {

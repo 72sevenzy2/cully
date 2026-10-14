@@ -2,186 +2,25 @@ goos: windows
 goarch: amd64
 pkg: github.com/mcp-runtime/cully/internal/website/benchmarks
 cpu: 11th Gen Intel(R) Core(TM) i5-1135G7 @ 2.40GHz
-BenchmarkSubmitHandler-8   	--- FAIL: BenchmarkSubmitHandler-8
-    handlerBench_test.go:137: failed with status 429
-    handlerBench_test.go:137: failed with status 429
-    handlerBench_test.go:137: failed with status 429
-    handlerBench_test.go:137: failed with status 429
-    handlerBench_test.go:137: failed with status 429
-    handlerBench_test.go:137: failed with status 429
-    handlerBench_test.go:137: failed with status 429
-    handlerBench_test.go:137: failed with status 429
-BenchmarkSubmitHandler-8   	--- FAIL: BenchmarkSubmitHandler-8
-    handlerBench_test.go:137: failed with status 429
-    handlerBench_test.go:137: failed with status 429
-    handlerBench_test.go:137: failed with status 429
-    handlerBench_test.go:137: failed with status 429
-    handlerBench_test.go:137: failed with status 429
-    handlerBench_test.go:137: failed with status 429
-    handlerBench_test.go:137: failed with status 429
-    handlerBench_test.go:137: failed with status 429
-BenchmarkSubmitHandler-8   	--- FAIL: BenchmarkSubmitHandler-8
-    handlerBench_test.go:137: failed with status 429
-    handlerBench_test.go:137: failed with status 429
-    handlerBench_test.go:137: failed with status 429
-    handlerBench_test.go:137: failed with status 429
-    handlerBench_test.go:137: failed with status 429
-    handlerBench_test.go:137: failed with status 429
-    handlerBench_test.go:137: failed with status 429
-    handlerBench_test.go:137: failed with status 429
-BenchmarkSubmitHandler-8   	--- FAIL: BenchmarkSubmitHandler-8
-    handlerBench_test.go:137: failed with status 429
-    handlerBench_test.go:137: failed with status 429
-    handlerBench_test.go:137: failed with status 429
-    handlerBench_test.go:137: failed with status 429
-    handlerBench_test.go:137: failed with status 429
-    handlerBench_test.go:137: failed with status 429
-    handlerBench_test.go:137: failed with status 429
-    handlerBench_test.go:137: failed with status 429
-BenchmarkSubmitHandler-8   	--- FAIL: BenchmarkSubmitHandler-8
-    handlerBench_test.go:137: failed with status 429
-    handlerBench_test.go:137: failed with status 429
-    handlerBench_test.go:137: failed with status 429
-    handlerBench_test.go:137: failed with status 429
-    handlerBench_test.go:137: failed with status 429
-    handlerBench_test.go:137: failed with status 429
-    handlerBench_test.go:137: failed with status 429
-    handlerBench_test.go:137: failed with status 429
-BenchmarkSubmitHandler-8   	--- FAIL: BenchmarkSubmitHandler-8
-    handlerBench_test.go:137: failed with status 429
-    handlerBench_test.go:137: failed with status 429
-    handlerBench_test.go:137: failed with status 429
-    handlerBench_test.go:137: failed with status 429
-    handlerBench_test.go:137: failed with status 429
-    handlerBench_test.go:137: failed with status 429
-    handlerBench_test.go:137: failed with status 429
-    handlerBench_test.go:137: failed with status 429
-BenchmarkSubmitHandler-8   	--- FAIL: BenchmarkSubmitHandler-8
-    handlerBench_test.go:137: failed with status 429
-    handlerBench_test.go:137: failed with status 429
-    handlerBench_test.go:137: failed with status 429
-    handlerBench_test.go:137: failed with status 429
-    handlerBench_test.go:137: failed with status 429
-    handlerBench_test.go:137: failed with status 429
-    handlerBench_test.go:137: failed with status 429
-    handlerBench_test.go:137: failed with status 429
-BenchmarkSubmitHandler-8   	--- FAIL: BenchmarkSubmitHandler-8
-    handlerBench_test.go:137: failed with status 429
-    handlerBench_test.go:137: failed with status 429
-    handlerBench_test.go:137: failed with status 429
-    handlerBench_test.go:137: failed with status 429
-    handlerBench_test.go:137: failed with status 429
-    handlerBench_test.go:137: failed with status 429
-    handlerBench_test.go:137: failed with status 429
-    handlerBench_test.go:137: failed with status 429
-BenchmarkSubmitHandler-8   	--- FAIL: BenchmarkSubmitHandler-8
-    handlerBench_test.go:137: failed with status 429
-    handlerBench_test.go:137: failed with status 429
-    handlerBench_test.go:137: failed with status 429
-    handlerBench_test.go:137: failed with status 429
-    handlerBench_test.go:137: failed with status 429
-    handlerBench_test.go:137: failed with status 429
-    handlerBench_test.go:137: failed with status 429
-    handlerBench_test.go:137: failed with status 429
-BenchmarkSubmitHandler-8   	--- FAIL: BenchmarkSubmitHandler-8
-    handlerBench_test.go:137: failed with status 429
-    handlerBench_test.go:137: failed with status 429
-    handlerBench_test.go:137: failed with status 429
-    handlerBench_test.go:137: failed with status 429
-    handlerBench_test.go:137: failed with status 429
-    handlerBench_test.go:137: failed with status 429
-    handlerBench_test.go:137: failed with status 429
-    handlerBench_test.go:137: failed with status 429
-BenchmarkSubmitHandler-8   	--- FAIL: BenchmarkSubmitHandler-8
-    handlerBench_test.go:137: failed with status 429
-    handlerBench_test.go:137: failed with status 429
-    handlerBench_test.go:137: failed with status 429
-    handlerBench_test.go:137: failed with status 429
-    handlerBench_test.go:137: failed with status 429
-    handlerBench_test.go:137: failed with status 429
-    handlerBench_test.go:137: failed with status 429
-    handlerBench_test.go:137: failed with status 429
-BenchmarkSubmitHandler-8   	--- FAIL: BenchmarkSubmitHandler-8
-    handlerBench_test.go:137: failed with status 429
-    handlerBench_test.go:137: failed with status 429
-    handlerBench_test.go:137: failed with status 429
-    handlerBench_test.go:137: failed with status 429
-    handlerBench_test.go:137: failed with status 429
-    handlerBench_test.go:137: failed with status 429
-    handlerBench_test.go:137: failed with status 429
-    handlerBench_test.go:137: failed with status 429
-BenchmarkSubmitHandler-8   	--- FAIL: BenchmarkSubmitHandler-8
-    handlerBench_test.go:137: failed with status 429
-    handlerBench_test.go:137: failed with status 429
-    handlerBench_test.go:137: failed with status 429
-    handlerBench_test.go:137: failed with status 429
-    handlerBench_test.go:137: failed with status 429
-    handlerBench_test.go:137: failed with status 429
-    handlerBench_test.go:137: failed with status 429
-    handlerBench_test.go:137: failed with status 429
-BenchmarkSubmitHandler-8   	--- FAIL: BenchmarkSubmitHandler-8
-    handlerBench_test.go:137: failed with status 429
-    handlerBench_test.go:137: failed with status 429
-    handlerBench_test.go:137: failed with status 429
-    handlerBench_test.go:137: failed with status 429
-    handlerBench_test.go:137: failed with status 429
-    handlerBench_test.go:137: failed with status 429
-    handlerBench_test.go:137: failed with status 429
-    handlerBench_test.go:137: failed with status 429
-BenchmarkSubmitHandler-8   	--- FAIL: BenchmarkSubmitHandler-8
-    handlerBench_test.go:137: failed with status 429
-    handlerBench_test.go:137: failed with status 429
-    handlerBench_test.go:137: failed with status 429
-    handlerBench_test.go:137: failed with status 429
-    handlerBench_test.go:137: failed with status 429
-    handlerBench_test.go:137: failed with status 429
-    handlerBench_test.go:137: failed with status 429
-    handlerBench_test.go:137: failed with status 429
-BenchmarkSubmitHandler-8   	--- FAIL: BenchmarkSubmitHandler-8
-    handlerBench_test.go:137: failed with status 429
-    handlerBench_test.go:137: failed with status 429
-    handlerBench_test.go:137: failed with status 429
-    handlerBench_test.go:137: failed with status 429
-    handlerBench_test.go:137: failed with status 429
-    handlerBench_test.go:137: failed with status 429
-    handlerBench_test.go:137: failed with status 429
-    handlerBench_test.go:137: failed with status 429
-BenchmarkSubmitHandler-8   	--- FAIL: BenchmarkSubmitHandler-8
-    handlerBench_test.go:137: failed with status 429
-    handlerBench_test.go:137: failed with status 429
-    handlerBench_test.go:137: failed with status 429
-    handlerBench_test.go:137: failed with status 429
-    handlerBench_test.go:137: failed with status 429
-    handlerBench_test.go:137: failed with status 429
-    handlerBench_test.go:137: failed with status 429
-    handlerBench_test.go:137: failed with status 429
-BenchmarkSubmitHandler-8   	--- FAIL: BenchmarkSubmitHandler-8
-    handlerBench_test.go:137: failed with status 429
-    handlerBench_test.go:137: failed with status 429
-    handlerBench_test.go:137: failed with status 429
-    handlerBench_test.go:137: failed with status 429
-    handlerBench_test.go:137: failed with status 429
-    handlerBench_test.go:137: failed with status 429
-    handlerBench_test.go:137: failed with status 429
-    handlerBench_test.go:137: failed with status 429
-BenchmarkSubmitHandler-8   	--- FAIL: BenchmarkSubmitHandler-8
-    handlerBench_test.go:137: failed with status 429
-    handlerBench_test.go:137: failed with status 429
-    handlerBench_test.go:137: failed with status 429
-    handlerBench_test.go:137: failed with status 429
-    handlerBench_test.go:137: failed with status 429
-    handlerBench_test.go:137: failed with status 429
-    handlerBench_test.go:137: failed with status 429
-    handlerBench_test.go:137: failed with status 429
-BenchmarkSubmitHandler-8   	--- FAIL: BenchmarkSubmitHandler-8
-    handlerBench_test.go:137: failed with status 429
-    handlerBench_test.go:137: failed with status 429
-    handlerBench_test.go:137: failed with status 429
-    handlerBench_test.go:137: failed with status 429
-    handlerBench_test.go:137: failed with status 429
-    handlerBench_test.go:137: failed with status 429
-    handlerBench_test.go:137: failed with status 429
-    handlerBench_test.go:137: failed with status 429
-FAIL
-exit status 1
-FAIL	github.com/mcp-runtime/cully/internal/website/benchmarks	13.348s
+BenchmarkSubmitHandler-8   	     100	  32855311 ns/op	   0.01 MB/s	   37262 B/op	     226 allocs/op
+BenchmarkSubmitHandler-8   	     100	  32342174 ns/op	   0.01 MB/s	   37079 B/op	     225 allocs/op
+BenchmarkSubmitHandler-8   	      81	  33585781 ns/op	   0.01 MB/s	   36614 B/op	     206 allocs/op
+BenchmarkSubmitHandler-8   	     100	  41716376 ns/op	   0.01 MB/s	   36959 B/op	     225 allocs/op
+BenchmarkSubmitHandler-8   	     100	  36842136 ns/op	   0.01 MB/s	   37620 B/op	     225 allocs/op
+BenchmarkSubmitHandler-8   	     100	  34674492 ns/op	   0.01 MB/s	   36186 B/op	     225 allocs/op
+BenchmarkSubmitHandler-8   	     100	  32456444 ns/op	   0.01 MB/s	   38263 B/op	     225 allocs/op
+BenchmarkSubmitHandler-8   	     100	  30676389 ns/op	   0.01 MB/s	   36216 B/op	     225 allocs/op
+BenchmarkSubmitHandler-8   	     100	  36044172 ns/op	   0.01 MB/s	   38215 B/op	     225 allocs/op
+BenchmarkSubmitHandler-8   	      44	  47278439 ns/op	   0.01 MB/s	   29729 B/op	     168 allocs/op
+BenchmarkSubmitHandler-8   	     100	  32217538 ns/op	   0.01 MB/s	   36192 B/op	     225 allocs/op
+BenchmarkSubmitHandler-8   	     100	  36372738 ns/op	   0.01 MB/s	   38303 B/op	     225 allocs/op
+BenchmarkSubmitHandler-8   	     100	  35129910 ns/op	   0.01 MB/s	   36296 B/op	     225 allocs/op
+BenchmarkSubmitHandler-8   	     100	  39789542 ns/op	   0.01 MB/s	   36920 B/op	     225 allocs/op
+BenchmarkSubmitHandler-8   	     100	  32971204 ns/op	   0.01 MB/s	   36907 B/op	     225 allocs/op
+BenchmarkSubmitHandler-8   	     100	  39045052 ns/op	   0.01 MB/s	   36146 B/op	     225 allocs/op
+BenchmarkSubmitHandler-8   	     100	  33093439 ns/op	   0.01 MB/s	   35572 B/op	     225 allocs/op
+BenchmarkSubmitHandler-8   	     100	  32066909 ns/op	   0.01 MB/s	   34930 B/op	     225 allocs/op
+BenchmarkSubmitHandler-8   	     100	  33845068 ns/op	   0.01 MB/s	   38260 B/op	     225 allocs/op
+BenchmarkSubmitHandler-8   	     100	  40245531 ns/op	   0.01 MB/s	   36897 B/op	     225 allocs/op
+PASS
+ok  	github.com/mcp-runtime/cully/internal/website/benchmarks	76.271s

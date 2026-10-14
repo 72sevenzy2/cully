@@ -2,186 +2,25 @@ goos: windows
 goarch: amd64
 pkg: github.com/mcp-runtime/cully/internal/website/benchmarks
 cpu: 11th Gen Intel(R) Core(TM) i5-1135G7 @ 2.40GHz
-BenchmarkProfileImportHandler-8   	--- FAIL: BenchmarkProfileImportHandler-8
-    handlerBench_test.go:170: failed with status 429
-    handlerBench_test.go:170: failed with status 429
-    handlerBench_test.go:170: failed with status 429
-    handlerBench_test.go:170: failed with status 429
-    handlerBench_test.go:170: failed with status 429
-    handlerBench_test.go:170: failed with status 429
-    handlerBench_test.go:170: failed with status 429
-    handlerBench_test.go:170: failed with status 429
-BenchmarkProfileImportHandler-8   	--- FAIL: BenchmarkProfileImportHandler-8
-    handlerBench_test.go:170: failed with status 429
-    handlerBench_test.go:170: failed with status 429
-    handlerBench_test.go:170: failed with status 429
-    handlerBench_test.go:170: failed with status 429
-    handlerBench_test.go:170: failed with status 429
-    handlerBench_test.go:170: failed with status 429
-    handlerBench_test.go:170: failed with status 429
-    handlerBench_test.go:170: failed with status 429
-BenchmarkProfileImportHandler-8   	--- FAIL: BenchmarkProfileImportHandler-8
-    handlerBench_test.go:170: failed with status 429
-    handlerBench_test.go:170: failed with status 429
-    handlerBench_test.go:170: failed with status 429
-    handlerBench_test.go:170: failed with status 429
-    handlerBench_test.go:170: failed with status 429
-    handlerBench_test.go:170: failed with status 429
-    handlerBench_test.go:170: failed with status 429
-    handlerBench_test.go:170: failed with status 429
-BenchmarkProfileImportHandler-8   	--- FAIL: BenchmarkProfileImportHandler-8
-    handlerBench_test.go:170: failed with status 429
-    handlerBench_test.go:170: failed with status 429
-    handlerBench_test.go:170: failed with status 429
-    handlerBench_test.go:170: failed with status 429
-    handlerBench_test.go:170: failed with status 429
-    handlerBench_test.go:170: failed with status 429
-    handlerBench_test.go:170: failed with status 429
-    handlerBench_test.go:170: failed with status 429
-BenchmarkProfileImportHandler-8   	--- FAIL: BenchmarkProfileImportHandler-8
-    handlerBench_test.go:170: failed with status 429
-    handlerBench_test.go:170: failed with status 429
-    handlerBench_test.go:170: failed with status 429
-    handlerBench_test.go:170: failed with status 429
-    handlerBench_test.go:170: failed with status 429
-    handlerBench_test.go:170: failed with status 429
-    handlerBench_test.go:170: failed with status 429
-    handlerBench_test.go:170: failed with status 429
-BenchmarkProfileImportHandler-8   	--- FAIL: BenchmarkProfileImportHandler-8
-    handlerBench_test.go:170: failed with status 429
-    handlerBench_test.go:170: failed with status 429
-    handlerBench_test.go:170: failed with status 429
-    handlerBench_test.go:170: failed with status 429
-    handlerBench_test.go:170: failed with status 429
-    handlerBench_test.go:170: failed with status 429
-    handlerBench_test.go:170: failed with status 429
-    handlerBench_test.go:170: failed with status 429
-BenchmarkProfileImportHandler-8   	--- FAIL: BenchmarkProfileImportHandler-8
-    handlerBench_test.go:170: failed with status 429
-    handlerBench_test.go:170: failed with status 429
-    handlerBench_test.go:170: failed with status 429
-    handlerBench_test.go:170: failed with status 429
-    handlerBench_test.go:170: failed with status 429
-    handlerBench_test.go:170: failed with status 429
-    handlerBench_test.go:170: failed with status 429
-    handlerBench_test.go:170: failed with status 429
-BenchmarkProfileImportHandler-8   	--- FAIL: BenchmarkProfileImportHandler-8
-    handlerBench_test.go:170: failed with status 429
-    handlerBench_test.go:170: failed with status 429
-    handlerBench_test.go:170: failed with status 429
-    handlerBench_test.go:170: failed with status 429
-    handlerBench_test.go:170: failed with status 429
-    handlerBench_test.go:170: failed with status 429
-    handlerBench_test.go:170: failed with status 429
-    handlerBench_test.go:170: failed with status 429
-BenchmarkProfileImportHandler-8   	--- FAIL: BenchmarkProfileImportHandler-8
-    handlerBench_test.go:170: failed with status 429
-    handlerBench_test.go:170: failed with status 429
-    handlerBench_test.go:170: failed with status 429
-    handlerBench_test.go:170: failed with status 429
-    handlerBench_test.go:170: failed with status 429
-    handlerBench_test.go:170: failed with status 429
-    handlerBench_test.go:170: failed with status 429
-    handlerBench_test.go:170: failed with status 429
-BenchmarkProfileImportHandler-8   	--- FAIL: BenchmarkProfileImportHandler-8
-    handlerBench_test.go:170: failed with status 429
-    handlerBench_test.go:170: failed with status 429
-    handlerBench_test.go:170: failed with status 429
-    handlerBench_test.go:170: failed with status 429
-    handlerBench_test.go:170: failed with status 429
-    handlerBench_test.go:170: failed with status 429
-    handlerBench_test.go:170: failed with status 429
-    handlerBench_test.go:170: failed with status 429
-BenchmarkProfileImportHandler-8   	--- FAIL: BenchmarkProfileImportHandler-8
-    handlerBench_test.go:170: failed with status 429
-    handlerBench_test.go:170: failed with status 429
-    handlerBench_test.go:170: failed with status 429
-    handlerBench_test.go:170: failed with status 429
-    handlerBench_test.go:170: failed with status 429
-    handlerBench_test.go:170: failed with status 429
-    handlerBench_test.go:170: failed with status 429
-    handlerBench_test.go:170: failed with status 429
-BenchmarkProfileImportHandler-8   	--- FAIL: BenchmarkProfileImportHandler-8
-    handlerBench_test.go:170: failed with status 429
-    handlerBench_test.go:170: failed with status 429
-    handlerBench_test.go:170: failed with status 429
-    handlerBench_test.go:170: failed with status 429
-    handlerBench_test.go:170: failed with status 429
-    handlerBench_test.go:170: failed with status 429
-    handlerBench_test.go:170: failed with status 429
-    handlerBench_test.go:170: failed with status 429
-BenchmarkProfileImportHandler-8   	--- FAIL: BenchmarkProfileImportHandler-8
-    handlerBench_test.go:170: failed with status 429
-    handlerBench_test.go:170: failed with status 429
-    handlerBench_test.go:170: failed with status 429
-    handlerBench_test.go:170: failed with status 429
-    handlerBench_test.go:170: failed with status 429
-    handlerBench_test.go:170: failed with status 429
-    handlerBench_test.go:170: failed with status 429
-    handlerBench_test.go:170: failed with status 429
-BenchmarkProfileImportHandler-8   	--- FAIL: BenchmarkProfileImportHandler-8
-    handlerBench_test.go:170: failed with status 429
-    handlerBench_test.go:170: failed with status 429
-    handlerBench_test.go:170: failed with status 429
-    handlerBench_test.go:170: failed with status 429
-    handlerBench_test.go:170: failed with status 429
-    handlerBench_test.go:170: failed with status 429
-    handlerBench_test.go:170: failed with status 429
-    handlerBench_test.go:170: failed with status 429
-BenchmarkProfileImportHandler-8   	--- FAIL: BenchmarkProfileImportHandler-8
-    handlerBench_test.go:170: failed with status 429
-    handlerBench_test.go:170: failed with status 429
-    handlerBench_test.go:170: failed with status 429
-    handlerBench_test.go:170: failed with status 429
-    handlerBench_test.go:170: failed with status 429
-    handlerBench_test.go:170: failed with status 429
-    handlerBench_test.go:170: failed with status 429
-    handlerBench_test.go:170: failed with status 429
-BenchmarkProfileImportHandler-8   	--- FAIL: BenchmarkProfileImportHandler-8
-    handlerBench_test.go:170: failed with status 429
-    handlerBench_test.go:170: failed with status 429
-    handlerBench_test.go:170: failed with status 429
-    handlerBench_test.go:170: failed with status 429
-    handlerBench_test.go:170: failed with status 429
-    handlerBench_test.go:170: failed with status 429
-    handlerBench_test.go:170: failed with status 429
-    handlerBench_test.go:170: failed with status 429
-BenchmarkProfileImportHandler-8   	--- FAIL: BenchmarkProfileImportHandler-8
-    handlerBench_test.go:170: failed with status 429
-    handlerBench_test.go:170: failed with status 429
-    handlerBench_test.go:170: failed with status 429
-    handlerBench_test.go:170: failed with status 429
-    handlerBench_test.go:170: failed with status 429
-    handlerBench_test.go:170: failed with status 429
-    handlerBench_test.go:170: failed with status 429
-    handlerBench_test.go:170: failed with status 429
-BenchmarkProfileImportHandler-8   	--- FAIL: BenchmarkProfileImportHandler-8
-    handlerBench_test.go:170: failed with status 429
-    handlerBench_test.go:170: failed with status 429
-    handlerBench_test.go:170: failed with status 429
-    handlerBench_test.go:170: failed with status 429
-    handlerBench_test.go:170: failed with status 429
-    handlerBench_test.go:170: failed with status 429
-    handlerBench_test.go:170: failed with status 429
-    handlerBench_test.go:170: failed with status 429
-BenchmarkProfileImportHandler-8   	--- FAIL: BenchmarkProfileImportHandler-8
-    handlerBench_test.go:170: failed with status 429
-    handlerBench_test.go:170: failed with status 429
-    handlerBench_test.go:170: failed with status 429
-    handlerBench_test.go:170: failed with status 429
-    handlerBench_test.go:170: failed with status 429
-    handlerBench_test.go:170: failed with status 429
-    handlerBench_test.go:170: failed with status 429
-    handlerBench_test.go:170: failed with status 429
-BenchmarkProfileImportHandler-8   	--- FAIL: BenchmarkProfileImportHandler-8
-    handlerBench_test.go:170: failed with status 429
-    handlerBench_test.go:170: failed with status 429
-    handlerBench_test.go:170: failed with status 429
-    handlerBench_test.go:170: failed with status 429
-    handlerBench_test.go:170: failed with status 429
-    handlerBench_test.go:170: failed with status 429
-    handlerBench_test.go:170: failed with status 429
-    handlerBench_test.go:170: failed with status 429
-FAIL
-exit status 1
-FAIL	github.com/mcp-runtime/cully/internal/website/benchmarks	4.702s
+BenchmarkProfileImportHandler-8   	   58590	     19569 ns/op	   2.35 MB/s	   14889 B/op	     102 allocs/op
+BenchmarkProfileImportHandler-8   	   52897	     35303 ns/op	   1.30 MB/s	   14895 B/op	     102 allocs/op
+BenchmarkProfileImportHandler-8   	   42530	     30208 ns/op	   1.52 MB/s	   14846 B/op	     102 allocs/op
+BenchmarkProfileImportHandler-8   	   24027	     50200 ns/op	   0.92 MB/s	   14892 B/op	     102 allocs/op
+BenchmarkProfileImportHandler-8   	   24700	     48263 ns/op	   0.95 MB/s	   14784 B/op	     102 allocs/op
+BenchmarkProfileImportHandler-8   	   27889	     42836 ns/op	   1.07 MB/s	   14684 B/op	     102 allocs/op
+BenchmarkProfileImportHandler-8   	   34737	     38593 ns/op	   1.19 MB/s	   14814 B/op	     102 allocs/op
+BenchmarkProfileImportHandler-8   	   59785	     37207 ns/op	   1.24 MB/s	   14779 B/op	     102 allocs/op
+BenchmarkProfileImportHandler-8   	   27027	     48113 ns/op	   0.96 MB/s	   14917 B/op	     102 allocs/op
+BenchmarkProfileImportHandler-8   	   26512	     43330 ns/op	   1.06 MB/s	   14861 B/op	     102 allocs/op
+BenchmarkProfileImportHandler-8   	   26871	     44418 ns/op	   1.04 MB/s	   14806 B/op	     102 allocs/op
+BenchmarkProfileImportHandler-8   	   26898	     45048 ns/op	   1.02 MB/s	   14904 B/op	     102 allocs/op
+BenchmarkProfileImportHandler-8   	   25814	     43362 ns/op	   1.06 MB/s	   14990 B/op	     102 allocs/op
+BenchmarkProfileImportHandler-8   	   26629	     49239 ns/op	   0.93 MB/s	   14904 B/op	     102 allocs/op
+BenchmarkProfileImportHandler-8   	   24616	     43822 ns/op	   1.05 MB/s	   14810 B/op	     102 allocs/op
+BenchmarkProfileImportHandler-8   	   26176	     48590 ns/op	   0.95 MB/s	   15005 B/op	     102 allocs/op
+BenchmarkProfileImportHandler-8   	   26925	     44116 ns/op	   1.04 MB/s	   14801 B/op	     102 allocs/op
+BenchmarkProfileImportHandler-8   	   27286	     42898 ns/op	   1.07 MB/s	   14727 B/op	     102 allocs/op
+BenchmarkProfileImportHandler-8   	   23584	     49864 ns/op	   0.92 MB/s	   14881 B/op	     102 allocs/op
+BenchmarkProfileImportHandler-8   	   25269	     47732 ns/op	   0.96 MB/s	   14864 B/op	     102 allocs/op
+PASS
+ok  	github.com/mcp-runtime/cully/internal/website/benchmarks	41.130s
