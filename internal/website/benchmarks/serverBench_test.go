@@ -4,19 +4,14 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
-
-	"github.com/mcp-runtime/cully/internal/website"
 )
 
 func BenchmarkServer(b *testing.B) {
-	b.ReportAllocs()
-	s, err := website.New("test", b.TempDir())
-	if err != nil {
-		panic(err)
-	}
+	s := BenchmarkSetupHelper(b)
 	h := s.Handler()
 	rec := httptest.NewRequest(http.MethodGet, "/", nil)
 	b.ResetTimer()
+	b.ReportAllocs()
 
 	for b.Loop() {
 		rr := httptest.NewRecorder()
@@ -25,14 +20,10 @@ func BenchmarkServer(b *testing.B) {
 }
 
 func BenchmarkServerConcurrency(b *testing.B) {
-	b.ReportAllocs()
-
-	s, err := website.New("test", b.TempDir())
-	if err != nil {
-		panic(err)
-	}
+	s := BenchmarkSetupHelper(b)
 	h := s.Handler()
 	b.ResetTimer()
+	b.ReportAllocs()
 
 	b.RunParallel(func(p *testing.PB) {
 		for p.Next() {

@@ -18,13 +18,10 @@ import (
 // read-only routes.
 
 func BenchmarkPublishedHandler(b *testing.B) {
-	b.ReportAllocs()
-	s, err := website.New("test", b.TempDir())
-	if err != nil {
-		panic(err)
-	}
+	s := BenchmarkSetupHelper(b)
 	h := s.Handler()
 	b.ResetTimer()
+	b.ReportAllocs()
 
 	b.RunParallel(func(p *testing.PB) {
 		req := httptest.NewRequest(http.MethodGet, "/testimonials.json", nil)
@@ -36,13 +33,10 @@ func BenchmarkPublishedHandler(b *testing.B) {
 }
 
 func BenchmarkPhotoHandler404(b *testing.B) {
-	b.ReportAllocs()
-	s, err := website.New("test", b.TempDir())
-	if err != nil {
-		panic(err)
-	}
+	s := BenchmarkSetupHelper(b)
 	h := s.Handler()
 	b.ResetTimer()
+	b.ReportAllocs()
 
 	b.RunParallel(func(p *testing.PB) {
 		// assuming http.NotFound() responses:
@@ -55,11 +49,7 @@ func BenchmarkPhotoHandler404(b *testing.B) {
 }
 
 func BenchmarkPhotoHandler(b *testing.B) {
-	b.ReportAllocs()
-	s, err := website.New("test", b.TempDir())
-	if err != nil {
-		panic(err)
-	}
+	s := BenchmarkSetupHelper(b)
 	h := s.Handler()
 	id := "00000000000000000000000000000010" // 32 bit integer "10"
 	dir := filepath.Join(s.DataDir, "approved", id)
@@ -70,6 +60,7 @@ func BenchmarkPhotoHandler(b *testing.B) {
 	if err2 := os.WriteFile(filepath.Join(dir, "photo"), photoData, os.ModePerm); err2 != nil {
 		panic(err2)
 	}
+	b.ReportAllocs()
 	b.ResetTimer()
 
 	b.RunParallel(func(p *testing.PB) {
@@ -87,13 +78,10 @@ func BenchmarkPhotoHandler(b *testing.B) {
 }
 
 func BenchmarkInstillationHandler(b *testing.B) {
-	b.ReportAllocs()
-	s, err := website.New("test", b.TempDir())
-	if err != nil {
-		panic(err)
-	}
+	s := BenchmarkSetupHelper(b)
 	h := s.Handler()
 	b.ResetTimer()
+	b.ReportAllocs()
 
 	b.RunParallel(func(p *testing.PB) {
 		req := httptest.NewRequest(http.MethodGet, "/install.sh", nil)
@@ -107,10 +95,7 @@ func BenchmarkInstillationHandler(b *testing.B) {
 // write-included handlers.
 
 func BenchmarkSubmitHandler(b *testing.B) {
-	s, err := website.New("test", b.TempDir())
-	if err != nil {
-		panic(err)
-	}
+	s := BenchmarkSetupHelper(b)
 	h := s.Handler()
 
 	var body bytes.Buffer
@@ -156,13 +141,8 @@ func BenchmarkSubmitHandler(b *testing.B) {
 }
 
 func BenchmarkProfileImportHandler(b *testing.B) {
-	s, err := website.New("test", b.TempDir())
-	s.Client = &http.Client{
-		Transport: &examReq{},
-	}
-	if err != nil {
-		panic(err)
-	}
+	s := BenchmarkSetupHelper(b)
+	s.Client.Transport = &examReq{}
 	h := s.Handler()
 	type Test struct {
 		URL string `json:"url"`
@@ -202,4 +182,25 @@ func (s *examReq) RoundTrip(req *http.Request) (*http.Response, error) {
 		Body:       io.NopCloser(bytes.NewReader([]byte("example data"))),
 		Request:    req,
 	}, nil
+}
+
+func BenchmarkSetupHelper(b *testing.B) *website.Server {
+	b.Helper()
+	r := b.TempDir()
+	if err := os.MkdirAll(r, os.ModePerm); err != nil {
+		b.Fatal(err)
+	}
+	data, err := os.ReadFile(filepath.Join("test", "index.html"))
+	if err != nil {
+		b.Fatal(err)
+	}
+
+	if err := os.WriteFile(filepath.Join(r, "index.html"), data, os.ModePerm); err != nil {
+		b.Fatal(err)
+	}
+	s, err := website.New(r, b.TempDir())
+	if err != nil {
+		b.Fatal(err)
+	}
+	return s
 }
