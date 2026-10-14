@@ -3,6 +3,7 @@ package benchmarks
 import (
 	"bytes"
 	"encoding/json"
+	"io"
 	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
@@ -156,6 +157,9 @@ func BenchmarkSubmitHandler(b *testing.B) {
 
 func BenchmarkProfileImportHandler(b *testing.B) {
 	s, err := website.New("test", b.TempDir())
+	s.Client = &http.Client{
+		Transport: &examReq{},
+	}
 	h := s.Handler()
 	if err != nil {
 		panic(err)
@@ -187,4 +191,15 @@ func BenchmarkProfileImportHandler(b *testing.B) {
 			}
 		}
 	})
+}
+
+type examReq struct{}
+
+func (s *examReq) RoundTrip(req *http.Request) (*http.Response, error) {
+	return &http.Response{
+		StatusCode: http.StatusOK,
+		Header:     make(http.Header),
+		Body:       io.NopCloser(bytes.NewReader([]byte("example data"))),
+		Request:    req,
+	}, nil
 }
