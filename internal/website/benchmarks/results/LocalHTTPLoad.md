@@ -2,8 +2,9 @@
 
 Captured 2026-10-14 on macOS 26, Apple M4 Pro. The server was the locally built
 `cmd/cully-web` binary using `dist/site`, produced by `node site/build.mjs` (the
-same build step used by `Dockerfile.website`), with a fresh temporary data
-directory. Both routes returned HTTP 200 before load was run.
+same build step used by `Dockerfile.website`), from patch revision `513a901`,
+with a fresh temporary data directory. Both routes returned HTTP 200 before
+load was run.
 
 ```sh
 go build -o /tmp/cully-web ./cmd/cully-web
