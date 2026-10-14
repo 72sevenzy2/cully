@@ -7,7 +7,7 @@ import (
 )
 
 func BenchmarkServer(b *testing.B) {
-	s := BenchmarkSetupHelper(b)
+	s := SetupBenchmarkHelper(b)
 	h := s.Handler()
 	rec := httptest.NewRequest(http.MethodGet, "/", nil)
 	b.ResetTimer()
@@ -20,7 +20,7 @@ func BenchmarkServer(b *testing.B) {
 }
 
 func BenchmarkServerConcurrency(b *testing.B) {
-	s := BenchmarkSetupHelper(b)
+	s := SetupBenchmarkHelper(b)
 	h := s.Handler()
 	b.ResetTimer()
 	b.ReportAllocs()

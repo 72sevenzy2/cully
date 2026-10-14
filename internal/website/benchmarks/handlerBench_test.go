@@ -19,7 +19,7 @@ import (
 // read-only routes.
 
 func BenchmarkPublishedHandler(b *testing.B) {
-	s := BenchmarkSetupHelper(b)
+	s := SetupBenchmarkHelper(b)
 	h := s.Handler()
 	b.ResetTimer()
 	b.ReportAllocs()
@@ -34,7 +34,7 @@ func BenchmarkPublishedHandler(b *testing.B) {
 }
 
 func BenchmarkPhotoHandler404(b *testing.B) {
-	s := BenchmarkSetupHelper(b)
+	s := SetupBenchmarkHelper(b)
 	h := s.Handler()
 	b.ResetTimer()
 	b.ReportAllocs()
@@ -50,7 +50,7 @@ func BenchmarkPhotoHandler404(b *testing.B) {
 }
 
 func BenchmarkPhotoHandler(b *testing.B) {
-	s := BenchmarkSetupHelper(b)
+	s := SetupBenchmarkHelper(b)
 	h := s.Handler()
 	id := "00000000000000000000000000000010" // 32 bit integer "10"
 	dir := filepath.Join(s.DataDir, "approved", id)
@@ -79,7 +79,7 @@ func BenchmarkPhotoHandler(b *testing.B) {
 }
 
 func BenchmarkInstillationHandler(b *testing.B) {
-	s := BenchmarkSetupHelper(b)
+	s := SetupBenchmarkHelper(b)
 	h := s.Handler()
 	b.ResetTimer()
 	b.ReportAllocs()
@@ -96,7 +96,7 @@ func BenchmarkInstillationHandler(b *testing.B) {
 // write-included handlers.
 
 func BenchmarkSubmitHandler(b *testing.B) {
-	s := BenchmarkSetupHelper(b)
+	s := SetupBenchmarkHelper(b)
 	h := s.Handler()
 
 	var body bytes.Buffer
@@ -142,7 +142,7 @@ func BenchmarkSubmitHandler(b *testing.B) {
 }
 
 func BenchmarkProfileImportHandler(b *testing.B) {
-	s := BenchmarkSetupHelper(b)
+	s := SetupBenchmarkHelper(b)
 	s.Client.Transport = &examReq{}
 	h := s.Handler()
 	type Test struct {
@@ -201,7 +201,7 @@ func (s *examReq) RoundTrip(req *http.Request) (*http.Response, error) {
 	}, nil
 }
 
-func BenchmarkSetupHelper(b *testing.B) *website.Server {
+func SetupBenchmarkHelper(b *testing.B) *website.Server {
 	b.Helper()
 	r := b.TempDir()
 	if err := os.MkdirAll(r, os.ModePerm); err != nil {
