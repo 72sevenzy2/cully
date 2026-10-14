@@ -2,25 +2,25 @@ goos: windows
 goarch: amd64
 pkg: github.com/mcp-runtime/cully/internal/website/benchmarks
 cpu: 11th Gen Intel(R) Core(TM) i5-1135G7 @ 2.40GHz
-BenchmarkPublishedHandler-8   	   18268	     75577 ns/op	     955 B/op	      15 allocs/op
-BenchmarkPublishedHandler-8   	    9008	    143609 ns/op	     925 B/op	      15 allocs/op
-BenchmarkPublishedHandler-8   	   10000	    161660 ns/op	     955 B/op	      15 allocs/op
-BenchmarkPublishedHandler-8   	   10000	    139762 ns/op	     968 B/op	      15 allocs/op
-BenchmarkPublishedHandler-8   	   12387	    192351 ns/op	     960 B/op	      15 allocs/op
-BenchmarkPublishedHandler-8   	    9396	    202779 ns/op	     980 B/op	      15 allocs/op
-BenchmarkPublishedHandler-8   	    4927	    225630 ns/op	     941 B/op	      15 allocs/op
-BenchmarkPublishedHandler-8   	    7144	    197157 ns/op	     942 B/op	      15 allocs/op
-BenchmarkPublishedHandler-8   	   17703	    108899 ns/op	     948 B/op	      15 allocs/op
-BenchmarkPublishedHandler-8   	    8103	    197224 ns/op	     792 B/op	      14 allocs/op
-BenchmarkPublishedHandler-8   	    5311	    197205 ns/op	    1037 B/op	      15 allocs/op
-BenchmarkPublishedHandler-8   	   10000	    174465 ns/op	    1008 B/op	      15 allocs/op
-BenchmarkPublishedHandler-8   	   12718	    181064 ns/op	     943 B/op	      15 allocs/op
-BenchmarkPublishedHandler-8   	   10000	    130095 ns/op	     935 B/op	      15 allocs/op
-BenchmarkPublishedHandler-8   	   10000	    112365 ns/op	     942 B/op	      15 allocs/op
-BenchmarkPublishedHandler-8   	    8107	    128249 ns/op	     760 B/op	      14 allocs/op
-BenchmarkPublishedHandler-8   	   10000	    149706 ns/op	     942 B/op	      15 allocs/op
-BenchmarkPublishedHandler-8   	   10000	    143481 ns/op	     847 B/op	      14 allocs/op
-BenchmarkPublishedHandler-8   	   10000	    108084 ns/op	     962 B/op	      15 allocs/op
-BenchmarkPublishedHandler-8   	    9720	    110495 ns/op	     950 B/op	      15 allocs/op
+BenchmarkPublishedHandler-8   	   18344	     98269 ns/op	    2415 B/op	      23 allocs/op
+BenchmarkPublishedHandler-8   	   10000	    165985 ns/op	    2460 B/op	      23 allocs/op
+BenchmarkPublishedHandler-8   	   16366	    160814 ns/op	    2226 B/op	      22 allocs/op
+BenchmarkPublishedHandler-8   	   11997	    119911 ns/op	    2388 B/op	      23 allocs/op
+BenchmarkPublishedHandler-8   	   17602	    120332 ns/op	    2473 B/op	      23 allocs/op
+BenchmarkPublishedHandler-8   	    9090	    135705 ns/op	    2470 B/op	      23 allocs/op
+BenchmarkPublishedHandler-8   	   10000	    140098 ns/op	    2394 B/op	      23 allocs/op
+BenchmarkPublishedHandler-8   	    8311	    131906 ns/op	    2502 B/op	      23 allocs/op
+BenchmarkPublishedHandler-8   	   10000	    184771 ns/op	    2215 B/op	      22 allocs/op
+BenchmarkPublishedHandler-8   	    8060	    223832 ns/op	    2419 B/op	      23 allocs/op
+BenchmarkPublishedHandler-8   	   10244	    210369 ns/op	    2264 B/op	      22 allocs/op
+BenchmarkPublishedHandler-8   	   10000	    134717 ns/op	    2414 B/op	      23 allocs/op
+BenchmarkPublishedHandler-8   	   14425	    188591 ns/op	    2436 B/op	      23 allocs/op
+BenchmarkPublishedHandler-8   	   10000	    152432 ns/op	    2427 B/op	      23 allocs/op
+BenchmarkPublishedHandler-8   	    9108	    226090 ns/op	    2448 B/op	      23 allocs/op
+BenchmarkPublishedHandler-8   	    7779	    167921 ns/op	    2390 B/op	      23 allocs/op
+BenchmarkPublishedHandler-8   	    7677	    174638 ns/op	    2366 B/op	      23 allocs/op
+BenchmarkPublishedHandler-8   	   10000	    157581 ns/op	    2473 B/op	      23 allocs/op
+BenchmarkPublishedHandler-8   	    8073	    164786 ns/op	    2267 B/op	      22 allocs/op
+BenchmarkPublishedHandler-8   	   14359	    166634 ns/op	    2432 B/op	      23 allocs/op
 PASS
-ok  	github.com/mcp-runtime/cully/internal/website/benchmarks	40.450s
+ok  	github.com/mcp-runtime/cully/internal/website/benchmarks	51.759s

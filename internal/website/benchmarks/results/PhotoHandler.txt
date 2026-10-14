@@ -2,25 +2,25 @@ goos: windows
 goarch: amd64
 pkg: github.com/mcp-runtime/cully/internal/website/benchmarks
 cpu: 11th Gen Intel(R) Core(TM) i5-1135G7 @ 2.40GHz
-BenchmarkPhotoHandler-8   	   18368	     72840 ns/op	    7716 B/op	      30 allocs/op
-BenchmarkPhotoHandler-8   	   10000	    123958 ns/op	    7717 B/op	      30 allocs/op
-BenchmarkPhotoHandler-8   	    6102	    175365 ns/op	    7717 B/op	      30 allocs/op
-BenchmarkPhotoHandler-8   	    5935	    177081 ns/op	    7717 B/op	      30 allocs/op
-BenchmarkPhotoHandler-8   	   10060	    141164 ns/op	    7717 B/op	      30 allocs/op
-BenchmarkPhotoHandler-8   	   14552	     69528 ns/op	    7716 B/op	      30 allocs/op
-BenchmarkPhotoHandler-8   	   17097	     70172 ns/op	    7716 B/op	      30 allocs/op
-BenchmarkPhotoHandler-8   	    8300	    144392 ns/op	    7717 B/op	      30 allocs/op
-BenchmarkPhotoHandler-8   	   10000	    115925 ns/op	    7717 B/op	      30 allocs/op
-BenchmarkPhotoHandler-8   	   10000	    158614 ns/op	    7717 B/op	      30 allocs/op
-BenchmarkPhotoHandler-8   	   10000	    104232 ns/op	    7716 B/op	      30 allocs/op
-BenchmarkPhotoHandler-8   	   11179	    105361 ns/op	    7717 B/op	      30 allocs/op
-BenchmarkPhotoHandler-8   	   10000	    108922 ns/op	    7716 B/op	      30 allocs/op
-BenchmarkPhotoHandler-8   	   10000	    127789 ns/op	    7716 B/op	      30 allocs/op
-BenchmarkPhotoHandler-8   	    9535	    125591 ns/op	    7716 B/op	      30 allocs/op
-BenchmarkPhotoHandler-8   	   10000	    130577 ns/op	    7718 B/op	      30 allocs/op
-BenchmarkPhotoHandler-8   	    7605	    170767 ns/op	    7717 B/op	      30 allocs/op
-BenchmarkPhotoHandler-8   	    6490	    158257 ns/op	    7716 B/op	      30 allocs/op
-BenchmarkPhotoHandler-8   	   10146	    132369 ns/op	    7716 B/op	      30 allocs/op
-BenchmarkPhotoHandler-8   	   10000	    129492 ns/op	    7716 B/op	      30 allocs/op
+BenchmarkPhotoHandler-8   	   15070	     75227 ns/op	    7716 B/op	      30 allocs/op
+BenchmarkPhotoHandler-8   	   10006	    110937 ns/op	    7716 B/op	      30 allocs/op
+BenchmarkPhotoHandler-8   	    7479	    151480 ns/op	    7716 B/op	      30 allocs/op
+BenchmarkPhotoHandler-8   	   10000	    126389 ns/op	    7717 B/op	      30 allocs/op
+BenchmarkPhotoHandler-8   	   10000	    158442 ns/op	    7716 B/op	      30 allocs/op
+BenchmarkPhotoHandler-8   	   14787	    175814 ns/op	    7717 B/op	      30 allocs/op
+BenchmarkPhotoHandler-8   	   10651	    177106 ns/op	    7716 B/op	      30 allocs/op
+BenchmarkPhotoHandler-8   	   10152	    118585 ns/op	    7716 B/op	      30 allocs/op
+BenchmarkPhotoHandler-8   	   10197	    176638 ns/op	    7717 B/op	      30 allocs/op
+BenchmarkPhotoHandler-8   	   11265	    124982 ns/op	    7717 B/op	      30 allocs/op
+BenchmarkPhotoHandler-8   	   10000	    133265 ns/op	    7716 B/op	      30 allocs/op
+BenchmarkPhotoHandler-8   	    8750	    134063 ns/op	    7717 B/op	      30 allocs/op
+BenchmarkPhotoHandler-8   	   14642	    164200 ns/op	    7717 B/op	      30 allocs/op
+BenchmarkPhotoHandler-8   	   11234	    122539 ns/op	    7716 B/op	      30 allocs/op
+BenchmarkPhotoHandler-8   	   11091	    119599 ns/op	    7716 B/op	      30 allocs/op
+BenchmarkPhotoHandler-8   	   11904	    111588 ns/op	    7717 B/op	      30 allocs/op
+BenchmarkPhotoHandler-8   	    8073	    125677 ns/op	    7716 B/op	      30 allocs/op
+BenchmarkPhotoHandler-8   	    9924	    126099 ns/op	    7716 B/op	      30 allocs/op
+BenchmarkPhotoHandler-8   	   11138	    147059 ns/op	    7717 B/op	      30 allocs/op
+BenchmarkPhotoHandler-8   	    7178	    163783 ns/op	    7717 B/op	      30 allocs/op
 PASS
-ok  	github.com/mcp-runtime/cully/internal/website/benchmarks	33.405s
+ok  	github.com/mcp-runtime/cully/internal/website/benchmarks	46.078s
