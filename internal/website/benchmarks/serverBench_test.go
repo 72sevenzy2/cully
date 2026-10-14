@@ -10,6 +10,7 @@ func BenchmarkServer(b *testing.B) {
 	s := SetupBenchmarkHelper(b)
 	h := s.Handler()
 	rec := httptest.NewRequest(http.MethodGet, "/", nil)
+	assertBenchmarkResponse(b, h, rec, http.StatusOK, "Cully Solo")
 	b.ResetTimer()
 	b.ReportAllocs()
 
@@ -22,6 +23,7 @@ func BenchmarkServer(b *testing.B) {
 func BenchmarkServerConcurrency(b *testing.B) {
 	s := SetupBenchmarkHelper(b)
 	h := s.Handler()
+	assertBenchmarkResponse(b, h, httptest.NewRequest(http.MethodGet, "/", nil), http.StatusOK, "Cully Solo")
 	b.ResetTimer()
 	b.ReportAllocs()
 

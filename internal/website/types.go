@@ -5,7 +5,10 @@ import "errors"
 // MaxPhoto is the maximum upload or imported-photo size in bytes.
 const MaxPhoto = 5 << 20
 
-const maxProfileRequestBody = 1024
+const (
+	maxRequestsPerMinute  = 20
+	maxProfileRequestBody = 1024
+)
 
 // Validation errors retain the messages shown by the submission form.
 var (

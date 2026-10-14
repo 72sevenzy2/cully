@@ -39,14 +39,13 @@ type Testimonial struct {
 }
 
 type Server struct {
-	SiteDir              string
-	DataDir              string
-	Client               *http.Client
-	mu                   sync.Mutex
-	window               time.Time
-	count                int
-	MaxRequestsPerMinute int
-	Uploads              chan struct{}
+	SiteDir string
+	DataDir string
+	Client  *http.Client
+	mu      sync.Mutex
+	window  time.Time
+	count   int
+	uploads chan struct{}
 }
 
 func New(site, data string) (*Server, error) {
@@ -55,7 +54,7 @@ func New(site, data string) (*Server, error) {
 			return nil, err
 		}
 	}
-	return &Server{SiteDir: site, DataDir: data, Uploads: make(chan struct{}, 4), Client: &http.Client{
+	return &Server{SiteDir: site, DataDir: data, uploads: make(chan struct{}, 4), Client: &http.Client{
 		Timeout: 8 * time.Second,
 		CheckRedirect: func(req *http.Request, via []*http.Request) error {
 			if len(via) >= 3 || !linkedInURL(req.URL) {
@@ -63,7 +62,7 @@ func New(site, data string) (*Server, error) {
 			}
 			return nil
 		},
-	}, MaxRequestsPerMinute: 20}, nil
+	}}, nil
 }
 
 func (s *Server) Handler() http.Handler {
@@ -104,7 +103,7 @@ func (s *Server) allow(w http.ResponseWriter, r *http.Request) bool {
 	if time.Since(s.window) >= time.Minute {
 		s.window, s.count = time.Now(), 0
 	}
-	if s.count >= s.MaxRequestsPerMinute {
+	if s.count >= maxRequestsPerMinute {
 		w.Header().Set("Retry-After", "60")
 		problem(w, 429, "Too many requests. Please try again in a minute.")
 		return false
@@ -118,8 +117,8 @@ func (s *Server) submit(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	select {
-	case s.Uploads <- struct{}{}:
-		defer func() { <-s.Uploads }()
+	case s.uploads <- struct{}{}:
+		defer func() { <-s.uploads }()
 	default:
 		problem(w, 429, "Uploads are busy. Please try again shortly.")
 		return
