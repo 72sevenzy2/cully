@@ -9,6 +9,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"unsafe"
 
@@ -165,7 +166,7 @@ func BenchmarkProfileImportHandler(b *testing.B) {
 			rr := httptest.NewRecorder()
 			h.ServeHTTP(rr, req)
 
-			if rr.Code != http.StatusCreated {
+			if rr.Code != http.StatusOK {
 				b.Errorf("failed with status %d", rr.Code)
 				return
 			}
@@ -176,10 +177,26 @@ func BenchmarkProfileImportHandler(b *testing.B) {
 type examReq struct{}
 
 func (s *examReq) RoundTrip(req *http.Request) (*http.Response, error) {
+	data := `<!DOCTYPE html>
+	<html lang="en">
+	<head>
+    <meta charset="UTF-8">
+    <meta property="og:title" content="Example Person - Engineer | LinkedIn">
+    <meta property="og:description" content="Example Person, Software Engineer">
+    <title>Example Person - Engineer | LinkedIn</title>
+	</head>
+		<body>
+ 		   <main>
+	          <h1>Example Person</h1>
+        		<p>Software Engineer</p>
+ 		   </main>
+		</body>
+	</html>`
+
 	return &http.Response{
 		StatusCode: http.StatusOK,
 		Header:     make(http.Header),
-		Body:       io.NopCloser(bytes.NewReader([]byte("example data"))),
+		Body:       io.NopCloser(strings.NewReader(data)),
 		Request:    req,
 	}, nil
 }
