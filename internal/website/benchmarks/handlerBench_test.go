@@ -20,10 +20,10 @@ import (
 func BenchmarkPublishedHandler(b *testing.B) {
 	b.ReportAllocs()
 	s, err := website.New("test", b.TempDir())
-	h := s.Handler()
 	if err != nil {
 		panic(err)
 	}
+	h := s.Handler()
 	b.ResetTimer()
 
 	b.RunParallel(func(p *testing.PB) {
@@ -38,10 +38,10 @@ func BenchmarkPublishedHandler(b *testing.B) {
 func BenchmarkPhotoHandler404(b *testing.B) {
 	b.ReportAllocs()
 	s, err := website.New("test", b.TempDir())
-	h := s.Handler()
 	if err != nil {
 		panic(err)
 	}
+	h := s.Handler()
 	b.ResetTimer()
 
 	b.RunParallel(func(p *testing.PB) {
@@ -57,10 +57,10 @@ func BenchmarkPhotoHandler404(b *testing.B) {
 func BenchmarkPhotoHandler(b *testing.B) {
 	b.ReportAllocs()
 	s, err := website.New("test", b.TempDir())
-	h := s.Handler()
 	if err != nil {
 		panic(err)
 	}
+	h := s.Handler()
 	id := "00000000000000000000000000000010" // 32 bit integer "10"
 	dir := filepath.Join(s.DataDir, "approved", id)
 	photoData := unsafe.Slice(unsafe.StringData("example photo"), len("example photo"))
@@ -89,10 +89,10 @@ func BenchmarkPhotoHandler(b *testing.B) {
 func BenchmarkInstillationHandler(b *testing.B) {
 	b.ReportAllocs()
 	s, err := website.New("test", b.TempDir())
-	h := s.Handler()
 	if err != nil {
 		panic(err)
 	}
+	h := s.Handler()
 	b.ResetTimer()
 
 	b.RunParallel(func(p *testing.PB) {
@@ -108,17 +108,17 @@ func BenchmarkInstillationHandler(b *testing.B) {
 
 func BenchmarkSubmitHandler(b *testing.B) {
 	s, err := website.New("test", b.TempDir())
-	h := s.Handler()
 	if err != nil {
 		panic(err)
 	}
+	h := s.Handler()
 
 	var body bytes.Buffer
 	mw := multipart.NewWriter(&body)
 
 	field := map[string]string{
 		"name":    "eg.1",
-		"quote":   "some testimonialss",
+		"quote":   "some testimonialssss",
 		"consent": "on",
 	}
 
@@ -160,10 +160,10 @@ func BenchmarkProfileImportHandler(b *testing.B) {
 	s.Client = &http.Client{
 		Transport: &examReq{},
 	}
-	h := s.Handler()
 	if err != nil {
 		panic(err)
 	}
+	h := s.Handler()
 	type Test struct {
 		URL string `json:"url"`
 	}
@@ -179,8 +179,8 @@ func BenchmarkProfileImportHandler(b *testing.B) {
 	b.ResetTimer()
 
 	b.RunParallel(func(pb *testing.PB) {
-		req := httptest.NewRequest(http.MethodPost, "/api/linkedin-profile", bytes.NewReader(js))
 		for pb.Next() {
+			req := httptest.NewRequest(http.MethodPost, "/api/linkedin-profile", bytes.NewReader(js))
 			req.Header.Set("x-cully-submission", "1")
 			rr := httptest.NewRecorder()
 			h.ServeHTTP(rr, req)

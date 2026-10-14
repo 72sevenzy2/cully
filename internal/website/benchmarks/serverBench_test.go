@@ -16,10 +16,10 @@ func BenchmarkServer(b *testing.B) {
 	}
 	h := s.Handler()
 	rec := httptest.NewRequest(http.MethodGet, "/", nil)
-	rr := httptest.NewRecorder()
 	b.ResetTimer()
 
 	for b.Loop() {
+		rr := httptest.NewRecorder()
 		h.ServeHTTP(rr, rec)
 	}
 }
