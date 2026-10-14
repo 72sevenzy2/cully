@@ -27,8 +27,8 @@ func BenchmarkPublishedHandler(b *testing.B) {
 
 	b.RunParallel(func(p *testing.PB) {
 		req := httptest.NewRequest(http.MethodGet, "/testimonials.json", nil)
-		rr := httptest.NewRecorder()
 		for p.Next() {
+			rr := httptest.NewRecorder()
 			h.ServeHTTP(rr, req)
 		}
 	})
@@ -46,8 +46,8 @@ func BenchmarkPhotoHandler404(b *testing.B) {
 	b.RunParallel(func(p *testing.PB) {
 		// assuming http.NotFound() responses:
 		req := httptest.NewRequest(http.MethodGet, "/testimonial-photos/10", nil)
-		rr := httptest.NewRecorder()
 		for p.Next() {
+			rr := httptest.NewRecorder()
 			h.ServeHTTP(rr, req)
 		}
 	})
@@ -96,8 +96,8 @@ func BenchmarkInstillationHandler(b *testing.B) {
 
 	b.RunParallel(func(p *testing.PB) {
 		req := httptest.NewRequest(http.MethodGet, "/install.sh", nil)
-		rr := httptest.NewRecorder()
 		for p.Next() {
+			rr := httptest.NewRecorder()
 			h.ServeHTTP(rr, req)
 		}
 	})
@@ -175,8 +175,8 @@ func BenchmarkProfileImportHandler(b *testing.B) {
 	b.ResetTimer()
 
 	b.RunParallel(func(pb *testing.PB) {
+		req := httptest.NewRequest(http.MethodPost, "/api/linkedin-profile", bytes.NewReader(js))
 		for pb.Next() {
-			req := httptest.NewRequest(http.MethodPost, "/api/linkedin-profile", bytes.NewReader(js))
 			req.Header.Set("x-cully-submission", "1")
 			rr := httptest.NewRecorder()
 			h.ServeHTTP(rr, req)
